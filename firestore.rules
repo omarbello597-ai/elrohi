@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper — verifica si el usuario tiene sesión
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper — obtiene el perfil del usuario desde Firestore
+    function userProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userRole() {
+      return userProfile().role;
+    }
+
+    function isRole(role) {
+      return isAuth() && userRole() == role;
+    }
+
+    function isAnyRole(roles) {
+      return isAuth() && userRole() in roles;
+    }
+
+    // ── Usuarios ──────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuth();
+      allow write: if isRole('gerente') || isRole('admin_elrohi') || request.auth.uid == userId;
+    }
+
+    // ── Clientes ──────────────────────────────────────────────────────────────
+    match /clients/{id} {
+      allow read: if isAuth();
+      allow write: if isAnyRole(['gerente', 'admin_elrohi']);
+    }
+
+    // ── Satélites ─────────────────────────────────────────────────────────────
+    match /satellites/{id} {
+      allow read: if isAuth();
+      allow write: if isAnyRole(['gerente', 'admin_elrohi']);
+    }
+
+    // ── Operaciones globales ──────────────────────────────────────────────────
+    match /operations/{id} {
+      allow read: if isAuth();
+      allow write: if isAnyRole(['gerente', 'admin_elrohi']);
+    }
+
+    // ── Tarifas por satélite ──────────────────────────────────────────────────
+    match /satOpVals/{satId} {
+      allow read: if isAuth();
+      // Solo el admin del satélite puede cambiar sus tarifas
+      allow write: if isAnyRole(['gerente', 'admin_elrohi', 'admin_satelite']);
+    }
+
+    // ── Pedidos ───────────────────────────────────────────────────────────────
+    match /orders/{id} {
+      allow read: if isAuth();
+      allow write: if isAnyRole(['gerente', 'admin_elrohi', 'despachos']);
+    }
+
+    // ── Lotes ─────────────────────────────────────────────────────────────────
+    match /lots/{id} {
+      allow read: if isAuth();
+      // Múltiples roles pueden actualizar lotes según su función
+      allow write: if isAnyRole(['gerente', 'admin_elrohi', 'corte', 'admin_satelite', 'operario', 'tintoreria', 'pespunte', 'bodega']);
+    }
+
+    // ── Inventario ────────────────────────────────────────────────────────────
+    match /inventory/{id} {
+      allow read: if isAuth();
+      allow write: if isAnyRole(['gerente', 'admin_elrohi', 'bodega']);
+    }
+
+    // ── Insumos ───────────────────────────────────────────────────────────────
+    match /supplies/{id} {
+      allow read: if isAuth();
+      allow write: if isAnyRole(['gerente', 'admin_elrohi']);
+    }
+
+    // ── Pagos ─────────────────────────────────────────────────────────────────
+    match /payments/{id} {
+      allow read: if isAnyRole(['gerente', 'nomina', 'admin_satelite']);
+      allow write: if isAnyRole(['gerente', 'nomina']);
+    }
+  }
+}
