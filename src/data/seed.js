@@ -14,7 +14,7 @@ import { db, auth } from '../firebase';
 // ─── DEMO USERS ───────────────────────────────────────────────────────────────
 // Contraseñas demo: todas usan "elrohi2024" para facilitar pruebas
 export const DEMO_USERS = [
-  { id: '8DdBqKbLtKYcLoX7lp7Xo8ePMYo2',  name: 'Carlos Mendoza',  role: 'gerente',        satId: null,   email: 'gerente@elrohi.com',     initials: 'CM' },
+  { id: '2Msh5PTQgEOFVdnDhQreixY0QQr1',  name: 'Carlos Mendoza',  role: 'gerente',        satId: null,   email: 'gerente@elrohi.com',     initials: 'CM' },
   { id: 'Wbwg3IFskjPIbHA91d3ffpx97fb2',  name: 'Ana López',       role: 'admin_elrohi',   satId: null,   email: 'admin@elrohi.com',       initials: 'AL' },
   { id: 'aFHBxgMoEjdUc9e69OCnYoI2yO33',  name: 'Roberto Ríos',    role: 'nomina',         satId: null,   email: 'nomina@elrohi.com',      initials: 'RR' },
   { id: 'TUBGEjjzSCVO8t3wG2roXrxoaR52',  name: 'Sandra Pérez',    role: 'despachos',      satId: null,   email: 'despachos@elrohi.com',   initials: 'SP' },
