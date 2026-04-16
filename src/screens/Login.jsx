@@ -19,7 +19,7 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password);
       // Navigate to first allowed page after login — AuthContext sets profile
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError('Correo o contraseña incorrectos');
     } finally {
