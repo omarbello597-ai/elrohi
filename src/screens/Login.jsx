@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getUser } from '../services/db';
 import { NAV_CONFIG, ROLE_META, ACCENT } from '../constants';
 
 export default function LoginScreen() {
@@ -11,21 +12,28 @@ export default function LoginScreen() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!email || !password) { setError('Ingresa tu correo y contraseña'); return; }
-    setLoading(true);
-    setError('');
-    try {
-      await login(email.trim(), password);
-      // Navigate to first allowed page after login — AuthContext sets profile
-      navigate('/');
-    } catch (err) {
-      setError('Correo o contraseña incorrectos');
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleLogin = async (e) => {
+  e.preventDefault();
+  if (!email || !password) { setError('Ingresa tu correo y contraseña'); return; }
+  setLoading(true);
+  setError('');
+  try {
+    const result = await login(email.trim(), password);
+    const profile = await getUser(result.user.uid);
+    const NAV = {
+      gerente: '/dashboard', admin_elrohi: '/dashboard',
+      nomina: '/nomina', despachos: '/pedidos',
+      corte: '/corte', admin_satelite: '/taller',
+      operario: '/mis-ops', tintoreria: '/tintoreria',
+      pespunte: '/pespunte', bodega: '/bodega',
+    };
+    navigate(profile?.role ? (NAV[profile.role] || '/dashboard') : '/');
+  } catch (err) {
+    setError('Correo o contraseña incorrectos');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Quick-access demo buttons
   const DEMO_LOGINS = [
