@@ -14,7 +14,8 @@ import TallerScreen     from './screens/Taller';
 import AsignarOpsScreen from './screens/AsignarOps';
 import { MisOpsScreen, QuincenaScreen } from './screens/Operario';
 import { CorteScreen, TintoriaScreen, PespunteScreen, BodegaScreen } from './screens/Produccion';
-import { SatelitesScreen, InventarioScreen, NominaScreen, ConfigScreen } from './screens/Otros';
+import { SatelitesScreen, InventarioScreen, ConfigScreen } from './screens/Otros';
+import { NominaScreen } from './screens/Nomina';
 
 import { seedDatabase } from './data/seed';
 import { NAV_CONFIG }   from './constants';
