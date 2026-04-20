@@ -67,7 +67,7 @@ export const NAV_CONFIG = {
   admin_elrohi:   ['/dashboard', '/pedidos', '/lotes', '/corte', '/satelites', '/inventario'],
   nomina:         ['/nomina'],
   despachos:      ['/pedidos', '/inventario'],
-  corte:          ['/corte'],
+  corte:          ['/corte','/remision'],
   admin_satelite: ['/taller', '/asignar-ops'],
   operario:       ['/mis-ops', '/quincena'],
   tintoreria:     ['/tintoreria'],
@@ -91,6 +91,7 @@ export const NAV_ITEMS = {
   '/tintoreria':  { label: 'Tintorería',       icon: 'Palette'         },
   '/pespunte':    { label: 'Pespunte',         icon: 'Layers'          },
   '/bodega':      { label: 'Bodega',           icon: 'Box'             },
+  '/remision': { label: 'Remisión Corte', icon: 'FileText' },
 };
 
 export const ACCENT = '#e85d26';
