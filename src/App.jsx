@@ -81,6 +81,7 @@ const ALL_ROUTES = [
   { path: '/tintoreria',  component: TintoriaScreen,   roles: ['gerente', 'admin_elrohi', 'tintoreria'] },
   { path: '/pespunte',    component: PespunteScreen,   roles: ['gerente', 'admin_elrohi', 'pespunte'] },
   { path: '/bodega',      component: BodegaScreen,     roles: ['gerente', 'admin_elrohi', 'bodega'] },
+  { path: '/remision', component: RemisionScreen, roles: ['gerente', 'admin_elrohi', 'corte'] },
 ];
 
 // ─── HOME REDIRECT ────────────────────────────────────────────────────────────
