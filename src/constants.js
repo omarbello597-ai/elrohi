@@ -68,11 +68,12 @@ export const NAV_CONFIG = {
   nomina:         ['/nomina'],
   despachos:      ['/pedidos', '/inventario'],
   corte:          ['/corte','/remision'],
-  admin_satelite: ['/taller', '/asignar-ops'],
+  admin_satelite: ['/taller', '/asignar-ops', '/remision'],
   operario:       ['/mis-ops', '/quincena'],
   tintoreria:     ['/tintoreria'],
   pespunte:       ['/pespunte', '/quincena'],
   bodega:         ['/bodega'],
+  
 };
 
 export const NAV_ITEMS = {
