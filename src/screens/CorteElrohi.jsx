@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { addDocument, updateDocument } from '../services/db';
+import { addDocument, updateDocument, listenCol } from '../services/db';
 import { GARMENT_TYPES, SIZES, LOT_PRIORITY, ACCENT } from '../constants';
-import { Modal, Select, Btn, EmptyState } from '../components/ui';
-import { gLabel, genLotCode, today } from '../utils';
+import { EmptyState, ProgressBar } from '../components/ui';
+import { gLabel, genLotCode, today, fmtM } from '../utils';
+import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+
+// ─── CONSTANTES ───────────────────────────────────────────────────────────────
+const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','34','36','38','40','42','44'];
+const MESES     = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const genDocName = (num) => {
+  const h = new Date();
+  return `ELROHI_Corte${String(num).padStart(4,'0')}_Fecha_${String(h.getDate()).padStart(2,'0')}${MESES[h.getMonth()]}${h.getFullYear()}`;
+};
+const nowStr    = () => new Date().toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+const todayFmt  = () => { const h=new Date(); return `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${String(h.getFullYear()).slice(-2)}`; };
 
 const CORTE_STATES = [
   { key: 'nuevo',                 label: 'Nuevo',                 cls: 'bg-gray-100 text-gray-600'     },
@@ -20,12 +32,87 @@ const nextStateMap = {
   en_corte:              { next: 'entregar_admin',        label: '📦 Entregar al Admin',          color: '#d97706' },
 };
 
+// ─── CANVAS DE FIRMA ─────────────────────────────────────────────────────────
+function FirmaCanvas({ onSave, label }) {
+  const canvasRef = useRef(null);
+  const drawing   = useRef(false);
+  const [hasFirma, setHasFirma] = useState(false);
+
+  const getPos = (e, c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; };
+  const start  = (e) => { e.preventDefault(); drawing.current=true; const c=canvasRef.current; const ctx=c.getContext('2d'); const p=getPos(e,c); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
+  const draw   = (e) => { e.preventDefault(); if(!drawing.current)return; const c=canvasRef.current; const ctx=c.getContext('2d'); ctx.strokeStyle='#1a3a6b'; ctx.lineWidth=2; ctx.lineCap='round'; const p=getPos(e,c); ctx.lineTo(p.x,p.y); ctx.stroke(); setHasFirma(true); };
+  const stop   = () => { drawing.current=false; };
+  const clear  = () => { const c=canvasRef.current; c.getContext('2d').clearRect(0,0,c.width,c.height); setHasFirma(false); onSave(null); };
+  const save   = () => { onSave(canvasRef.current.toDataURL('image/png')); toast.success('Firma guardada'); };
+
+  return (
+    <div style={{marginBottom:10}}>
+      <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:5}}>{label}</p>
+      <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
+        <canvas ref={canvasRef} width={340} height={70}
+          style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
+          onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
+          onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
+      </div>
+      <div style={{display:'flex',gap:6,marginTop:4}}>
+        <button onClick={clear} style={{fontSize:10,padding:'2px 9px',background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:4,cursor:'pointer',fontWeight:600}}>Borrar</button>
+        {hasFirma && <button onClick={save} style={{fontSize:10,padding:'2px 9px',background:'#dcfce7',color:'#15803d',border:'none',borderRadius:4,cursor:'pointer',fontWeight:600}}>✓ Guardar firma</button>}
+      </div>
+    </div>
+  );
+}
+
+// ─── IMPRIMIR FORMATO ─────────────────────────────────────────────────────────
+function printFormato(fc) {
+  const lot = fc.lot || {};
+  const garmentRows = (lot.garments||[]).map((g,i)=>{
+    const sizes = SIZES_REF.map(s=>{const key=s.split('/')[0]; const val=g.sizes?.[key]||g.sizes?.[s]||''; return `<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${val||''}</td>`;}).join('');
+    return `<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;font-weight:500;color:#1a3a6b">${gLabel(g.gtId)}</td>${sizes}<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#dce6f5">${g.total?.toLocaleString('es-CO')||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#fff0e0;color:#e85d26">${fc.cortesRef?.[i]||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic;background:#fdfbff">${fc.comentariosRef?.[i]||''}</td></tr>`;
+  }).join('');
+  const emptyRef = Array(Math.max(0,5-(lot.garments||[]).length)).fill(0).map(()=>`<tr><td style="border:1px solid #1a3a6b;height:22px"></td>${SIZES_REF.map(()=>'<td style="border:1px solid #1a3a6b"></td>').join('')}<td style="border:1px solid #1a3a6b;background:#dce6f5"></td><td style="border:1px solid #1a3a6b;background:#fff0e0"></td><td style="border:1px solid #1a3a6b;background:#fdfbff"></td></tr>`).join('');
+  const espRows = (fc.especificaciones||[]).map(e=>`<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;font-weight:500;color:#1a3a6b;height:22px">${e.tipoTela||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:600">${e.metrosUsados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:600;color:#dc2626">${e.metrosDesechados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic">${e.comentario||''}</td></tr>`).join('');
+  const firmaBox = (label,img,nombre,fecha) => `<div style="text-align:center;padding:6px 14px">${img?`<img src="${img}" style="height:44px;display:block;margin:0 auto 3px;border-bottom:1px solid #1a3a6b;width:80%">`:`<div style="height:44px;border-bottom:1px solid #1a3a6b;margin:0 16px"></div>`}<div style="font-size:9px;font-weight:700;color:#1a3a6b;letter-spacing:0.1em">${label}</div>${nombre?`<div style="font-size:9px;color:#374151;margin-top:1px">${nombre}</div>`:''}${fecha?`<div style="font-size:8px;color:#6b7280">${fecha}</div>`:''}</div>`;
+
+  const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>${fc.nombreDoc}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body>
+  <div style="max-width:960px;margin:10px auto;border:1.5px solid #1a3a6b">
+    <div style="border-bottom:2px solid #1a3a6b;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div style="width:72px;height:56px;border:1.5px dashed #9ca3af;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#f9f9f7"><span style="font-size:8px;color:#9ca3af;text-align:center">Logo<br>cliente</span></div>
+      <div style="text-align:center;flex:1"><div style="font-size:17px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div><div style="font-size:9px;color:#1a3a6b;font-weight:500">NIT. 901.080.234-7</div><div style="font-size:9px;color:#1a3a6b;font-weight:500">Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div></div>
+      <div style="border:2px solid #1a3a6b;padding:4px 10px;text-align:center;min-width:90px"><div style="font-size:9px;font-weight:700;color:#1a3a6b;letter-spacing:0.1em">CORTE</div><div style="font-size:13px;font-weight:900;color:#e85d26;font-family:monospace">${fc.nombreDoc}</div></div>
+    </div>
+    <div style="display:flex;border-bottom:1px solid #1a3a6b">
+      <div style="border-right:1px solid #1a3a6b;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="font-size:8px;font-weight:700;color:#1a3a6b">FECHA</span><span style="font-size:12px;font-weight:700;color:#1a3a6b;font-family:monospace">${fc.date||todayFmt()}</span></div>
+      <div style="flex:1;padding:6px 14px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b;white-space:nowrap">Operario de Corte:</span><span style="font-size:13px;font-weight:700;color:#1a3a6b">${fc.operarioNombre||''}</span></div>
+      <div style="padding:6px 14px;display:flex;align-items:center;gap:8px;border-left:1px solid #1a3a6b"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Lote:</span><span style="font-size:11px;font-weight:700;color:#e85d26;font-family:monospace">${fc.lotCode||''}</span></div>
+    </div>
+    <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">REFERENCIAS — PRENDAS</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#e8eef7;font-size:9px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:${s.includes('/')?'32':'28'}px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#dce6f5;font-size:9px;font-weight:700;color:#1a3a6b;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
+    <div style="background:#e85d26;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">ESPECIFICACIONES DE TELA</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="border:1px solid #1a3a6b;padding:3px 8px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:left;width:200px">Tipo de tela</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:center;width:160px">Metros usados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#dc2626;text-align:center;width:160px">Metros desechados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:8px;font-weight:700;color:#92400e;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${espRows}</tbody></table>
+    <div style="border-top:1px solid #1a3a6b;padding:7px 12px;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b;white-space:nowrap">NOTA:</span><span style="flex:1;border-bottom:1px solid #1a3a6b;min-height:18px;display:inline-block;font-size:11px;padding:0 4px">${fc.nota||''}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #1a3a6b">
+      ${firmaBox('Entregado por (Corte)',fc.firmaCorte,fc.operarioNombre,fc.fechaCorte)}
+      <div style="border-left:1px solid #1a3a6b">${firmaBox('Recibido por (Admin ELROHI)',fc.firmaAdmin,fc.nombreAdmin,fc.fechaAdmin)}</div>
+    </div>
+  </div>
+  <script>window.onload=()=>window.print();</script></body></html>`;
+
+  const win = window.open('','_blank'); win.document.write(html); win.document.close();
+}
+
+// ─── PANTALLA PRINCIPAL ───────────────────────────────────────────────────────
 export default function CorteElrohiScreen() {
-  const { profile }         = useAuth();
-  const { lots }            = useData();
+  const { profile }           = useAuth();
+  const { lots }              = useData();
+  const [vista, setVista]     = useState('lista');  // 'lista' | 'nuevo' | 'historial'
   const [filterStatus, setFilter] = useState('all');
-  const [showNew, setShowNew]     = useState(false);
-  const [saving,  setSaving]      = useState(false);
+  const [formatosCorte, setFormatosCorte] = useState([]);
+  const [saving, setSaving]   = useState(false);
+
+  useEffect(() => {
+    const unsub = listenCol('formatosCorte', setFormatosCorte, orderBy('createdAt','desc'));
+    return unsub;
+  }, []);
 
   const isAdmin = ['gerente','admin_elrohi'].includes(profile?.role);
   const isCorte = profile?.role === 'corte' || isAdmin;
@@ -33,273 +120,516 @@ export default function CorteElrohiScreen() {
   const corteLots = lots.filter(l =>
     ['nuevo','recibido_alistamiento','en_corte','entregar_admin'].includes(l.status)
   );
-
-  const filtered = filterStatus === 'all'
-    ? corteLots
-    : corteLots.filter(l => l.status === filterStatus);
-
-  // ─── FORM ────────────────────────────────────────────────────────────────
-  const [form, setForm] = useState({
-    descripcion: '', deadline: '', priority: 'normal', notes: '',
-    items: [{ gtId: 'gt1', sizes: {}, total: 0 }],
-  });
-
-  const addItem = () =>
-    setForm(f => ({ ...f, items: [...f.items, { gtId: 'gt1', sizes: {}, total: 0 }] }));
-
-  const removeItem = (i) =>
-    setForm(f => ({ ...f, items: f.items.filter((_, idx) => idx !== i) }));
-
-  const updItem = (i, k, v) =>
-    setForm(f => {
-      const items = [...f.items];
-      items[i] = { ...items[i], [k]: v };
-      if (k === 'sizes') items[i].total = Object.values(v).reduce((a, b) => a + (+b || 0), 0);
-      return { ...f, items };
-    });
-
-  const createLot = async () => {
-    if (!form.deadline) { toast.error('Selecciona la fecha límite'); return; }
-    const total = form.items.reduce((a, i) => a + i.total, 0);
-    if (total === 0) { toast.error('Agrega al menos una prenda con cantidades'); return; }
-    setSaving(true);
-    try {
-      const code = genLotCode();
-      await addDocument('lots', {
-        code,
-        descripcion:  form.descripcion || code,
-        clientId:     null,
-        status:       'nuevo',
-        priority:     form.priority,
-        satId:        null,
-        created:      today(),
-        deadline:     form.deadline,
-        garments:     form.items.filter(i => i.total > 0),
-        totalPieces:  total,
-        lotOps:       [],
-        opsElrohi:    [],
-        notes:        form.notes,
-        novelties:    [],
-        bodega:       null,
-        createdBy:    profile?.id,
-      });
-      toast.success(`✅ Lote ${code} creado`);
-      setShowNew(false);
-      setForm({ descripcion: '', deadline: '', priority: 'normal', notes: '', items: [{ gtId: 'gt1', sizes: {}, total: 0 }] });
-    } catch(e) { console.error(e); toast.error('Error al crear'); }
-    finally { setSaving(false); }
-  };
+  const filtered = filterStatus === 'all' ? corteLots : corteLots.filter(l => l.status === filterStatus);
+  const pendientes = formatosCorte.filter(f => f.status === 'enviado' && isAdmin);
 
   const advance = async (lot, nextStatus) => {
-    try {
-      await updateDocument('lots', lot.id, { status: nextStatus });
-      toast.success('Estado actualizado');
-    } catch { toast.error('Error'); }
+    try { await updateDocument('lots', lot.id, { status: nextStatus }); toast.success('Estado actualizado'); }
+    catch { toast.error('Error'); }
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-sm font-bold text-gray-900">Área de Corte</h1>
-        {isCorte && (
-          <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-white rounded-lg text-xs font-bold"
-            style={{ background: ACCENT }}>
-            + Nuevo Lote de Corte
-          </button>
-        )}
+        <div className="flex gap-2">
+          {isCorte && (
+            <button onClick={() => setVista('nuevo')}
+              className="px-4 py-2 text-white rounded-lg text-xs font-bold"
+              style={{ background: ACCENT }}>
+              + Nuevo Corte
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-1.5 mb-4 flex-wrap">
-        {[['all', `Todos (${corteLots.length})`], ...CORTE_STATES.map(s => [s.key, `${s.label} (${corteLots.filter(l => l.status === s.key).length})`])].map(([k, l]) => (
-          <button key={k} onClick={() => setFilter(k)}
-            className="px-2.5 py-1 rounded-full text-[10px] font-medium border-none cursor-pointer transition-colors"
-            style={{ background: filterStatus === k ? ACCENT : '#f1f0ec', color: filterStatus === k ? '#fff' : '#6b7280' }}>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+        {[
+          ['lista',    'Cola de Corte'],
+          ['nuevo',    'Nuevo Formato'],
+          ['pendientes', `Pendientes${pendientes.length > 0 ? ` (${pendientes.length})` : ''}`],
+          ['historial','Historial'],
+        ].map(([k,l]) => (
+          <button key={k} onClick={() => setVista(k)}
+            className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+            style={{ background: vista===k?'#fff':'transparent', color: vista===k?'#111827':'#6b7280', fontWeight: vista===k?700:400, boxShadow: vista===k?'0 1px 3px rgba(0,0,0,0.08)':'none' }}>
             {l}
           </button>
         ))}
       </div>
 
-      {filtered.length === 0 && (
-        <EmptyState emoji="✂" title="Sin lotes en esta etapa" sub={isCorte ? "Crea un nuevo lote usando el botón de arriba" : "No hay lotes pendientes"} />
-      )}
-
-      <div className="space-y-3">
-        {filtered.map(lot => {
-          const st   = CORTE_STATES.find(s => s.key === lot.status);
-          const pr   = LOT_PRIORITY[lot.priority];
-          const next = nextStateMap[lot.status];
-          const canAct = isAdmin || (profile?.role === 'corte');
-
-          return (
-            <div key={lot.id} className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
-                    <span className={`${st?.cls} px-2 py-0.5 rounded-full text-[9px] font-semibold`}>{st?.label}</span>
-                    <span className={`${pr.cls} px-2 py-0.5 rounded-full text-[9px] font-semibold`}>{pr.label}</span>
-                  </div>
-
-                  {/* Prendas */}
-                  <div className="flex flex-wrap gap-1.5 mb-1">
-                    {lot.garments?.map((g, i) => (
-                      <span key={i} className="text-[10px] bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full text-gray-700">
-                        {gLabel(g.gtId)}: <strong>{g.total?.toLocaleString('es-CO')}</strong> pzs
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className="text-[10px] text-gray-400">
-                    Total: <strong>{lot.totalPieces?.toLocaleString('es-CO')} piezas</strong>
-                    {' · Vence: '}{lot.deadline}
-                    {lot.descripcion && lot.descripcion !== lot.code && ` · ${lot.descripcion}`}
-                  </p>
-                  {lot.notes && <p className="text-[10px] text-gray-400 italic mt-0.5">"{lot.notes}"</p>}
-                </div>
-
-                {/* Botón de acción */}
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  {canAct && next && (
-                    <button onClick={() => advance(lot, next.next)}
-                      className="text-white text-[10px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap"
-                      style={{ background: next.color }}>
-                      {next.label}
-                    </button>
-                  )}
-                  {isAdmin && lot.status === 'entregar_admin' && (
-                    <button onClick={() => advance(lot, 'asignacion')}
-                      className="text-white text-[10px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap"
-                      style={{ background: '#7c3aed' }}>
-                      ✓ Recibido → Asignar Satélite
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Tabla de tallas */}
-              <div className="mt-3 overflow-x-auto">
-                <table className="text-[10px] border-collapse w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-2 py-1 text-left text-gray-500 font-medium border border-gray-200">Prenda</th>
-                      {SIZES.map(s => (
-                        <th key={s} className="px-2 py-1 text-center text-gray-500 font-medium border border-gray-200 w-10">{s}</th>
-                      ))}
-                      <th className="px-2 py-1 text-center text-gray-700 font-bold border border-gray-200">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lot.garments?.map((g, i) => (
-                      <tr key={i} className="border-b border-gray-100">
-                        <td className="px-2 py-1.5 font-medium text-gray-700 border border-gray-200 whitespace-nowrap">
-                          {gLabel(g.gtId)}
-                        </td>
-                        {SIZES.map(s => (
-                          <td key={s} className="px-2 py-1.5 text-center border border-gray-200"
-                            style={{ color: (g.sizes?.[s] || 0) > 0 ? '#1a3a6b' : '#d1d5db', fontWeight: (g.sizes?.[s] || 0) > 0 ? 600 : 400 }}>
-                            {g.sizes?.[s] || '—'}
-                          </td>
-                        ))}
-                        <td className="px-2 py-1.5 text-center font-bold text-gray-800 border border-gray-200 bg-gray-50">
-                          {g.total?.toLocaleString('es-CO')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* ── MODAL NUEVO LOTE ── */}
-      {showNew && (
-        <Modal title="Nuevo Lote de Corte" onClose={() => setShowNew(false)} wide>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-xs text-blue-700">
-            💡 El lote no se asigna a un cliente. La producción va a bodega y desde ahí se despacha cuando llegue un pedido.
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Descripción (opcional)</label>
-              <input value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
-                placeholder="Ej: Pantalones drill azul referencia 01"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha límite *</label>
-              <input type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
-            </div>
-          </div>
-
-          <Select label="Prioridad" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-            <option value="normal">Normal</option>
-            <option value="urgente">Urgente</option>
-            <option value="critico">Crítico</option>
-          </Select>
-
-          {/* Prendas */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">Prendas a cortar</label>
-              <button onClick={addItem} className="text-xs text-blue-600 font-medium hover:text-blue-800">
-                + Agregar prenda
+      {/* ── LISTA / COLA ── */}
+      {vista === 'lista' && (
+        <>
+          <div className="flex gap-1.5 mb-4 flex-wrap">
+            {[['all',`Todos (${corteLots.length})`], ...CORTE_STATES.map(s=>[s.key,`${s.label} (${corteLots.filter(l=>l.status===s.key).length})`])].map(([k,l])=>(
+              <button key={k} onClick={() => setFilter(k)}
+                className="px-2.5 py-1 rounded-full text-[10px] font-medium border-none cursor-pointer"
+                style={{ background: filterStatus===k?ACCENT:'#f1f0ec', color: filterStatus===k?'#fff':'#6b7280' }}>
+                {l}
               </button>
-            </div>
-            {form.items.map((item, i) => (
-              <div key={i} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <select value={item.gtId} onChange={e => updItem(i, 'gtId', e.target.value)}
-                    className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none">
-                    {GARMENT_TYPES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  </select>
-                  {form.items.length > 1 && (
-                    <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 text-xs font-bold px-1">✕</button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {SIZES.map(sz => (
-                    <div key={sz} className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-500 w-5 text-center">{sz}</span>
-                      <input type="number" min={0} value={item.sizes[sz] || ''}
-                        onChange={e => updItem(i, 'sizes', { ...item.sizes, [sz]: +e.target.value || 0 })}
-                        className="w-14 border border-gray-200 rounded px-1.5 py-1 text-xs text-center focus:outline-none focus:border-blue-300" />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-400 mt-2">
-                  Total: <strong>{item.total?.toLocaleString('es-CO')} piezas</strong>
-                </p>
-              </div>
             ))}
           </div>
 
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Notas</label>
-            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="Observaciones del lote..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none h-14 focus:outline-none focus:border-blue-400" />
-          </div>
+          {filtered.length === 0 && <EmptyState emoji="✂" title="Sin lotes" sub="Crea un nuevo corte usando el botón de arriba" />}
 
-          {/* Resumen */}
-          <div className="bg-blue-50 rounded-xl p-3 mb-4 text-xs">
-            <span className="text-blue-700 font-semibold">Total del lote: </span>
-            <span className="text-blue-900 font-black text-sm">
-              {form.items.reduce((a, i) => a + i.total, 0).toLocaleString('es-CO')} piezas
-            </span>
-          </div>
+          <div className="space-y-3">
+            {filtered.map(lot => {
+              const st   = CORTE_STATES.find(s => s.key === lot.status);
+              const pr   = LOT_PRIORITY[lot.priority];
+              const next = nextStateMap[lot.status];
+              return (
+                <div key={lot.id} className="bg-white rounded-xl border border-gray-100 p-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
+                        <span className={`${st?.cls} px-2 py-0.5 rounded-full text-[9px] font-semibold`}>{st?.label}</span>
+                        <span className={`${pr.cls} px-2 py-0.5 rounded-full text-[9px] font-semibold`}>{pr.label}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-1">
+                        {lot.garments?.map((g,i) => (
+                          <span key={i} className="text-[10px] bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full text-gray-700">
+                            {gLabel(g.gtId)}: <strong>{g.total?.toLocaleString('es-CO')}</strong>
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-gray-400">
+                        {lot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {lot.deadline}
+                        {lot.descripcion && lot.descripcion !== lot.code && ` · ${lot.descripcion}`}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {isCorte && next && (
+                        <button onClick={() => advance(lot, next.next)}
+                          className="text-white text-[10px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap"
+                          style={{ background: next.color }}>
+                          {next.label}
+                        </button>
+                      )}
+                      {isAdmin && lot.status === 'entregar_admin' && (
+                        <button onClick={() => advance(lot, 'asignacion')}
+                          className="text-white text-[10px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap"
+                          style={{ background: '#7c3aed' }}>
+                          ✓ Recibido → Asignar Satélite
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-          <div className="flex gap-2 justify-end">
-            <Btn variant="secondary" onClick={() => setShowNew(false)}>Cancelar</Btn>
-            <Btn onClick={createLot} disabled={saving}>{saving ? 'Guardando...' : 'Crear Lote de Corte'}</Btn>
+                  {/* Tabla tallas */}
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="text-[10px] border-collapse w-full">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="px-2 py-1 text-left text-gray-500 font-medium border border-gray-200">Prenda</th>
+                          {SIZES.map(s => <th key={s} className="px-2 py-1 text-center text-gray-500 font-medium border border-gray-200 w-10">{s}</th>)}
+                          <th className="px-2 py-1 text-center text-gray-700 font-bold border border-gray-200">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lot.garments?.map((g,i) => (
+                          <tr key={i}>
+                            <td className="px-2 py-1.5 font-medium text-gray-700 border border-gray-200 whitespace-nowrap">{gLabel(g.gtId)}</td>
+                            {SIZES.map(s => (
+                              <td key={s} className="px-2 py-1.5 text-center border border-gray-200"
+                                style={{ color:(g.sizes?.[s]||0)>0?'#1a3a6b':'#d1d5db', fontWeight:(g.sizes?.[s]||0)>0?600:400 }}>
+                                {g.sizes?.[s]||'—'}
+                              </td>
+                            ))}
+                            <td className="px-2 py-1.5 text-center font-bold text-gray-800 border border-gray-200 bg-gray-50">{g.total?.toLocaleString('es-CO')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </Modal>
+        </>
       )}
+
+      {/* ── NUEVO FORMATO ── */}
+      {vista === 'nuevo' && (
+        <NuevoFormato profile={profile} lots={lots} onBack={() => setVista('lista')} />
+      )}
+
+      {/* ── PENDIENTES FIRMA ADMIN ── */}
+      {vista === 'pendientes' && (
+        <PendientesFormato formatosCorte={pendientes} profile={profile} />
+      )}
+
+      {/* ── HISTORIAL ── */}
+      {vista === 'historial' && (
+        <HistorialFormatos formatosCorte={formatosCorte} />
+      )}
+    </div>
+  );
+}
+
+// ─── NUEVO FORMATO (formulario completo estilo remisión) ──────────────────────
+function NuevoFormato({ profile, lots, onBack }) {
+  const [numCorte,  setNumCorte]  = useState('18');
+  const [priority,  setPriority]  = useState('normal');
+  const [deadline,  setDeadline]  = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [items,     setItems]     = useState([{ gtId: 'gt1', sizes: {}, total: 0 }]);
+  const [cortesRef, setCortesRef] = useState(Array(5).fill(''));
+  const [comentRef, setComentRef] = useState(Array(5).fill(''));
+  const [specs,     setSpecs]     = useState(Array(4).fill(null).map(()=>({tipoTela:'',metrosUsados:'',metrosDesechados:'',comentario:''})));
+  const [nota,      setNota]      = useState('');
+  const [firmaImg,  setFirmaImg]  = useState(null);
+  const [nombre,    setNombre]    = useState(profile?.name||'');
+  const [saving,    setSaving]    = useState(false);
+
+  const nombreDoc = genDocName(numCorte);
+
+  const addItem    = () => setItems(f => [...f, { gtId: 'gt1', sizes: {}, total: 0 }]);
+  const removeItem = (i) => setItems(f => f.filter((_,idx) => idx !== i));
+  const updItem    = (i, k, v) => setItems(f => {
+    const its = [...f]; its[i] = {...its[i],[k]:v};
+    if (k==='sizes') its[i].total = Object.values(v).reduce((a,b)=>a+(+b||0),0);
+    return its;
+  });
+  const updSpec = (i, k, v) => setSpecs(f => { const n=[...f]; n[i]={...n[i],[k]:v}; return n; });
+
+  const enviar = async () => {
+    if (!deadline) { toast.error('Selecciona la fecha límite'); return; }
+    const total = items.reduce((a,i) => a+i.total, 0);
+    if (total === 0) { toast.error('Agrega prendas con cantidades'); return; }
+    if (!firmaImg)   { toast.error('Dibuja y guarda tu firma'); return; }
+    if (!nombre)     { toast.error('Escribe tu nombre'); return; }
+    setSaving(true);
+    try {
+      const code = genLotCode();
+      const lotData = {
+        code, descripcion: descripcion || code, clientId: null,
+        status: 'nuevo', priority, satId: null,
+        created: today(), deadline,
+        garments: items.filter(i => i.total > 0),
+        totalPieces: total, lotOps: [], opsElrohi: [],
+        notes: nota, novelties: [], bodega: null, createdBy: profile?.id,
+      };
+
+      // Crear el lote
+      const lotId = await addDocument('lots', lotData);
+
+      // Crear el formato formal
+      await addDocument('formatosCorte', {
+        nombreDoc, numCorte: String(numCorte).padStart(4,'0'),
+        lotId, lotCode: code, status: 'enviado',
+        date: today(),
+        lot: { ...lotData, id: lotId },
+        cortesRef, comentariosRef: comentRef,
+        especificaciones: specs, nota,
+        operarioNombre: nombre,
+        firmaCorte: firmaImg, fechaCorte: nowStr(),
+        firmaAdmin: null, nombreAdmin: null, fechaAdmin: null,
+      });
+
+      toast.success(`✅ Lote ${code} creado y formato enviado al Admin`);
+      onBack();
+    } catch(e) { console.error(e); toast.error('Error al crear'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} className="text-xs text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1">← Volver a cola</button>
+
+      {/* HEADER FORMATO */}
+      <div className="bg-white rounded-xl border-2 border-blue-200 overflow-hidden mb-4">
+        {/* Header tipo remisión */}
+        <div className="flex items-center gap-3 p-4 border-b border-blue-100" style={{ background: '#f0f4ff' }}>
+          <div className="w-16 h-12 border border-dashed border-gray-300 rounded flex items-center justify-center bg-white flex-shrink-0">
+            <span className="text-[9px] text-gray-400 text-center">Logo<br/>cliente</span>
+          </div>
+          <div className="flex-1 text-center">
+            <p className="text-base font-black" style={{ color: '#1a3a6b' }}>Dotaciones <span style={{ color: ACCENT }}>EL ROHI</span></p>
+            <p className="text-[10px]" style={{ color: '#1a3a6b' }}>NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</p>
+          </div>
+          <div className="border-2 border-blue-800 px-3 py-2 text-center flex-shrink-0 rounded">
+            <p className="text-[9px] font-bold" style={{ color: '#1a3a6b' }}>CORTE</p>
+            <p className="text-sm font-black font-mono" style={{ color: ACCENT }}>
+              <input value={numCorte} onChange={e => setNumCorte(e.target.value)}
+                className="w-16 text-center bg-transparent border-none outline-none font-black font-mono text-sm"
+                style={{ color: ACCENT }} />
+            </p>
+          </div>
+        </div>
+
+        {/* Meta */}
+        <div className="flex border-b border-blue-100 bg-white">
+          <div className="px-3 py-2 border-r border-blue-100 flex items-center gap-2 flex-shrink-0">
+            <span className="text-[9px] font-bold text-blue-800 uppercase tracking-wider">Fecha</span>
+            <span className="text-xs font-bold font-mono text-blue-900">{todayFmt()}</span>
+          </div>
+          <div className="flex-1 px-4 py-2 flex items-center gap-2">
+            <span className="text-[10px] font-bold text-blue-800 whitespace-nowrap">Operario:</span>
+            <span className="text-sm font-bold text-blue-900">{profile?.name}</span>
+          </div>
+          <div className="px-3 py-2 border-l border-blue-100 flex items-center gap-2">
+            <span className="text-[10px] font-bold text-blue-800">Prioridad:</span>
+            <select value={priority} onChange={e => setPriority(e.target.value)}
+              className="text-xs border border-gray-200 rounded px-2 py-0.5 bg-white focus:outline-none">
+              <option value="normal">Normal</option>
+              <option value="urgente">Urgente</option>
+              <option value="critico">Crítico</option>
+            </select>
+            <span className="text-[10px] font-bold text-blue-800 ml-2">Fecha límite:</span>
+            <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
+              className="text-xs border border-gray-200 rounded px-2 py-0.5 focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      {/* REFERENCIAS */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
+        <div className="px-4 py-2 flex items-center justify-between" style={{ background: '#1a3a6b' }}>
+          <p className="text-[10px] font-bold text-white uppercase tracking-wider">Referencias — Prendas</p>
+          <button onClick={addItem} className="text-[9px] text-blue-200 hover:text-white font-medium">+ Agregar prenda</button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[10px]" style={{ tableLayout:'fixed' }}>
+            <thead>
+              <tr style={{ background:'#e8eef7' }}>
+                <th className="border border-blue-200 px-2 py-1.5 text-left text-[9px] text-blue-800 font-bold" style={{width:'110px'}}>Referencia</th>
+                {SIZES_REF.map(s => <th key={s} className="border border-blue-200 px-1 py-1.5 text-[8px] text-blue-700 font-bold" style={{width:'30px'}}>{s}</th>)}
+                <th className="border border-blue-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{background:'#dce6f5',color:'#1a3a6b',width:'46px'}}>TOTAL</th>
+                <th className="border border-blue-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{background:'#fff0e0',color:ACCENT,width:'50px'}}>#CORTE</th>
+                <th className="border border-blue-200 px-1 py-1.5 text-[8px] font-bold italic text-center" style={{background:'#f5f0fa',color:'#4a3a6b',width:'90px'}}>Comentarios</th>
+                <th className="border border-blue-200 px-1 py-1.5 text-[9px] text-center" style={{width:'30px'}}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item,i) => (
+                <tr key={i}>
+                  <td className="border border-blue-100 px-1 py-1">
+                    <select value={item.gtId} onChange={e => updItem(i,'gtId',e.target.value)}
+                      className="w-full text-[10px] font-medium border-none bg-transparent outline-none" style={{color:'#1a3a6b'}}>
+                      {GARMENT_TYPES.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </td>
+                  {SIZES_REF.map(s => {
+                    const key = s.split('/')[0];
+                    return (
+                      <td key={s} className="border border-blue-100 px-0 py-1">
+                        <input type="number" min={0} value={item.sizes[key]||''}
+                          onChange={e => updItem(i,'sizes',{...item.sizes,[key]:+e.target.value||0})}
+                          className="w-full text-center text-[10px] font-semibold border-none outline-none bg-transparent"
+                          style={{color:'#1a3a6b'}} />
+                      </td>
+                    );
+                  })}
+                  <td className="border border-blue-100 px-1 py-1 text-center font-bold" style={{background:'#f0f4f8',color:'#1a3a6b'}}>{item.total?.toLocaleString('es-CO')}</td>
+                  <td className="border border-blue-100 px-1 py-1" style={{background:'#fff8f0'}}>
+                    <input type="text" value={cortesRef[i]||''} onChange={e=>{const n=[...cortesRef];n[i]=e.target.value;setCortesRef(n);}} placeholder="590"
+                      className="w-full text-center text-[10px] font-bold border-none outline-none bg-transparent" style={{color:ACCENT}} />
+                  </td>
+                  <td className="border border-blue-100 px-1 py-1" style={{background:'#fdfbff'}}>
+                    <input type="text" value={comentRef[i]||''} onChange={e=>{const n=[...comentRef];n[i]=e.target.value;setComentRef(n);}} placeholder="Obs..."
+                      className="w-full text-[9px] italic border-none outline-none bg-transparent" style={{color:'#4a3a6b'}} />
+                  </td>
+                  <td className="border border-blue-100 px-1 py-1 text-center">
+                    {items.length > 1 && (
+                      <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 text-[10px] font-bold">✕</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ESPECIFICACIONES DE TELA */}
+      <div className="bg-white rounded-xl border border-orange-100 overflow-hidden mb-4">
+        <div className="px-4 py-2" style={{ background: ACCENT }}>
+          <p className="text-[10px] font-bold text-white uppercase tracking-wider">Especificaciones de Tela</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[10px]" style={{ tableLayout:'fixed' }}>
+            <thead>
+              <tr style={{ background:'#fef3e2' }}>
+                <th className="border border-orange-200 px-2 py-1.5 text-left text-[9px] font-bold" style={{color:'#92400e',width:'200px'}}>Tipo de tela</th>
+                <th className="border border-orange-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{color:'#92400e',width:'130px'}}>Metros usados</th>
+                <th className="border border-orange-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{color:'#dc2626',width:'130px'}}>Metros desechados</th>
+                <th className="border border-orange-200 px-1 py-1.5 text-[8px] font-bold italic text-center" style={{color:'#92400e',background:'#fdfbff'}}>Comentarios</th>
+              </tr>
+            </thead>
+            <tbody>
+              {specs.map((sp,i) => (
+                <tr key={i}>
+                  <td className="border border-orange-100 px-1 py-1">
+                    <input value={sp.tipoTela} onChange={e=>updSpec(i,'tipoTela',e.target.value)} placeholder={`Tipo de tela ${i+1}`}
+                      className="w-full text-[10px] font-medium border-none outline-none bg-transparent" style={{color:'#1a3a6b'}} />
+                  </td>
+                  <td className="border border-orange-100 px-1 py-1">
+                    <input value={sp.metrosUsados} onChange={e=>updSpec(i,'metrosUsados',e.target.value)} placeholder="0.00"
+                      className="w-full text-center text-[10px] font-semibold border-none outline-none bg-transparent" style={{color:'#1a3a6b'}} />
+                  </td>
+                  <td className="border border-orange-100 px-1 py-1">
+                    <input value={sp.metrosDesechados} onChange={e=>updSpec(i,'metrosDesechados',e.target.value)} placeholder="0.00"
+                      className="w-full text-center text-[10px] font-semibold border-none outline-none bg-transparent" style={{color:'#dc2626'}} />
+                  </td>
+                  <td className="border border-orange-100 px-1 py-1" style={{background:'#fdfbff'}}>
+                    <input value={sp.comentario} onChange={e=>updSpec(i,'comentario',e.target.value)} placeholder="Obs..."
+                      className="w-full text-[9px] italic border-none outline-none bg-transparent" style={{color:'#4a3a6b'}} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* NOTA */}
+      <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4 flex items-center gap-2">
+        <span className="text-xs font-bold text-gray-700 whitespace-nowrap">NOTA:</span>
+        <input value={nota} onChange={e => setNota(e.target.value)} placeholder="Observaciones generales del corte..."
+          className="flex-1 border-b border-gray-300 text-sm py-0.5 focus:outline-none bg-transparent" />
+      </div>
+
+      {/* DESCRIPCIÓN */}
+      <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4 flex items-center gap-2">
+        <span className="text-xs font-bold text-gray-700 whitespace-nowrap">Descripción del lote:</span>
+        <input value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Ej: Pantalones drill azul referencia 01 (opcional)"
+          className="flex-1 border-b border-gray-300 text-sm py-0.5 focus:outline-none bg-transparent" />
+      </div>
+
+      {/* FIRMA */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Firma — Entregado por Corte</p>
+          {firmaImg && <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded-full">✓ Firma guardada</span>}
+        </div>
+        <FirmaCanvas label="Dibuja tu firma:" onSave={setFirmaImg} />
+        <div className="mt-2">
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Tu nombre completo</label>
+          <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Escribe tu nombre..."
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400" />
+        </div>
+      </div>
+
+      <button onClick={enviar} disabled={saving}
+        className="w-full py-3 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+        style={{ background: '#1a3a6b' }}>
+        {saving ? 'Creando lote y guardando formato...' : '📤 Crear Lote y Enviar Formato al Admin'}
+      </button>
+    </div>
+  );
+}
+
+// ─── PENDIENTES FIRMA ADMIN ────────────────────────────────────────────────────
+function PendientesFormato({ formatosCorte, profile }) {
+  const [sel, setSel]         = useState(null);
+  const [firmaImg, setFirmaImg] = useState(null);
+  const [nombre, setNombre]   = useState(profile?.name||'');
+  const [saving, setSaving]   = useState(false);
+
+  const firmar = async (fc) => {
+    if (!firmaImg){ toast.error('Dibuja y guarda tu firma'); return; }
+    if (!nombre)  { toast.error('Escribe tu nombre'); return; }
+    setSaving(true);
+    try {
+      await updateDocument('formatosCorte', fc.id, {
+        status: 'completado', firmaAdmin: firmaImg, nombreAdmin: nombre, fechaAdmin: nowStr(),
+      });
+      // Advance lot to asignacion
+      if (fc.lotId) await updateDocument('lots', fc.lotId, { status: 'asignacion' });
+      toast.success('✅ Formato firmado — lote listo para asignar a satélite');
+      setSel(null); setFirmaImg(null);
+    } catch { toast.error('Error al firmar'); }
+    finally { setSaving(false); }
+  };
+
+  if (formatosCorte.length === 0)
+    return <EmptyState emoji="✅" title="Sin formatos pendientes" sub="No hay formatos de corte por firmar" />;
+
+  return (
+    <div className="space-y-3">
+      {formatosCorte.map(fc => (
+        <div key={fc.id} className="bg-white rounded-xl border-2 border-amber-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-mono text-xs font-bold" style={{color:'#1a3a6b'}}>{fc.nombreDoc}</span>
+                <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">⏳ Pendiente tu firma</span>
+              </div>
+              <p className="text-xs text-gray-500">Lote: {fc.lotCode} · {fc.date} · Operario: {fc.operarioNombre}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => printFormato(fc)} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🖨️ Ver</button>
+              <button onClick={() => setSel(sel?.id===fc.id?null:fc)}
+                className="text-xs px-3 py-1.5 rounded-lg text-white font-bold" style={{background:'#1a3a6b'}}>
+                ✍ Firmar
+              </button>
+            </div>
+          </div>
+          {sel?.id === fc.id && (
+            <div className="border-t border-amber-100 pt-3 mt-2">
+              <FirmaCanvas label="Tu firma de recepción (Admin ELROHI):" onSave={setFirmaImg} />
+              <div className="mt-2 mb-3">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Tu nombre completo</label>
+                <input value={nombre} onChange={e => setNombre(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
+              </div>
+              <button onClick={() => firmar(fc)} disabled={saving}
+                className="w-full py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                style={{background:'#15803d'}}>
+                {saving ? 'Guardando...' : '✅ Confirmar recepción y firmar'}
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── HISTORIAL ────────────────────────────────────────────────────────────────
+function HistorialFormatos({ formatosCorte }) {
+  if (formatosCorte.length === 0)
+    return <EmptyState emoji="📋" title="Sin formatos registrados" sub="Los formatos enviados aparecerán aquí" />;
+
+  return (
+    <div className="space-y-2">
+      {formatosCorte.map(fc => (
+        <div key={fc.id} className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-mono text-xs font-bold" style={{color:'#1a3a6b'}}>{fc.nombreDoc}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${fc.status==='completado'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}>
+                  {fc.status==='completado'?'✓ Firmado':'⏳ Pendiente admin'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Lote: {fc.lotCode} · {fc.date} · {fc.operarioNombre}</p>
+            </div>
+            <button onClick={() => printFormato(fc)} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🖨️ Imprimir</button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className="text-xs">
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Entregado por (Corte)</p>
+              {fc.firmaCorte && <img src={fc.firmaCorte} alt="firma" style={{height:28,borderBottom:'1px solid #e5e7eb',marginBottom:2,maxWidth:'100%'}} />}
+              <p className="font-medium text-gray-700">{fc.operarioNombre||'—'}</p>
+              <p className="text-[9px] text-gray-400">{fc.fechaCorte||'—'}</p>
+            </div>
+            <div className="text-xs">
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Recibido por (Admin)</p>
+              {fc.firmaAdmin ? (
+                <>
+                  <img src={fc.firmaAdmin} alt="firma" style={{height:28,borderBottom:'1px solid #e5e7eb',marginBottom:2,maxWidth:'100%'}} />
+                  <p className="font-medium text-gray-700">{fc.nombreAdmin}</p>
+                  <p className="text-[9px] text-gray-400">{fc.fechaAdmin}</p>
+                </>
+              ) : <p className="text-gray-300 italic text-[10px]">Pendiente</p>}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
