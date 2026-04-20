@@ -14,7 +14,8 @@ import TallerScreen     from './screens/Taller';
 import AsignarOpsScreen from './screens/AsignarOps';
 import { MisOpsScreen, QuincenaScreen } from './screens/Operario';
 import { TintoriaScreen, PespunteScreen, BodegaScreen } from './screens/Produccion';
-import { SatelitesScreen, InventarioScreen, ConfigScreen } from './screens/Otros';
+import { InventarioScreen, ConfigScreen } from './screens/Otros';
+import GestionSatelitesScreen from './screens/GestionSatelites';
 import { NominaScreen } from './screens/Nomina';
 
 import { seedDatabase } from './data/seed';
@@ -75,7 +76,7 @@ const ALL_ROUTES = [
   { path: '/dashboard',   component: Dashboard,        roles: ['gerente', 'admin_elrohi', 'nomina', 'despachos'] },
   { path: '/pedidos',     component: PedidosScreen,    roles: ['gerente', 'admin_elrohi', 'despachos'] },
   { path: '/lotes',       component: LotesScreen,      roles: ['gerente', 'admin_elrohi', 'operario'] },
-  { path: '/satelites',   component: SatelitesScreen,  roles: ['gerente', 'admin_elrohi'] },
+  { path: '/satelites',   component: GestionSatelitesScreen, roles: ['gerente', 'admin_elrohi'] },
   { path: '/inventario',  component: InventarioScreen, roles: ['gerente', 'admin_elrohi', 'despachos', 'bodega'] },
   { path: '/nomina',      component: NominaScreen,     roles: ['gerente', 'nomina'] },
   { path: '/config',      component: ConfigScreen,     roles: ['gerente', 'admin_elrohi'] },
