@@ -8,6 +8,7 @@ const NAV_ICONS = {
   LayoutDashboard: '⊞', ShoppingBag: '📋', Package: '📦', Factory: '🏭',
   Box: '🗄', DollarSign: '💵', Settings: '⚙', Scissors: '✂',
   Zap: '⚡', Wrench: '🔧', Palette: '🎨', Layers: '🪡', FileText: '📄',
+  Warehouse: '📦', Users: '👥',
 };
 
 export default function Layout({ children }) {
