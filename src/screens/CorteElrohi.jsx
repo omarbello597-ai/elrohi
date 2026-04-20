@@ -8,6 +8,7 @@ import { EmptyState } from '../components/ui';
 import { gLabel, genLotCode, today, fmtM } from '../utils';
 import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
+import { getNextCorteNum } from '../services/consecutivos';
 
 const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','34','36','38','40','42','44'];
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -268,7 +269,15 @@ export default function CorteElrohiScreen() {
 
 // ─── NUEVO FORMATO ─────────────────────────────────────────────────────────────
 function NuevoFormato({ profile, onBack }) {
-  const [numCorte,  setNumCorte]  = useState('18');
+  const [numCorte, setNumCorte] = useState('');
+  const [loadingNum, setLoadingNum] = useState(true);
+  useEffect(() => {
+    getNextCorteNum().then(num => {
+    setNumCorte(num);
+    setLoadingNum(false);
+  });
+}, []);
+  
   const [priority,  setPriority]  = useState('normal');
   const [deadline,  setDeadline]  = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -348,8 +357,11 @@ function NuevoFormato({ profile, onBack }) {
           </div>
           <div className="border-2 border-blue-800 px-2 py-1.5 text-center flex-shrink-0 rounded">
             <p className="text-[9px] font-bold" style={{color:'#1a3a6b'}}>CORTE</p>
-            <input value={numCorte} onChange={e=>setNumCorte(e.target.value)}
-              className="w-16 text-center bg-transparent border-none outline-none font-black font-mono text-xs" style={{color:ACCENT}} />
+            <input value={loadingNum ? '...' : numCorte} onChange={e=>setNumCorte(e.target.value)}
+              disabled={loadingNum}
+              className={`w-16 text-center bg-transparent border-none outline-none font-black font-mono text-xs ${loadingNum ? 'opacity-40' : ''}`}
+              style={{color:ACCENT}} />
+            
           </div>
         </div>
         <div className="flex border-b border-blue-100 bg-white flex-wrap">
