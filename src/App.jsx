@@ -19,6 +19,7 @@ import { NominaScreen } from './screens/Nomina';
 
 import { seedDatabase } from './data/seed';
 import { NAV_CONFIG }   from './constants';
+import { RemisionScreen } from './screens/Remision';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
