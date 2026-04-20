@@ -63,8 +63,8 @@ export const PESPUNTE_OPS = [
 
 // ─── NAVIGATION PER ROLE ─────────────────────────────────────────────────────
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard', '/pedidos', '/lotes', '/satelites', '/inventario', '/nomina', '/config'],
-  admin_elrohi:   ['/dashboard', '/pedidos', '/lotes', '/corte', '/satelites', '/inventario'],
+  gerente:        ['/dashboard', '/pedidos', '/lotes', '/remision', '/satelites', '/inventario', '/nomina', '/config'],
+  admin_elrohi:   ['/dashboard', '/pedidos', '/lotes', '/corte', '/remision', '/satelites', '/inventario'],
   nomina:         ['/nomina'],
   despachos:      ['/pedidos', '/inventario'],
   corte:          ['/corte','/remision'],
