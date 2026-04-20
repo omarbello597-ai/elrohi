@@ -7,7 +7,7 @@ import { NAV_CONFIG, NAV_ITEMS, ROLE_META, ACCENT } from '../constants';
 const NAV_ICONS = {
   LayoutDashboard: '⊞', ShoppingBag: '📋', Package: '📦', Factory: '🏭',
   Box: '🗄', DollarSign: '💵', Settings: '⚙', Scissors: '✂',
-  Zap: '⚡', Wrench: '🔧', Palette: '🎨', Layers: '🪡',
+  Zap: '⚡', Wrench: '🔧', Palette: '🎨', Layers: '🪡', FileText: '📄',
 };
 
 export default function Layout({ children }) {
