@@ -24,13 +24,13 @@ const CORTE_STATES = [
   { key: 'nuevo',                 label: 'Nuevo',                 cls: 'bg-gray-100 text-gray-600'     },
   { key: 'recibido_alistamiento', label: 'Recibido Alistamiento', cls: 'bg-blue-100 text-blue-700'     },
   { key: 'en_corte',              label: 'En Corte',              cls: 'bg-orange-100 text-orange-800' },
-  { key: 'entregar_admin',        label: 'Entregar a Admin',      cls: 'bg-amber-100 text-amber-800'   },
+  { key: 'entregar_admin',        label: 'Entregado a Admin para flujo',      cls: 'bg-amber-100 text-amber-800'   },
 ];
 
 const nextStateMap = {
   nuevo:                 { next: 'recibido_alistamiento', label: '📥 Recibir para alistamiento', color: '#2563eb' },
   recibido_alistamiento: { next: 'en_corte',              label: '✂ Iniciar corte',              color: '#ea580c' },
-  en_corte:              { next: 'entregar_admin',        label: '📦 Entregar al Admin',          color: '#d97706' },
+  en_corte:              { next: 'entregar_admin',        label: '📦 Entregado a Admin para flujo',          color: '#d97706' },
 };
 
 // ─── CANVAS DE FIRMA ─────────────────────────────────────────────────────────
