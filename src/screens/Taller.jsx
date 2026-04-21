@@ -290,8 +290,9 @@ export default function TallerScreen() {
 
       {/* ── OPERARIOS ── */}
       {tab==='operarios' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {myWorkers.length===0 && (
+  <OperariosTab satId={profile?.satId} workers={myWorkers} />
+)}
+      {myWorkers.length===0 && (
             <div className="col-span-2 flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-4xl mb-3">👥</p>
               <p className="font-medium text-gray-700">Sin operarios registrados</p>
@@ -491,4 +492,111 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
       </div>
     </div>
   );
+function OperariosTab({ satId, workers }) {
+  const [showNew, setShowNew] = useState(false);
+  const [form, setForm] = useState({ nombre:'', apellido:'', cedula:'', telefono:'' });
+  const [saving, setSaving] = useState(false);
+
+  const crear = async () => {
+    if (!form.nombre || !form.cedula) { toast.error('Nombre y cédula son obligatorios'); return; }
+    setSaving(true);
+    try {
+      await addDocument('users', {
+        nombre:   form.nombre.trim(),
+        apellido: form.apellido.trim(),
+        name:     `${form.nombre.trim()} ${form.apellido.trim()}`,
+        initials: `${form.nombre.trim()[0]}${form.apellido.trim()[0]}`.toUpperCase(),
+        cedula:   form.cedula.trim(),
+        telefono: form.telefono.trim(),
+        role:     'operario',
+        satId,
+        active:   true,
+      });
+      toast.success('✅ Operario creado');
+      setShowNew(false);
+      setForm({ nombre:'', apellido:'', cedula:'', telefono:'' });
+    } catch { toast.error('Error'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mis Operarios</p>
+        <button onClick={() => setShowNew(!showNew)}
+          className="text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+          style={{ background: ACCENT }}>
+          + Nuevo Operario
+        </button>
+      </div>
+
+      {showNew && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+          <p className="text-xs font-bold text-gray-700 mb-3">Nuevo operario para este taller</p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre *</label>
+              <input value={form.nombre} onChange={e=>setForm(f=>({...f,nombre:e.target.value}))}
+                placeholder="Carlos"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Apellido</label>
+              <input value={form.apellido} onChange={e=>setForm(f=>({...f,apellido:e.target.value}))}
+                placeholder="Rodríguez"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Cédula *</label>
+              <input value={form.cedula} onChange={e=>setForm(f=>({...f,cedula:e.target.value}))}
+                placeholder="1.234.567.890"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label>
+              <input value={form.telefono} onChange={e=>setForm(f=>({...f,telefono:e.target.value}))}
+                placeholder="310-555-0000"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => setShowNew(false)}
+              className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+            <button onClick={crear} disabled={saving}
+              className="flex-1 py-2 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+              style={{ background: ACCENT }}>
+              {saving ? 'Guardando...' : 'Crear Operario'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {workers.length === 0 && !showNew && (
+          <div className="col-span-2 flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-gray-100">
+            <p className="text-4xl mb-3">👥</p>
+            <p className="font-medium text-gray-700">Sin operarios registrados</p>
+            <p className="text-sm text-gray-400 mt-1">Usa el botón de arriba para agregar</p>
+          </div>
+        )}
+        {workers.map(w => (
+          <div key={w.id} className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-700 flex-shrink-0">
+                {w.initials||w.name?.slice(0,2).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">{w.name}</p>
+                {w.cedula && <p className="text-[10px] text-gray-400 font-mono">CC: {w.cedula}</p>}
+                {w.telefono && <p className="text-[10px] text-gray-400">{w.telefono}</p>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
+      }
