@@ -26,6 +26,8 @@ import BodegasScreen        from './screens/Bodegas';
 import OperacionesElrohiScreen from './screens/OperacionesElrohi';
 import GestionOperariosScreen  from './screens/GestionOperarios';
 import RecepcionTintoreria from './screens/RecepcionTintoreria';
+import BodegaCalidadScreen from './screens/BodegaCalidad';
+import BodegaLonasScreen from './screens/BodegaLonas';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
@@ -94,6 +96,8 @@ const ALL_ROUTES = [
   { path: '/gestion-operarios',   component: GestionOperariosScreen,  roles: ['gerente','admin_elrohi'] },
   { path: '/recepcion-tinto',     component: RecepcionTintoreria, roles: ['gerente','admin_elrohi'] },
   { path: '/taller',              component: TallerScreen, roles: ['admin_satelite'] },
+  { path: '/bodega-calidad', component: BodegaCalidadScreen, roles: ['gerente','admin_elrohi','bodega_op','terminacion'] },
+  { path: '/bodega-lonas',   component: BodegaLonasScreen,   roles: ['gerente','admin_elrohi','bodega_op','despachos'] },
 ];
 
 // ─── HOME REDIRECT ────────────────────────────────────────────────────────────
