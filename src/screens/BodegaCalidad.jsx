@@ -20,8 +20,10 @@ export default function BodegaCalidadScreen() {
 
   // Operarios internos ELROHI disponibles
   const operariosElrohi = users.filter(u =>
-    ['corte','bodega_op','terminacion','operario'].includes(u.role) && u.active !== false && !u.satId
-  );
+  !u.satId && 
+  u.active !== false &&
+  !['admin_elrohi','gerente','nomina','admin_satelite','tintoreria'].includes(u.role)
+);
 
   const asignarOperario = async (lot, opId, operarioId) => {
     const worker = users.find(u => u.id === operarioId);
