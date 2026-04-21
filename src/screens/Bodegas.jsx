@@ -189,7 +189,7 @@ export default function BodegasScreen() {
             const lotes = lotesEnBodega(b.id);
             const totalPzas = lotes.reduce((a,l)=>a+(l.totalPieces||0),0);
             return (
-              <button key={b.id} onClick={()=>setVista(b.id)}
+              <button key={b.id} onClick={()=> b.id === 'bodega_lonas' ? window.location.href='/bodega-lonas' : setVista(b.id)}
                 className="bg-white rounded-xl border-2 p-5 text-left hover:shadow-md transition-all"
                 style={{borderColor:`${b.color}40`}}>
                 <div className="flex items-start justify-between mb-3">
