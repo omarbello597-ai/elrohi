@@ -190,7 +190,7 @@ export default function TallerScreen() {
                       return (
                         <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs" style={{background:op.status==='completado'?'#f0fdf4':op.status==='en_proceso'?'#eff6ff':'#f9f9f7'}}>
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':op.status==='en_proceso'?'bg-blue-500':'bg-gray-300'}`} />
-                          <span className="flex-1 font-medium text-gray-700">{op.opId}</span>
+                          <span className="flex-1 font-medium text-gray-700">{op.name || op.opId}</span>
                           {worker && <span className="text-gray-500">{worker.name}</span>}
                           {tiempoOp && <span className="text-[10px] text-gray-400 italic">⏱ {tiempoOp}</span>}
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':op.status==='en_proceso'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}`}>
