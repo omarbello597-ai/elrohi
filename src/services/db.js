@@ -153,11 +153,12 @@ export const updateLotOp = async (lotId, loId, changes) => {
   if (!snap.exists()) return;
   const lot = { id: snap.id, ...snap.data() };
   const lotOps = lot.lotOps.map((lo) => (lo.id === loId ? { ...lo, ...changes } : lo));
-  // Si todas las ops están completadas → avanzar a tintorería automáticamente
+  // Si todas las ops están completadas → pasar a listo para remisión a tintorería
+  // El admin satélite hace el conteo, ambas firmas y genera la remisión
   const allDone = lotOps.every((lo) => lo.status === 'completado');
   await updateDocument('lots', lotId, {
     lotOps,
-    ...(allDone ? { status: 'tintoreria' } : {}),
+    ...(allDone ? { status: 'listo_remision_tintoreria' } : {}),
   });
 };
 
