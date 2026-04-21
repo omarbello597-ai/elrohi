@@ -223,7 +223,7 @@ export default function GestionOperariosScreen() {
               )}
 
               {/* Acciones */}
-              <div className="flex gap-2 mt-3">
+              <div className="flex gap-2 mt-3 flex-wrap">
                 <button onClick={() => openEdit(u)}
                   className="flex-1 text-[10px] py-1.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200">
                   ✏️ Editar
@@ -235,6 +235,16 @@ export default function GestionOperariosScreen() {
                 <button onClick={() => toggleActive(u)}
                   className={`text-[10px] py-1.5 px-2 rounded-lg font-medium ${u.active!==false?'bg-green-50 text-green-700 hover:bg-green-100':'bg-red-50 text-red-600 hover:bg-red-100'}`}>
                   {u.active!==false?'Activo':'Inactivo'}
+                </button>
+                <button onClick={async () => {
+                  if (!window.confirm(`¿Eliminar a ${u.name} del flujo? Sus operaciones históricas quedarán guardadas.`)) return;
+                  try {
+                    await updateDocument('users', u.id, { active: false, eliminado: true, eliminadoAt: new Date().toISOString() });
+                    toast.success(`${u.name} eliminado del flujo`);
+                  } catch { toast.error('Error al eliminar'); }
+                }}
+                  className="text-[10px] py-1.5 px-2 rounded-lg font-medium bg-red-100 text-red-700 hover:bg-red-200">
+                  🗑 Eliminar
                 </button>
               </div>
             </div>
