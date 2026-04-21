@@ -1,20 +1,20 @@
-// ─── CONSECUTIVOS — Números automáticos de documentos ────────────────────────
-import { doc, getDoc, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
-// Obtiene y auto-incrementa el consecutivo de corte
 export const getNextCorteNum = async () => {
   const ref = doc(db, 'consecutivos', 'corte');
-  let num = 1;
-  await runTransaction(db, async (tx) => {
-    const snap = await tx.get(ref);
-    num = snap.exists() ? (snap.data().current || 0) + 1 : 1;
-    tx.set(ref, { current: num, updatedAt: new Date().toISOString() });
-  });
-  return String(num).padStart(4, '0');
+  try {
+    const snap = await getDoc(ref);
+    const current = snap.exists() ? (snap.data().current || 0) : 0;
+    const next = current + 1;
+    await setDoc(ref, { current: next }, { merge: true });
+    return String(next).padStart(4, '0');
+  } catch(e) {
+    console.error('Error consecutivo:', e);
+    return String(Date.now()).slice(-4);
+  }
 };
 
-// Utilidad para formatear duración en ms → texto legible
 export const fmtDuration = (ms) => {
   if (!ms || ms < 0) return null;
   const totalMin = Math.floor(ms / 60000);
@@ -25,7 +25,6 @@ export const fmtDuration = (ms) => {
   return `${totalMin}m`;
 };
 
-// Duración desde una fecha ISO hasta ahora
 export const durationSince = (isoString) => {
   if (!isoString) return null;
   return fmtDuration(Date.now() - new Date(isoString).getTime());
