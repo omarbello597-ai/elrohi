@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { updateDocument } from '../services/db';
 import { advanceLotStatus } from '../services/db_timeline';
 import { gLabel, fmtM } from '../utils';
 import { GARMENT_TYPES, SIZES, ACCENT } from '../constants';
@@ -318,39 +319,92 @@ export default function BodegasScreen() {
                 </div>
                 {ops.length > 0 && (
                   <>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
                       <div className="h-full rounded-full" style={{width:`${prog}%`,background:prog===100?'#10b981':'#7c3aed'}} />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-3">
                       {ops.map((op,i)=>{
                         const worker = users.find(u=>u.id===op.wId);
                         return (
-                          <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs"
-                            style={{background:op.status==='completado'?'#f0fdf4':'#f9f9f7'}}>
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':'bg-orange-400'}`} />
-                            <span className="flex-1 font-medium text-gray-700">{op.name}</span>
-                            <span className="text-[10px] text-gray-400">{op.qty?.toLocaleString('es-CO')} pzas</span>
-                            {worker && <span className="text-[10px] font-medium text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">{worker.name}</span>}
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'}`}>
-                              {op.status==='completado'?'✓ Listo':'En proceso'}
-                            </span>
+                          <div key={i} className="border rounded-xl p-3"
+                            style={{borderColor:op.status==='completado'?'#86efac':'#fed7aa',background:op.status==='completado'?'#f0fdf4':'#fff8f4'}}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':'bg-orange-400'}`} />
+                              <span className="flex-1 text-xs font-bold text-gray-800">{op.name}</span>
+                              <span className="text-[10px] text-gray-400">{op.qty?.toLocaleString('es-CO')} pzas</span>
+                              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'}`}>
+                                {op.status==='completado'?'✓ Listo':'Pendiente'}
+                              </span>
+                            </div>
+                            {/* Selector de operario — visible siempre para admin si no está completado */}
+                            {op.status !== 'completado' && (
+                              <div className="bg-white rounded-lg border border-orange-200 p-2 mt-1">
+                                <p className="text-[10px] font-bold text-orange-700 mb-1.5">
+                                  👤 {op.wId ? `Asignado: ${worker?.name||'Cargando...'}` : '⚠ Sin operario — asigna uno:'}
+                                </p>
+                                <select
+                                  value={op.wId||''}
+                                  onChange={async(e)=>{
+                                    const operarioId = e.target.value;
+                                    if (!operarioId) return;
+                                    const w = users.find(u=>u.id===operarioId);
+                                    const opsElrohi = (lot.opsElrohi||[]).map(o=>
+                                      o.id===op.id ? {...o,wId:operarioId,workerName:w?.name||''} : o
+                                    );
+                                    try {
+                                      await updateDocument('lots', lot.id, {opsElrohi});
+                                      toast.success(`✅ Asignado a ${w?.name}`);
+                                    } catch { toast.error('Error'); }
+                                  }}
+                                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-orange-400">
+                                  <option value="">— Seleccionar operario —</option>
+                                  {users.filter(u=>u.active!==false).map(w=>(
+                                    <option key={w.id} value={w.id}>{w.name} ({w.role})</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                            {op.status !== 'completado' && op.wId && (
+                              <button
+                                onClick={async()=>{
+                                  const opsElrohi = (lot.opsElrohi||[]).map(o=>
+                                    o.id===op.id ? {...o,status:'completado',doneAt:new Date().toISOString()} : o
+                                  );
+                                  const allDone = opsElrohi.every(o=>o.status==='completado');
+                                  try {
+                                    if (allDone) {
+                                      await advanceLotStatus(lot.id,'en_revision_calidad',profile?.id,profile?.name,{opsElrohi});
+                                      toast.success('✅ Operaciones completas — en revisión de calidad');
+                                    } else {
+                                      await updateDocument('lots',lot.id,{opsElrohi});
+                                      toast.success('Operación completada');
+                                    }
+                                  } catch { toast.error('Error'); }
+                                }}
+                                className="mt-2 w-full py-1.5 text-white text-xs font-bold rounded-lg"
+                                style={{background:'#15803d'}}>
+                                ✓ Marcar como completada
+                              </button>
+                            )}
                           </div>
                         );
                       })}
                     </div>
                   </>
                 )}
-                {isAdmin && lot.status==='en_revision_calidad' && (
-                  <button onClick={async()=>{
-                    try {
-                      await advanceLotStatus(lot.id,'bodega_lonas',profile?.id,profile?.name);
-                      toast.success('✅ Aprobado — pasa a Bodega Lonas');
-                    } catch { toast.error('Error'); }
-                  }}
-                    className="mt-3 w-full py-2 text-white rounded-lg text-xs font-bold"
-                    style={{background:'#15803d'}}>
-                    ✓ Aprobar calidad → Bodega Lonas
-                  </button>
+                {lot.status==='en_revision_calidad' && (
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={async()=>{
+                      try {
+                        await advanceLotStatus(lot.id,'bodega_lonas',profile?.id,profile?.name);
+                        toast.success('✅ Aprobado — pasa a Bodega Lonas');
+                      } catch { toast.error('Error'); }
+                    }}
+                      className="flex-1 py-2 text-white rounded-lg text-xs font-bold"
+                      style={{background:'#15803d'}}>
+                      ✓ Aprobar calidad → Bodega Lonas
+                    </button>
+                  </div>
                 )}
               </div>
             );
