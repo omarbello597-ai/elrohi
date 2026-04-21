@@ -67,8 +67,8 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto','/listas-precios'],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto','/listas-precios'],
   nomina:         ['/nomina'],
   despachos:      ['/bodegas', '/pedidos', '/quincena'],
   corte:          ['/corte','/operaciones-elrohi','/quincena'],
@@ -101,6 +101,7 @@ export const NAV_ITEMS = {
   '/recepcion-tinto':    { label: 'Recibir Tintorería', icon: 'Layers' },
   '/bodega-calidad':     { label: 'Bodega Control Calidad', icon: 'CheckSquare' },
   '/bodega-lonas':       { label: 'Bodega Lonas',           icon: 'Package' },
+  '/listas-precios': { label: 'Listas de Precios', icon: 'DollarSign' },
 };
 
 export const ACCENT = '#e85d26';
