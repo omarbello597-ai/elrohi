@@ -75,7 +75,7 @@ function FirmaCanvas({ onSave, label }) {
       <div style={{ border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
         <canvas
           ref={canvasRef}
-          width={600} height={120}
+          width={1200} height={120}
           style={{ display: 'block', touchAction: 'none', cursor: 'crosshair', width: '100%' }}
           onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
           onTouchStart={start} onTouchMove={draw} onTouchEnd={stop}
