@@ -26,7 +26,7 @@ function FirmaCanvas({ onSave, label }) {
     <div style={{marginBottom:10}}>
       <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:5}}>{label}</p>
       <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
-        <canvas ref={ref} width={340} height={70} style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
+        <canvas ref={ref} width={600} height={120} style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
           onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
           onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
       </div>
