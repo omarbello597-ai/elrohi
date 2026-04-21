@@ -5,7 +5,7 @@ import { addDocument, updateDocument, listenCol } from '../services/db';
 import { advanceLotStatus } from '../services/db_timeline';
 import { GARMENT_TYPES, SIZES, LOT_PRIORITY, ACCENT } from '../constants';
 import { EmptyState } from '../components/ui';
-import { gLabel, genLotCode, today, fmtM } from '../utils';
+import { gLabel, today, fmtM } from '../utils';
 import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { getNextCorteNum } from '../services/consecutivos';
