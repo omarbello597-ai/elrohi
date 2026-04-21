@@ -75,7 +75,10 @@ export default function LotesScreen() {
   const [filter,   setFilter]   = useState('all');
   const [selLotId, setSelLotId] = useState(null);
 
-  const filtered = filter === 'all' ? lots : lots.filter(l => l.status === filter);
+  // Excluir lotes en Bodega Lonas y Despachados del panel de producción
+  const STATUS_PRODUCCION = Object.keys(LOT_STATUS).filter(s => !['bodega_lonas','despachado'].includes(s));
+  const lotsEnProd = lots.filter(l => STATUS_PRODUCCION.includes(l.status));
+  const filtered = filter === 'all' ? lotsEnProd : lots.filter(l => l.status === filter);
   const detail   = lots.find(l => l.id === selLotId);
 
   if (detail) {
@@ -95,7 +98,7 @@ export default function LotesScreen() {
         <button onClick={() => setFilter('all')}
           className="px-2.5 py-1 rounded-full text-[10px] font-medium border-none cursor-pointer"
           style={{ background: filter==='all'?ACCENT:'#f1f0ec', color: filter==='all'?'#fff':'#6b7280' }}>
-          Todos ({lots.length})
+          Todos ({lotsEnProd.length})
         </button>
         {Object.entries(LOT_STATUS).map(([key, val]) => {
           const count = lots.filter(l => l.status === key).length;
