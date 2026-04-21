@@ -26,7 +26,6 @@ import BodegasScreen        from './screens/Bodegas';
 import OperacionesElrohiScreen from './screens/OperacionesElrohi';
 import GestionOperariosScreen  from './screens/GestionOperarios';
 import RecepcionTintoreria from './screens/RecepcionTintoreria';
-import TallerScreen from './screens/Taller';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
