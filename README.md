@@ -172,3 +172,4 @@ src/
 └── data/
     └── seed.js          # Datos iniciales de simulación
 ```
+<!-- deploy -->
