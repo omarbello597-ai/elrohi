@@ -67,16 +67,16 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto', '/bodega-calidad', '/bodega-lonas'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto', '/bodega-calidad', '/bodega-lonas'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto'],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto'],
   nomina:         ['/nomina'],
-  despachos:    ['/bodega-lonas', '/pedidos', '/quincena'],
+  despachos:      ['/bodegas', '/pedidos', '/quincena'],
   corte:          ['/corte','/operaciones-elrohi','/quincena'],
   admin_satelite: ['/taller','/asignar-ops'],
   operario:       ['/mis-ops','/quincena'],
   tintoreria:     ['/tintoreria'],
   terminacion:    ['/operaciones-elrohi','/quincena'],
-  bodega_op:    ['/bodega-calidad', '/bodega-lonas', '/quincena'],
+  bodega_op:      ['/bodegas', '/quincena'],
 
 };
 
