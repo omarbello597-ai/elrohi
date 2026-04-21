@@ -12,7 +12,6 @@ const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','3
 const nowStr   = () => new Date().toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const todayFmt = () => { const h=new Date(); return `${String(h.getDate()).padStart(2,'0')}/${String(h.getMonth()+1).padStart(2,'0')}/${String(h.getFullYear()).slice(-2)}`; };
 
-// ─── CANVAS FIRMA ─────────────────────────────────────────────────────────────
 function FirmaCanvas({ onSave, label }) {
   const ref = useRef(null); const drawing = useRef(false); const [has, setHas] = useState(false);
   const gp  = (e,c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; };
@@ -25,8 +24,7 @@ function FirmaCanvas({ onSave, label }) {
     <div style={{marginBottom:8}}>
       <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:4}}>{label}</p>
       <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
-        <canvas ref={ref} width={1200} height={160}
-          style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
+        <canvas ref={ref} width={1200} height={160} style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
           onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
           onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
       </div>
@@ -38,7 +36,6 @@ function FirmaCanvas({ onSave, label }) {
   );
 }
 
-// ─── IMPRIMIR REMISIÓN → TINTORERÍA ───────────────────────────────────────────
 function printRemisionTinto(lot, satName, remData) {
   const conteoRows = remData.conteo.map(g => {
     const faltante = g.original - g.enviado;
@@ -46,112 +43,62 @@ function printRemisionTinto(lot, satName, remData) {
       <td style="border:1px solid #1a3a6b;padding:4px 8px;font-size:11px;font-weight:500;color:#1a3a6b">${gLabel(g.gtId)}</td>
       <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:#1a3a6b;background:#dce6f5">${g.original}</td>
       <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4">${g.enviado}</td>
-      <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;${faltante>0?'color:#dc2626;background:#fef2f2':'color:#15803d;background:#f0fdf4'}">${faltante>0?`-${faltante}`:'✓ Completo'}</td>
+      <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;${faltante>0?'color:#dc2626;background:#fef2f2':'color:#15803d;background:#f0fdf4'}">${faltante>0?`-${faltante}`:'✓'}</td>
       <td style="border:1px solid #1a3a6b;padding:4px 8px;font-size:10px;color:#374151;font-style:italic">${g.novedad||''}</td>
     </tr>`;
   }).join('');
-
-  const firmaBox = (label,img,nombre,fecha) => `
-    <div style="padding:10px 16px;text-align:center">
-      ${img?`<img src="${img}" style="height:70px;display:block;margin:0 auto 5px;border-bottom:1.5px solid #1a3a6b;width:85%;object-fit:contain">`:`<div style="height:70px;border-bottom:1.5px solid #1a3a6b;margin:0 20px"></div>`}
-      <div style="font-size:10px;font-weight:700;color:#1a3a6b;letter-spacing:0.08em;margin-top:5px">${label}</div>
-      ${nombre?`<div style="font-size:11px;color:#374151;margin-top:2px;font-weight:500">${nombre}</div>`:''}
-      ${fecha?`<div style="font-size:9px;color:#6b7280;margin-top:1px">${fecha}</div>`:''}
-    </div>`;
-
+  const firmaBox = (label,img,nombre,fecha) => `<div style="padding:10px 16px;text-align:center">${img?`<img src="${img}" style="height:70px;display:block;margin:0 auto 5px;border-bottom:1.5px solid #1a3a6b;width:85%;object-fit:contain">`:`<div style="height:70px;border-bottom:1.5px solid #1a3a6b;margin:0 20px"></div>`}<div style="font-size:10px;font-weight:700;color:#1a3a6b;letter-spacing:0.08em;margin-top:5px">${label}</div>${nombre?`<div style="font-size:11px;color:#374151;margin-top:2px;font-weight:500">${nombre}</div>`:''}${fecha?`<div style="font-size:9px;color:#6b7280;margin-top:1px">${fecha}</div>`:''}</div>`;
   const hayFaltantes = remData.conteo.some(g => g.enviado < g.original);
-
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
-  <title>Remisión Tintorería — ${lot.code}</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style>
-  </head><body>
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Remisión Tintorería</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style></head><body>
   <div style="max-width:900px;margin:12px auto;border:1.5px solid #1a3a6b">
-    <!-- HEADER -->
     <div style="border-bottom:2px solid #1a3a6b;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div style="width:76px;height:58px;border:1.5px dashed #9ca3af;border-radius:4px;display:flex;align-items:center;justify-content:center;background:#f9f9f7">
-        <span style="font-size:8px;color:#9ca3af;text-align:center;line-height:1.3">Logo<br>cliente</span>
-      </div>
-      <div style="text-align:center;flex:1">
-        <div style="font-size:18px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div>
-        <div style="font-size:9px;color:#1a3a6b;margin-top:2px">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div>
-      </div>
-      <div style="border:2px solid #4338ca;padding:5px 12px;text-align:center;border-radius:4px">
-        <div style="font-size:9px;font-weight:700;color:#4338ca;letter-spacing:0.1em">REMISIÓN</div>
-        <div style="font-size:11px;font-weight:900;color:#4338ca">TINTORERÍA</div>
-      </div>
+      <div style="width:76px;height:58px;border:1.5px dashed #9ca3af;border-radius:4px;display:flex;align-items:center;justify-content:center"><span style="font-size:8px;color:#9ca3af;text-align:center">Logo<br>cliente</span></div>
+      <div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div><div style="font-size:9px;color:#1a3a6b;margin-top:2px">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div></div>
+      <div style="border:2px solid #4338ca;padding:5px 12px;text-align:center;border-radius:4px"><div style="font-size:9px;font-weight:700;color:#4338ca;letter-spacing:0.1em">REMISIÓN</div><div style="font-size:11px;font-weight:900;color:#4338ca">TINTORERÍA</div></div>
     </div>
-    <!-- META -->
     <div style="display:flex;border-bottom:1px solid #1a3a6b;flex-wrap:wrap">
-      <div style="border-right:1px solid #1a3a6b;padding:5px 12px;display:flex;align-items:center;gap:8px">
-        <span style="font-size:9px;font-weight:700;color:#1a3a6b;text-transform:uppercase">Fecha</span>
-        <span style="font-size:12px;font-weight:700;color:#1a3a6b;font-family:monospace">${todayFmt()}</span>
-      </div>
-      <div style="flex:1;padding:5px 14px;display:flex;align-items:center;gap:8px">
-        <span style="font-size:10px;font-weight:700;color:#1a3a6b">Satélite:</span>
-        <span style="font-size:14px;font-weight:700;color:#1a3a6b">${satName}</span>
-      </div>
-      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px">
-        <span style="font-size:10px;font-weight:700;color:#1a3a6b">Corte N°:</span>
-        <span style="font-size:13px;font-weight:900;color:#e85d26;font-family:monospace">${lot.code}</span>
-      </div>
-      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px">
-        <span style="font-size:10px;font-weight:700;color:#1a3a6b">Recibe en Tintorería:</span>
-        <span style="font-size:12px;font-weight:700;color:#4338ca">${remData.nombreTinto||'_______________'}</span>
-      </div>
+      <div style="border-right:1px solid #1a3a6b;padding:5px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;color:#1a3a6b">FECHA</span><span style="font-size:12px;font-weight:700;color:#1a3a6b;font-family:monospace">${todayFmt()}</span></div>
+      <div style="flex:1;padding:5px 14px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Satélite:</span><span style="font-size:14px;font-weight:700;color:#1a3a6b">${satName}</span></div>
+      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Corte N°:</span><span style="font-size:13px;font-weight:900;color:#e85d26;font-family:monospace">${lot.code}</span></div>
+      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Recibe:</span><span style="font-size:12px;font-weight:700;color:#4338ca">${remData.nombreTinto||'___'}</span></div>
     </div>
-    <!-- CONTEO -->
     <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">CONTEO DE PRENDAS</div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#e8eef7">
-        <th style="border:1px solid #1a3a6b;padding:5px 10px;font-size:10px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>
-        <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#1a3a6b;text-align:center;background:#dce6f5">Piezas originales</th>
-        <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#15803d;text-align:center;background:#f0fdf4">Piezas enviadas</th>
-        <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#374151;text-align:center">Diferencia</th>
-        <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:9px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic;background:#f5f0fa">Novedad</th>
-      </tr></thead>
-      <tbody>${conteoRows}</tbody>
-    </table>
-    ${hayFaltantes ? `
-    <div style="border-top:1px solid #1a3a6b;padding:8px 14px;background:#fef9c3">
-      <span style="font-size:10px;font-weight:700;color:#92400e">⚠ ENVÍO PARCIAL — Hay prendas faltantes registradas como novedad</span>
-    </div>` : `
-    <div style="border-top:1px solid #1a3a6b;padding:8px 14px;background:#f0fdf4">
-      <span style="font-size:10px;font-weight:700;color:#15803d">✓ ENVÍO COMPLETO — Todas las prendas entregadas correctamente</span>
-    </div>`}
-    ${remData.nota ? `<div style="border-top:1px solid #1a3a6b;padding:7px 14px;display:flex;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="font-size:11px;color:#374151">${remData.nota}</span></div>` : ''}
-    <!-- FIRMAS SIMULTÁNEAS -->
-    <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">FIRMAS DE ENTREGA Y RECEPCIÓN</div>
+    <table style="width:100%;border-collapse:collapse"><thead><tr style="background:#e8eef7">
+      <th style="border:1px solid #1a3a6b;padding:5px 10px;font-size:10px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>
+      <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#1a3a6b;text-align:center;background:#dce6f5">Originales</th>
+      <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#15803d;text-align:center;background:#f0fdf4">Enviadas</th>
+      <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#374151;text-align:center">Diferencia</th>
+      <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:9px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic;background:#f5f0fa">Novedad</th>
+    </tr></thead><tbody>${conteoRows}</tbody></table>
+    <div style="border-top:1px solid #1a3a6b;padding:8px 14px;background:${hayFaltantes?'#fef9c3':'#f0fdf4'}">
+      <span style="font-size:10px;font-weight:700;color:${hayFaltantes?'#92400e':'#15803d'}">${hayFaltantes?'⚠ ENVÍO PARCIAL — Hay prendas faltantes':'✓ ENVÍO COMPLETO'}</span>
+    </div>
+    ${remData.nota?`<div style="border-top:1px solid #1a3a6b;padding:7px 14px;display:flex;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="font-size:11px">${remData.nota}</span></div>`:''}
+    <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">FIRMAS</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;border-top:0.5px solid #1a3a6b">
-      ${firmaBox('Entregado por — Admin Satélite', remData.firmaSat, remData.nombreSat, remData.fechaSat)}
-      <div style="border-left:1px solid #1a3a6b">
-      ${firmaBox('Recibido por — Tintorería', remData.firmaTinto, remData.nombreTinto, remData.fechaTinto)}
-      </div>
+      ${firmaBox('Entregado por — Admin Satélite',remData.firmaSat,remData.nombreSat,remData.fechaSat)}
+      <div style="border-left:1px solid #1a3a6b">${firmaBox('Recibido por — Tintorería',remData.firmaTinto,remData.nombreTinto,remData.fechaTinto)}</div>
     </div>
   </div>
-  <script>window.onload=()=>window.print();</script>
-  </body></html>`;
-
+  <script>window.onload=()=>window.print();</script></body></html>`;
   const win=window.open('','_blank'); win.document.write(html); win.document.close();
 }
 
-// ─── TALLER SCREEN ─────────────────────────────────────────────────────────────
 export default function TallerScreen() {
   const { profile }             = useAuth();
   const { lots, users, satellites } = useData();
   const [tab, setTab]           = useState('activos');
   const [showRemision, setShowRemision] = useState(null);
 
-  const sat        = satellites.find(s => s.id === profile?.satId);
-  const myWorkers  = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
-  const myLots     = lots.filter(l => l.satId === profile?.satId);
-
-  const activeLots  = myLots.filter(l => l.status === 'costura');
-  const listoLots   = myLots.filter(l => l.status === 'listo_remision_tintoreria');
+  const sat       = satellites.find(s => s.id === profile?.satId);
+  const myWorkers = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
+  const myLots    = lots.filter(l => l.satId === profile?.satId);
+  const activeLots = myLots.filter(l => l.status === 'costura');
+  const listoLots  = myLots.filter(l => l.status === 'listo_remision_tintoreria');
   const totalPieces = activeLots.reduce((a,l) => a+(l.totalPieces||0), 0);
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center gap-3 mb-4 bg-white rounded-xl border border-gray-100 p-4">
         <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-2xl flex-shrink-0">🏭</div>
         <div className="flex-1">
@@ -165,7 +112,6 @@ export default function TallerScreen() {
         )}
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-4">
         {[['Lotes activos',activeLots.length,'#2563eb'],['Operarios',myWorkers.length,'#7c3aed'],['Piezas en curso',totalPieces.toLocaleString('es-CO'),'#059669']].map(([l,v,c])=>(
           <div key={l} className="bg-white rounded-xl border border-gray-100 p-3 text-center">
@@ -175,13 +121,8 @@ export default function TallerScreen() {
         ))}
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
-        {[
-          ['activos',`En Costura (${activeLots.length})`],
-          ['listos',`Listos p/Tintorería (${listoLots.length})`],
-          ['operarios','Operarios'],
-        ].map(([k,l])=>(
+        {[['activos',`En Costura (${activeLots.length})`],['listos',`Listos p/Tintorería (${listoLots.length})`],['operarios','Operarios']].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
             style={{background:tab===k?'#fff':'transparent',color:tab===k?'#111827':'#6b7280',fontWeight:tab===k?700:400,boxShadow:tab===k?'0 1px 3px rgba(0,0,0,0.08)':'none'}}>
@@ -190,7 +131,6 @@ export default function TallerScreen() {
         ))}
       </div>
 
-      {/* ── EN COSTURA ── */}
       {tab==='activos' && (
         <div className="space-y-3">
           {activeLots.length===0 && (
@@ -206,7 +146,6 @@ export default function TallerScreen() {
             const prog = ops.length > 0 ? Math.round(done/ops.length*100) : 0;
             const inTimeline = lot.timeline?.find(t=>t.status==='costura'&&!t.salió);
             const tiempoSat  = inTimeline ? durationSince(inTimeline.entró) : null;
-
             return (
               <div key={lot.id} className="bg-white rounded-xl border border-gray-100 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
@@ -250,7 +189,6 @@ export default function TallerScreen() {
         </div>
       )}
 
-      {/* ── LISTOS PARA REMISIÓN TINTORERÍA ── */}
       {tab==='listos' && (
         <div className="space-y-3">
           {listoLots.length===0 && (
@@ -262,7 +200,7 @@ export default function TallerScreen() {
           )}
           {listoLots.map(lot=>(
             <div key={lot.id} className="bg-white rounded-xl border-2 border-green-200 p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
@@ -288,42 +226,8 @@ export default function TallerScreen() {
         </div>
       )}
 
-      {/* ── OPERARIOS ── */}
-      {tab==='operarios' && (
-  <OperariosTab satId={profile?.satId} workers={myWorkers} />
-)}
-      {myWorkers.length===0 && (
-            <div className="col-span-2 flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
-              <p className="text-4xl mb-3">👥</p>
-              <p className="font-medium text-gray-700">Sin operarios registrados</p>
-            </div>
-          )}
-          {myWorkers.map(w=>{
-            const myOps   = activeLots.flatMap(l=>(l.lotOps||[]).filter(o=>o.wId===w.id));
-            const doneOps = myOps.filter(o=>o.status==='completado');
-            const actOps  = myOps.filter(o=>o.status==='en_proceso');
-            return (
-              <div key={w.id} className="bg-white rounded-xl border border-gray-100 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-700 flex-shrink-0">
-                    {w.initials||w.name?.slice(0,2).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-gray-900">{w.name}</p>
-                    <p className="text-[10px] text-gray-400">{actOps.length} activas · {doneOps.length} listas</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] text-gray-400">Ganado</p>
-                    <p className="text-sm font-black text-green-600">{fmtM(doneOps.reduce((a,o)=>a+(o.qty||0)*100,0))}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {tab==='operarios' && <OperariosTab satId={profile?.satId} workers={myWorkers} />}
 
-      {/* MODAL REMISIÓN TINTORERÍA */}
       {showRemision && (
         <RemisionTintoreriaModal
           lot={showRemision}
@@ -336,166 +240,11 @@ export default function TallerScreen() {
   );
 }
 
-// ─── MODAL REMISIÓN A TINTORERÍA ──────────────────────────────────────────────
-function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
-  // Conteo inicial = cantidad original de cada prenda
-  const [conteo, setConteo] = useState(
-    (lot.garments||[]).map(g=>({ gtId:g.gtId, original:g.total, enviado:g.total, novedad:'' }))
-  );
-  const [nota,        setNota]        = useState('');
-  const [nombreSat,   setNombreSat]   = useState(profile?.name||'');
-  const [firmaSat,    setFirmaSat]    = useState(null);
-  const [nombreTinto, setNombreTinto] = useState('');
-  const [firmaTinto,  setFirmaTinto]  = useState(null);
-  const [saving,      setSaving]      = useState(false);
-
-  const updConteo = (i,k,v) => setConteo(c=>{const n=[...c];n[i]={...n[i],[k]:v};return n;});
-
-  const hayFaltantes = conteo.some(g => (+g.enviado||0) < g.original);
-  const esCompleto   = conteo.every(g => (+g.enviado||0) >= g.original);
-
-  const enviar = async () => {
-    if (!firmaSat)    { toast.error('El Admin Satélite debe firmar'); return; }
-    if (!nombreSat)   { toast.error('Escribe el nombre del Admin Satélite'); return; }
-    if (!firmaTinto)  { toast.error('El responsable de Tintorería debe firmar'); return; }
-    if (!nombreTinto) { toast.error('Escribe el nombre del responsable de Tintorería'); return; }
-
-    setSaving(true);
-    try {
-      const fechaSat   = nowStr();
-      const fechaTinto = nowStr();
-      const remData = {
-        lotId: lot.id, lotCode: lot.code,
-        satId: profile?.satId, satName,
-        conteo: conteo.map(g=>({...g, enviado:+g.enviado||0})),
-        esCompleto, hayFaltantes, nota,
-        nombreSat, firmaSat, fechaSat,
-        nombreTinto, firmaTinto, fechaTinto,
-        status: 'completado',
-      };
-
-      await addDocument('remisionesTinto', remData);
-      await advanceLotStatus(lot.id, 'tintoreria', profile?.id, profile?.name, {
-        remisionTinto: remData,
-      });
-
-      printRemisionTinto(lot, satName, remData);
-      toast.success('✅ Remisión generada — lote en tintorería');
-      onClose();
-    } catch(e) { console.error(e); toast.error('Error'); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'16px',overflowY:'auto'}}>
-      <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:560,marginTop:16,marginBottom:16}}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-gray-900">Remisión a Tintorería</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
-        </div>
-
-        {/* Info lote */}
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
-            <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✓ Ops completadas</span>
-          </div>
-          <p className="text-xs text-indigo-700">Satélite: <strong>{satName}</strong> · {lot.totalPieces?.toLocaleString('es-CO')} piezas originales</p>
-        </div>
-
-        {/* Conteo de prendas */}
-        <div className="mb-4">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Conteo de prendas a enviar</p>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-700">
-            💡 Por defecto se envía todo completo. Si hay faltantes, ajusta la cantidad y agrega la novedad.
-          </div>
-          <div className="space-y-2">
-            {conteo.map((g,i)=>{
-              const faltante = g.original - (+g.enviado||0);
-              const semaforo = faltante===0 ? 'verde' : faltante>0 ? 'amarillo' : 'verde';
-              return (
-                <div key={i} className="bg-white border border-gray-200 rounded-xl p-3">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm font-bold text-gray-800 flex-1">{gLabel(g.gtId)}</span>
-                    <span className="text-xs text-gray-500">Original: <strong>{g.original}</strong></span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-gray-600">Enviar:</span>
-                      <input type="number" min={0} max={g.original}
-                        value={g.enviado} onChange={e=>updConteo(i,'enviado',e.target.value)}
-                        className="w-16 text-center border border-gray-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:border-indigo-400"
-                        style={{color:faltante>0?'#dc2626':'#15803d'}} />
-                    </div>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${faltante===0?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}>
-                      {faltante===0?'✓ Completo':`-${faltante} faltante${faltante>1?'s':''}`}
-                    </span>
-                  </div>
-                  {faltante>0 && (
-                    <input type="text" value={g.novedad} onChange={e=>updConteo(i,'novedad',e.target.value)}
-                      placeholder="Novedad: ¿Por qué faltan? Ej: Se quedaron en taller, defecto de costura..."
-                      className="w-full border border-amber-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 bg-amber-50" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Resumen */}
-          <div className={`mt-3 p-3 rounded-xl text-xs font-bold ${esCompleto?'bg-green-50 text-green-700 border border-green-200':'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-            {esCompleto ? '✓ ENVÍO COMPLETO — Todas las prendas van a tintorería' : '⚠ ENVÍO PARCIAL — Hay prendas con novedad registrada'}
-          </div>
-        </div>
-
-        {/* Nota */}
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-700 mb-1">Nota (opcional)</label>
-          <textarea value={nota} onChange={e=>setNota(e.target.value)}
-            placeholder="Observaciones generales del lote..."
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none h-14 focus:outline-none" />
-        </div>
-
-        {/* ── FIRMA ADMIN SATÉLITE ── */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">Firma — Admin Satélite (Entrega)</p>
-            {firmaSat && <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">✓ Firmado</span>}
-          </div>
-          <FirmaCanvas label="Dibuja tu firma:" onSave={setFirmaSat} />
-          <input value={nombreSat} onChange={e=>setNombreSat(e.target.value)}
-            placeholder="Nombre del Admin Satélite"
-            className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white" />
-        </div>
-
-        {/* ── FIRMA TINTORERÍA ── */}
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-indigo-800 uppercase tracking-wider">Firma — Tintorería (Recibe)</p>
-            {firmaTinto && <span className="text-[10px] text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded-full">✓ Firmado</span>}
-          </div>
-          <FirmaCanvas label="Firma del responsable de Tintorería:" onSave={setFirmaTinto} />
-          <input value={nombreTinto} onChange={e=>setNombreTinto(e.target.value)}
-            placeholder="Nombre del responsable en Tintorería"
-            className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-400 bg-white" />
-        </div>
-
-        {/* Botones */}
-        <div className="flex gap-2">
-          <button onClick={onClose}
-            className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
-            Cancelar
-          </button>
-          <button onClick={enviar} disabled={saving}
-            className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-            style={{background:'#4338ca'}}>
-            {saving ? 'Generando...' : '🎨 Confirmar y generar remisión'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+// ─── OPERARIOS TAB ────────────────────────────────────────────────────────────
 function OperariosTab({ satId, workers }) {
   const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState({ nombre:'', apellido:'', cedula:'', telefono:'' });
-  const [saving, setSaving] = useState(false);
+  const [form,    setForm]    = useState({ nombre:'', apellido:'', cedula:'', telefono:'' });
+  const [saving,  setSaving]  = useState(false);
 
   const crear = async () => {
     if (!form.nombre || !form.cedula) { toast.error('Nombre y cédula son obligatorios'); return; }
@@ -515,14 +264,14 @@ function OperariosTab({ satId, workers }) {
       toast.success('✅ Operario creado');
       setShowNew(false);
       setForm({ nombre:'', apellido:'', cedula:'', telefono:'' });
-    } catch { toast.error('Error'); }
+    } catch(e) { console.error(e); toast.error('Error al crear'); }
     finally { setSaving(false); }
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mis Operarios</p>
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mis Operarios ({workers.length})</p>
         <button onClick={() => setShowNew(!showNew)}
           className="text-xs font-bold px-3 py-1.5 rounded-lg text-white"
           style={{ background: ACCENT }}>
@@ -531,7 +280,7 @@ function OperariosTab({ satId, workers }) {
       </div>
 
       {showNew && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+        <div className="bg-white rounded-xl border border-orange-200 p-4 mb-4">
           <p className="text-xs font-bold text-gray-700 mb-3">Nuevo operario para este taller</p>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
@@ -589,7 +338,7 @@ function OperariosTab({ satId, workers }) {
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-900">{w.name}</p>
-                {w.cedula && <p className="text-[10px] text-gray-400 font-mono">CC: {w.cedula}</p>}
+                {w.cedula   && <p className="text-[10px] text-gray-400 font-mono">CC: {w.cedula}</p>}
                 {w.telefono && <p className="text-[10px] text-gray-400">{w.telefono}</p>}
               </div>
             </div>
@@ -599,4 +348,134 @@ function OperariosTab({ satId, workers }) {
     </div>
   );
 }
-      }
+
+// ─── MODAL REMISIÓN A TINTORERÍA ──────────────────────────────────────────────
+function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
+  const [conteo,      setConteo]      = useState((lot.garments||[]).map(g=>({gtId:g.gtId,original:g.total,enviado:g.total,novedad:''})));
+  const [nota,        setNota]        = useState('');
+  const [nombreSat,   setNombreSat]   = useState(profile?.name||'');
+  const [firmaSat,    setFirmaSat]    = useState(null);
+  const [nombreTinto, setNombreTinto] = useState('');
+  const [firmaTinto,  setFirmaTinto]  = useState(null);
+  const [saving,      setSaving]      = useState(false);
+
+  const updConteo = (i,k,v) => setConteo(c=>{const n=[...c];n[i]={...n[i],[k]:v};return n;});
+  const hayFaltantes = conteo.some(g => (+g.enviado||0) < g.original);
+  const esCompleto   = conteo.every(g => (+g.enviado||0) >= g.original);
+
+  const enviar = async () => {
+    if (!firmaSat)    { toast.error('El Admin Satélite debe firmar'); return; }
+    if (!nombreSat)   { toast.error('Escribe el nombre del Admin Satélite'); return; }
+    if (!firmaTinto)  { toast.error('El responsable de Tintorería debe firmar'); return; }
+    if (!nombreTinto) { toast.error('Escribe el nombre del responsable de Tintorería'); return; }
+    setSaving(true);
+    try {
+      const remData = {
+        lotId: lot.id, lotCode: lot.code,
+        satId: profile?.satId, satName,
+        conteo: conteo.map(g=>({...g,enviado:+g.enviado||0})),
+        esCompleto, hayFaltantes, nota,
+        nombreSat, firmaSat, fechaSat: nowStr(),
+        nombreTinto, firmaTinto, fechaTinto: nowStr(),
+        status: 'completado',
+      };
+      await addDocument('remisionesTinto', remData);
+      await advanceLotStatus(lot.id, 'tintoreria', profile?.id, profile?.name, { remisionTinto: remData });
+      printRemisionTinto(lot, satName, remData);
+      toast.success('✅ Remisión generada — lote en tintorería');
+      onClose();
+    } catch(e) { console.error(e); toast.error('Error'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'16px',overflowY:'auto'}}>
+      <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:560,marginTop:16,marginBottom:16}}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-gray-900">Remisión a Tintorería</h2>
+          <button onClick={onClose} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+        </div>
+
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 mb-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
+            <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✓ Ops completadas</span>
+          </div>
+          <p className="text-xs text-indigo-700">Satélite: <strong>{satName}</strong> · {lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
+        </div>
+
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Conteo de prendas</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs text-amber-700">
+          💡 Por defecto se envía todo completo. Ajusta si hay faltantes.
+        </div>
+        <div className="space-y-2 mb-4">
+          {conteo.map((g,i)=>{
+            const faltante = g.original - (+g.enviado||0);
+            return (
+              <div key={i} className="bg-white border border-gray-200 rounded-xl p-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-sm font-bold text-gray-800 flex-1">{gLabel(g.gtId)}</span>
+                  <span className="text-xs text-gray-500">Original: <strong>{g.original}</strong></span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-600">Enviar:</span>
+                    <input type="number" min={0} max={g.original} value={g.enviado}
+                      onChange={e=>updConteo(i,'enviado',e.target.value)}
+                      className="w-16 text-center border border-gray-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
+                      style={{color:faltante>0?'#dc2626':'#15803d'}} />
+                  </div>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${faltante===0?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}>
+                    {faltante===0?'✓ Completo':`-${faltante}`}
+                  </span>
+                </div>
+                {faltante>0 && (
+                  <input type="text" value={g.novedad} onChange={e=>updConteo(i,'novedad',e.target.value)}
+                    placeholder="Novedad: ¿por qué faltan?"
+                    className="w-full border border-amber-200 rounded-lg px-3 py-1.5 text-xs bg-amber-50 focus:outline-none" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={`p-3 rounded-xl text-xs font-bold mb-4 ${esCompleto?'bg-green-50 text-green-700 border border-green-200':'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+          {esCompleto ? '✓ ENVÍO COMPLETO' : '⚠ ENVÍO PARCIAL — hay faltantes'}
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-semibold text-gray-700 mb-1">Nota (opcional)</label>
+          <textarea value={nota} onChange={e=>setNota(e.target.value)} placeholder="Observaciones..."
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none h-14 focus:outline-none" />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-blue-800">Firma — Admin Satélite (Entrega)</p>
+            {firmaSat && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
+          </div>
+          <FirmaCanvas label="Dibuja tu firma:" onSave={setFirmaSat} />
+          <input value={nombreSat} onChange={e=>setNombreSat(e.target.value)} placeholder="Tu nombre completo"
+            className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white mt-2" />
+        </div>
+
+        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-indigo-800">Firma — Tintorería (Recibe)</p>
+            {firmaTinto && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
+          </div>
+          <FirmaCanvas label="Firma del responsable de Tintorería:" onSave={setFirmaTinto} />
+          <input value={nombreTinto} onChange={e=>setNombreTinto(e.target.value)} placeholder="Nombre del responsable en Tintorería"
+            className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:outline-none bg-white mt-2" />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+          <button onClick={enviar} disabled={saving}
+            className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+            style={{background:'#4338ca'}}>
+            {saving?'Generando...':'🎨 Confirmar y generar remisión'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
