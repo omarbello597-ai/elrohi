@@ -76,7 +76,7 @@ export const NAV_CONFIG = {
   operario:       ['/mis-ops','/quincena'],
   tintoreria:     ['/tintoreria'],
   terminacion:    ['/operaciones-elrohi','/quincena'],
-  bodega_op:      ['/bodegas', '/quincena'],
+  bodega_op:      ['/bodegas', '/bodega-lonas', '/quincena'],
 
 };
 
