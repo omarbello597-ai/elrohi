@@ -358,7 +358,11 @@ export default function BodegasScreen() {
                                   }}
                                   className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-orange-400">
                                   <option value="">— Seleccionar operario —</option>
-                                  {users.filter(u=>u.active!==false).map(w=>(
+                                  {users.filter(u=>
+                                  !u.satId &&
+                                  u.active!==false &&
+                                  ['corte','bodega_op','terminacion','pespunte','operario','despachos'].includes(u.role)
+                                  ).map(w=>(
                                     <option key={w.id} value={w.id}>{w.name} ({w.role})</option>
                                   ))}
                                 </select>
