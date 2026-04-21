@@ -19,7 +19,7 @@ export default function BodegaCalidadScreen() {
   const enRevision = lots.filter(l => l.status === 'en_revision_calidad');
 
   // Todos los usuarios ELROHI — sin filtro de rol para incluir todos
-  const operariosElrohi = users.filter(u => u.active !== false);
+  const operariosElrohi = users.filter(u => u.active !== false && u.role !== 'admin_elrohi' && u.role !== 'gerente');
 
   const asignarOperario = async (lot, opId, operarioId) => {
     if (!operarioId) return;
