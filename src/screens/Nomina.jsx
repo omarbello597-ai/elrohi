@@ -1,428 +1,483 @@
-import { useState } from 'react';
-import { useData }  from '../contexts/DataContext';
+import { useState, useMemo } from 'react';
+import { useData }     from '../contexts/DataContext';
 import { addDocument } from '../services/db';
 import { fmtM, getOpVal, workerQuincena } from '../utils';
 import { Modal } from '../components/ui';
+import { ACCENT } from '../constants';
 import toast from 'react-hot-toast';
 
-const today    = () => new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+const today    = () => new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
 const todayISO = () => new Date().toISOString().split('T')[0];
-const recId    = () => 'REC-' + Date.now().toString().slice(-6);
-
-// Convierte imagen a base64 (sin Firebase Storage)
-const toBase64 = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload  = () => resolve(reader.result);
-  reader.onerror = reject;
-  reader.readAsDataURL(file);
+const recId    = () => 'REC-'+Date.now().toString().slice(-6);
+const toBase64 = (file) => new Promise((resolve,reject) => {
+  const r = new FileReader();
+  r.onload  = () => resolve(r.result);
+  r.onerror = reject;
+  r.readAsDataURL(file);
 });
 
-// ─── GENERAR RECIBO PDF ───────────────────────────────────────────────────────
-function printReceipt(sat, total, workers, photoBase64, rec, notes) {
-  const rows = workers.map(w =>
-    `<tr>
-      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${w.name}</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;color:#10b981">${fmtM(w.earnings)}</td>
-    </tr>`
-  ).join('');
+// Calcular quincena actual
+function getQuincenaActual() {
+  const now = new Date();
+  const day = now.getDate();
+  const month = now.getMonth();
+  const year  = now.getFullYear();
+  if (day <= 15) {
+    return {
+      label:  `1-15 ${now.toLocaleString('es-CO',{month:'long'})} ${year}`,
+      inicio: new Date(year, month, 1),
+      fin:    new Date(year, month, 15, 23, 59, 59),
+      tipo:   'primera',
+    };
+  } else {
+    const lastDay = new Date(year, month+1, 0).getDate();
+    return {
+      label:  `16-${lastDay} ${now.toLocaleString('es-CO',{month:'long'})} ${year}`,
+      inicio: new Date(year, month, 16),
+      fin:    new Date(year, month, lastDay, 23, 59, 59),
+      tipo:   'segunda',
+    };
+  }
+}
 
+// Calcular operaciones completadas en un rango de fechas
+function calcOpsEnPeriodo(userId, lots, ops, satOpVals, satId, inicio, fin) {
+  let total = 0;
+  lots.forEach(lot => {
+    const lotOps = lot.lotOps || [];
+    lotOps.forEach(lo => {
+      if (lo.wId !== userId) return;
+      if (lo.status !== 'completado') return;
+      const doneAt = lo.doneAt ? new Date(lo.doneAt) : null;
+      if (!doneAt || doneAt < inicio || doneAt > fin) return;
+      const val = getOpVal(ops, satOpVals, satId || lot.satId, lo.opId);
+      total += val * lo.qty;
+    });
+    // Operaciones internas ELROHI
+    const opsElrohi = lot.opsElrohi || [];
+    opsElrohi.forEach(op => {
+      if (op.wId !== userId) return;
+      if (op.status !== 'completado') return;
+      const doneAt = op.doneAt ? new Date(op.doneAt) : null;
+      if (!doneAt || doneAt < inicio || doneAt > fin) return;
+      total += (op.val || 0);
+    });
+  });
+  return total;
+}
+
+// Calcular incentivos en el periodo
+function calcIncentivosEnPeriodo(user, inicio, fin) {
+  return (user.incentivos || []).reduce((a, inc) => {
+    const fecha = inc.fecha ? new Date(inc.fecha) : null;
+    if (!fecha || fecha < inicio || fecha > fin) return a;
+    return a + (inc.valor || 0);
+  }, 0);
+}
+
+// Generar recibo PDF
+function printRecibo(data) {
+  const rows = data.detalle.map(d => `
+    <tr>
+      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${d.concepto}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;color:#10b981">${fmtM(d.valor)}</td>
+    </tr>`).join('');
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
-  <title>Recibo ${rec}</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:system-ui,sans-serif;background:#fff;color:#111}
-    .page{max-width:600px;margin:40px auto;padding:40px;border:1px solid #e5e7eb;border-radius:12px}
-    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #e85d26}
-    .logo{font-size:24px;font-weight:900;letter-spacing:-0.04em}
-    .logo span{color:#e85d26}
-    .rec-info{text-align:right;font-size:12px;color:#6b7280}
-    .rec-info strong{display:block;font-size:16px;color:#111;margin-top:2px}
-    .section{margin-bottom:22px}
-    .section-title{font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px}
-    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .info-item label{font-size:10px;color:#6b7280;display:block;margin-bottom:2px}
-    .info-item span{font-size:13px;font-weight:500}
-    table{width:100%;border-collapse:collapse;font-size:13px}
-    thead tr{background:#f9f9f7}
-    th{padding:8px 10px;text-align:left;font-size:10px;color:#6b7280;font-weight:500}
-    .total-row td{padding:12px 10px;font-weight:900;font-size:15px;color:#10b981;background:#f0fdf4}
-    .notes{background:#f9f9f7;border-radius:8px;padding:12px;font-size:12px;color:#374151}
-    .photo{width:100%;max-height:280px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;margin-top:8px}
-    .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}
-    .firma{text-align:center}
-    .firma-line{border-top:1px solid #374151;margin:40px auto 6px}
-    .footer{margin-top:24px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#9ca3af}
-    @media print{body{print-color-adjust:exact}}
-  </style></head><body>
+  <title>Recibo ${data.recId}</title>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif}
+  .page{max-width:600px;margin:40px auto;padding:40px;border:1px solid #e5e7eb;border-radius:12px}
+  .header{display:flex;justify-content:space-between;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #e85d26}
+  .logo{font-size:24px;font-weight:900}.logo span{color:#e85d26}
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}
+  .firma{text-align:center}.firma-line{border-top:1px solid #374151;margin:40px auto 6px}
+  @media print{body{print-color-adjust:exact}}</style></head><body>
   <div class="page">
     <div class="header">
       <div class="logo">🧵 <span>EL</span>ROHI</div>
-      <div class="rec-info">Recibo de pago<strong>${rec}</strong></div>
+      <div style="text-align:right;font-size:12px;color:#6b7280">Recibo de pago<br><strong style="font-size:16px;color:#111">${data.recId}</strong></div>
     </div>
-    <div class="section">
-      <div class="section-title">Datos del pago</div>
-      <div class="info-grid">
-        <div class="info-item"><label>Satélite</label><span>${sat.name}</span></div>
-        <div class="info-item"><label>Ciudad</label><span>${sat.city || ''}</span></div>
-        <div class="info-item"><label>Fecha</label><span>${today()}</span></div>
-        <div class="info-item"><label>Total</label><span style="color:#10b981;font-size:18px;font-weight:900">${fmtM(total)}</span></div>
+    <div style="margin-bottom:20px;background:#f9fafb;border-radius:8px;padding:12px 16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+        <div><span style="font-size:10px;color:#6b7280;display:block">Empleado</span><strong>${data.nombre}</strong></div>
+        <div><span style="font-size:10px;color:#6b7280;display:block">Período</span><strong>${data.periodo}</strong></div>
+        <div><span style="font-size:10px;color:#6b7280;display:block">Rol</span><strong>${data.rol}</strong></div>
+        <div><span style="font-size:10px;color:#6b7280;display:block">Fecha</span><strong>${today()}</strong></div>
       </div>
     </div>
-    <div class="section">
-      <div class="section-title">Desglose por operario</div>
-      <table>
-        <thead><tr><th>Operario</th><th style="text-align:right">Monto</th></tr></thead>
-        <tbody>${rows}</tbody>
-        <tfoot><tr class="total-row"><td>TOTAL</td><td style="text-align:right">${fmtM(total)}</td></tr></tfoot>
-      </table>
-    </div>
-    ${notes ? `<div class="section"><div class="section-title">Observaciones</div><div class="notes">${notes}</div></div>` : ''}
-    ${photoBase64 ? `<div class="section"><div class="section-title">Comprobante de transferencia</div><img src="${photoBase64}" class="photo" alt="Comprobante"/></div>` : ''}
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+      <thead><tr style="background:#f9f9f7"><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280">Concepto</th><th style="padding:8px 10px;text-align:right;font-size:10px;color:#6b7280">Valor</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr style="background:#f0fdf4"><td style="padding:12px 10px;font-weight:900;font-size:15px">TOTAL</td><td style="padding:12px 10px;text-align:right;font-weight:900;font-size:18px;color:#10b981">${fmtM(data.total)}</td></tr></tfoot>
+    </table>
+    ${data.notas?`<div style="background:#f9f9f7;border-radius:8px;padding:12px;font-size:12px;margin-bottom:16px">${data.notas}</div>`:''}
+    ${data.foto?`<img src="${data.foto}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:16px"/>`:''}
     <div class="firmas">
-      <div class="firma"><div class="firma-line"></div><div style="font-size:11px;color:#374151">Firma ELROHI — Nómina</div></div>
-      <div class="firma"><div class="firma-line"></div><div style="font-size:11px;color:#374151">Recibido — ${sat.name}</div></div>
+      <div class="firma"><div class="firma-line"></div><div style="font-size:11px">Firma ELROHI — Nómina</div></div>
+      <div class="firma"><div class="firma-line"></div><div style="font-size:11px">Recibido — ${data.nombre}</div></div>
     </div>
-    <div class="footer">
-      <span>ELROHI · Sistema de Gestión de Producción</span>
-      <span>${today()}</span>
-    </div>
-  </div>
-  <script>window.onload=()=>window.print();</script>
-  </body></html>`;
-
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
+  </div><script>window.onload=()=>window.print();</script></body></html>`;
+  const win=window.open('','_blank'); win.document.write(html); win.document.close();
 }
 
 // ─── NOMINA SCREEN ────────────────────────────────────────────────────────────
 export function NominaScreen() {
   const { lots, satellites, ops, satOpVals, users, payments } = useData();
+  const [tab,         setTab]         = useState('elrohi');
+  const [showModal,   setShowModal]   = useState(false);
+  const [selWorker,   setSelWorker]   = useState(null);
+  const [selSat,      setSelSat]      = useState(null);
+  const [photo,       setPhoto]       = useState(null);
+  const [photoPreview,setPhotoPreview]= useState(null);
+  const [notes,       setNotes]       = useState('');
+  const [saving,      setSaving]      = useState(false);
 
-  const [showModal,    setShowModal]    = useState(false);
-  const [selSat,       setSelSat]       = useState(null);
-  const [photo,        setPhoto]        = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [notes,        setNotes]        = useState('');
-  const [saving,       setSaving]       = useState(false);
-  const [showHistory,  setShowHistory]  = useState(false);
-  const [expanded,     setExpanded]     = useState(null);
+  const quincena = useMemo(() => getQuincenaActual(), []);
 
-  const summary = satellites.filter((s) => s.active).map((s) => {
-    const satLots    = lots.filter((l) => l.satId === s.id);
-    const satWorkers = users.filter((u) => u.satId === s.id && u.role === 'operario');
+  // OPERARIOS INTERNOS ELROHI
+  const operariosElrohi = users.filter(u =>
+    ['corte','bodega_op','terminacion','tintoreria','despachos'].includes(u.role) &&
+    u.active !== false && !u.satId && !u.eliminado
+  );
 
-    const total = satLots
-      .flatMap((l) => (l.lotOps || []).filter((lo) => lo.status === 'completado').map((lo) => ({ ...lo, satId: l.satId })))
-      .reduce((acc, lo) => acc + getOpVal(ops, satOpVals, lo.satId, lo.opId) * lo.qty, 0);
+  const calcLiquidacion = (u) => {
+    const opsVal      = calcOpsEnPeriodo(u.id, lots, ops, satOpVals, null, quincena.inicio, quincena.fin);
+    const incentivos  = calcIncentivosEnPeriodo(u, quincena.inicio, quincena.fin);
+    const baseFija    = u.salarioTipo === 'solo_fijo' || u.salarioTipo === 'fijo_mas_ops'
+      ? Math.round((u.salarioFijo || 0) / 2) : 0;
+    const total       = baseFija + opsVal + incentivos;
+    const detalle     = [];
+    if (baseFija > 0)   detalle.push({ concepto: `Base fija (${quincena.tipo} quincena)`, valor: baseFija });
+    if (opsVal > 0)     detalle.push({ concepto: 'Operaciones completadas', valor: opsVal });
+    if (incentivos > 0) detalle.push({ concepto: 'Incentivos', valor: incentivos });
+    if (detalle.length === 0) detalle.push({ concepto: 'Sin operaciones en este período', valor: 0 });
+    return { baseFija, opsVal, incentivos, total, detalle };
+  };
 
-    const compOps = satLots.flatMap((l) => (l.lotOps || []).filter((lo) => lo.status === 'completado')).length;
-
-    const workerBreakdown = satWorkers.map((w) => ({
-      ...w, earnings: workerQuincena(w.id, lots, ops, satOpVals),
-    }));
-
-    const lastPayment = payments
-      .filter((p) => p.satId === s.id)
-      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))[0];
-
+  // SATÉLITES
+  const satSummary = satellites.filter(s=>s.active).map(s => {
+    const satLots    = lots.filter(l=>l.satId===s.id);
+    const satWorkers = users.filter(u=>u.satId===s.id&&u.role==='operario');
+    const total      = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado'))
+      .reduce((acc,lo) => acc + getOpVal(ops,satOpVals,s.id,lo.opId)*lo.qty, 0);
+    const compOps    = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado')).length;
+    const workerBreakdown = satWorkers.map(w=>({...w, earnings: workerQuincena(w.id,lots,ops,satOpVals)}));
+    const lastPayment = payments.filter(p=>p.satId===s.id)
+      .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
     return { ...s, total, compOps, workerBreakdown, lastPayment };
-  }).sort((a, b) => b.total - a.total);
-
-  const grand = summary.reduce((a, s) => a + s.total, 0);
+  }).sort((a,b)=>b.total-a.total);
 
   const handlePhoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    // Validar tamaño máximo 2MB para base64 en Firestore
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('La foto no debe superar 2MB');
-      return;
-    }
-    const base64 = await toBase64(file);
-    setPhoto(base64);
-    setPhotoPreview(base64);
+    if (file.size > 2*1024*1024) { toast.error('Máx 2MB'); return; }
+    const b64 = await toBase64(file);
+    setPhoto(b64); setPhotoPreview(b64);
   };
 
-  const openPay = (sat) => {
-    setSelSat(sat);
-    setPhoto(null);
-    setPhotoPreview(null);
-    setNotes('');
+  const openPayElrohi = (u) => {
+    setSelWorker(u); setSelSat(null);
+    setPhoto(null); setPhotoPreview(null); setNotes('');
     setShowModal(true);
   };
 
-  const confirmPayment = async () => {
-    if (!selSat) return;
+  const openPaySat = (sat) => {
+    setSelSat(sat); setSelWorker(null);
+    setPhoto(null); setPhotoPreview(null); setNotes('');
+    setShowModal(true);
+  };
+
+  const confirmarPago = async () => {
     setSaving(true);
     try {
       const rec = recId();
-
-      // Guardar pago en Firestore (foto como base64, sin Firebase Storage)
-      await addDocument('payments', {
-        recId:    rec,
-        satId:    selSat.id,
-        satName:  selSat.name,
-        total:    selSat.total,
-        notes,
-        photoBase64: photo || null,
-        date:     todayISO(),
-        workers:  selSat.workerBreakdown,
-        compOps:  selSat.compOps,
-      });
-
-      toast.success(`✅ Pago registrado — ${rec}`);
-      printReceipt(selSat, selSat.total, selSat.workerBreakdown, photo, rec, notes);
+      if (selWorker) {
+        const liq = calcLiquidacion(selWorker);
+        const data = {
+          recId: rec, tipo: 'elrohi',
+          workerId: selWorker.id, workerName: selWorker.name,
+          rol: selWorker.role, periodo: quincena.label,
+          detalle: liq.detalle, total: liq.total,
+          notas: notes, foto: photo||null, fecha: todayISO(),
+        };
+        await addDocument('payments', data);
+        printRecibo({ ...data, nombre: selWorker.name });
+        toast.success(`✅ Pago registrado — ${rec}`);
+      } else if (selSat) {
+        await addDocument('payments', {
+          recId: rec, tipo: 'satelite',
+          satId: selSat.id, satName: selSat.name,
+          total: selSat.total, compOps: selSat.compOps,
+          workers: selSat.workerBreakdown,
+          notas: notes, photoBase64: photo||null, date: todayISO(),
+        });
+        // Print recibo satelite
+        const rows = selSat.workerBreakdown.map(w=>({concepto:w.name,valor:w.earnings}));
+        printRecibo({ recId:rec, nombre:selSat.name, periodo:quincena.label, rol:'Satélite', detalle:rows, total:selSat.total, notas:notes, foto:photo });
+        toast.success(`✅ Pago satélite registrado — ${rec}`);
+      }
       setShowModal(false);
-    } catch (err) {
-      console.error(err);
-      toast.error('Error al registrar el pago');
-    } finally {
-      setSaving(false);
-    }
+    } catch(e) { console.error(e); toast.error('Error'); }
+    finally { setSaving(false); }
+  };
+
+  const ROLE_LABELS = {
+    corte:'Corte', bodega_op:'Bodega', terminacion:'Terminación',
+    tintoreria:'Tintorería', despachos:'Despachos'
+  };
+  const SAL_LABELS = {
+    solo_operaciones:'Por operaciones', fijo_mas_ops:'Fijo + ops', solo_fijo:'Fijo'
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-sm font-bold text-gray-900">Nómina — Quincena Actual</h1>
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-        >
-          {showHistory ? '← Quincena actual' : '📋 Historial de pagos'}
-        </button>
+        <div>
+          <h1 className="text-sm font-bold text-gray-900">Nómina</h1>
+          <p className="text-xs text-gray-400">Período: {quincena.label}</p>
+        </div>
       </div>
 
-      {showHistory ? (
-        <HistorialPagos payments={payments} satellites={satellites} />
-      ) : (
-        <>
-          {/* Total general */}
-          <div className="rounded-2xl p-5 mb-5 text-white" style={{ background: 'linear-gradient(135deg,#1e2d45,#2d4a6e)' }}>
-            <p className="text-xs text-blue-300 uppercase tracking-wider mb-1">Total a pagar esta quincena</p>
-            <p className="text-3xl font-black" style={{ letterSpacing: '-0.04em' }}>{fmtM(grand)}</p>
-            <p className="text-xs text-blue-300 mt-1">
-              {summary.reduce((a, s) => a + s.compOps, 0)} operaciones · {summary.length} satélites activos
-            </p>
-          </div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+        {[['elrohi','👷 Operarios ELROHI'],['satelites','🏭 Satélites'],['historial','📋 Historial']].map(([k,l])=>(
+          <button key={k} onClick={()=>setTab(k)}
+            className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+            style={{background:tab===k?'#fff':'transparent',color:tab===k?'#111827':'#6b7280',
+              fontWeight:tab===k?700:400,boxShadow:tab===k?'0 1px 3px rgba(0,0,0,0.08)':'none'}}>
+            {l}
+          </button>
+        ))}
+      </div>
 
-          {/* Cards por satélite */}
-          <div className="space-y-2">
-            {summary.map((s) => {
-              const isPaid = !!s.lastPayment && s.lastPayment.date === todayISO();
-              return (
-                <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
-                    onClick={() => setExpanded(expanded === s.id ? null : s.id)}
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg flex-shrink-0">🏭</div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-gray-900">{s.name}</p>
-                      <p className="text-[10px] text-gray-400">{s.city} · {s.workerBreakdown.length} operarios · {s.compOps} ops completadas</p>
+      {/* OPERARIOS ELROHI */}
+      {tab==='elrohi' && (
+        <div className="space-y-3">
+          {operariosElrohi.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">👷</p>
+              <p className="text-sm text-gray-500">Sin operarios internos registrados</p>
+            </div>
+          )}
+          {operariosElrohi.map(u => {
+            const liq = calcLiquidacion(u);
+            return (
+              <div key={u.id} className="bg-white rounded-xl border border-gray-100 p-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white flex-shrink-0"
+                      style={{background:'#1a3a6b'}}>
+                      {u.initials||u.name?.slice(0,2).toUpperCase()}
                     </div>
-                    <div className="text-right mr-2">
-                      <p className="text-[9px] text-gray-400">Monto</p>
-                      <p className="text-base font-black text-green-600">{fmtM(s.total)}</p>
-                    </div>
-
-                    {isPaid ? (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 rounded-lg flex-shrink-0">
-                        <span className="text-green-600 text-sm">✅</span>
-                        <span className="text-[10px] font-bold text-green-700">Pagado</span>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{u.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">
+                          {ROLE_LABELS[u.role]||u.role}
+                        </span>
+                        <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                          {SAL_LABELS[u.salarioTipo]||'Por operaciones'}
+                        </span>
                       </div>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openPay(s); }}
-                        className="px-3 py-1.5 text-white rounded-lg text-[10px] font-bold hover:opacity-90 flex-shrink-0"
-                        style={{ background: '#e85d26' }}
-                      >
-                        Pagar
-                      </button>
-                    )}
+                    </div>
                   </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-[9px] text-gray-400">Total quincena</p>
+                    <p className="text-xl font-black text-green-600">{fmtM(liq.total)}</p>
+                  </div>
+                </div>
 
-                  {/* Desglose operarios */}
-                  {expanded === s.id && (
-                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                      {s.workerBreakdown.length > 0 ? (
-                        <>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2">Desglose por operario</p>
-                          <div className="space-y-1.5">
-                            {s.workerBreakdown.map((w) => (
-                              <div key={w.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 text-xs">
-                                <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700">{w.initials}</div>
-                                <span className="flex-1 font-medium text-gray-800">{w.name}</span>
-                                <span className="font-bold text-green-600 font-mono">{fmtM(w.earnings)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-2">Sin operaciones completadas aún</p>
-                      )}
-                      {s.lastPayment && (
-                        <button
-                          onClick={() => printReceipt(s, s.lastPayment.total, s.lastPayment.workers || [], s.lastPayment.photoBase64, s.lastPayment.recId, s.lastPayment.notes)}
-                          className="mt-3 text-[10px] text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          🖨️ Reimprimir último recibo ({s.lastPayment.recId})
-                        </button>
-                      )}
+                {/* Desglose */}
+                <div className="mt-3 space-y-1.5">
+                  {liq.baseFija > 0 && (
+                    <div className="flex justify-between text-xs px-3 py-1.5 bg-blue-50 rounded-lg">
+                      <span className="text-blue-700">💰 Base fija ({quincena.tipo} quincena)</span>
+                      <span className="font-bold text-blue-800">{fmtM(liq.baseFija)}</span>
                     </div>
                   )}
+                  {liq.opsVal > 0 && (
+                    <div className="flex justify-between text-xs px-3 py-1.5 bg-green-50 rounded-lg">
+                      <span className="text-green-700">⚡ Operaciones completadas</span>
+                      <span className="font-bold text-green-800">{fmtM(liq.opsVal)}</span>
+                    </div>
+                  )}
+                  {liq.incentivos > 0 && (
+                    <div className="flex justify-between text-xs px-3 py-1.5 bg-amber-50 rounded-lg">
+                      <span className="text-amber-700">⭐ Incentivos</span>
+                      <span className="font-bold text-amber-800">{fmtM(liq.incentivos)}</span>
+                    </div>
+                  )}
+                  {liq.total === 0 && (
+                    <p className="text-[10px] text-gray-400 text-center py-1">Sin movimientos en este período</p>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        </>
+
+                <button onClick={() => openPayElrohi(u)}
+                  className="mt-3 w-full py-2 text-white text-xs font-bold rounded-lg disabled:opacity-40"
+                  style={{background: liq.total > 0 ? '#15803d' : '#9ca3af'}}
+                  disabled={liq.total === 0}>
+                  💳 Registrar pago — {fmtM(liq.total)}
+                </button>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {/* ── MODAL DE PAGO ── */}
-      {showModal && selSat && (
-        <Modal title={`Registrar pago — ${selSat.name}`} onClose={() => setShowModal(false)} wide>
-
-          {/* Resumen */}
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-            <p className="text-xs text-green-700 font-medium mb-1">Total a pagar</p>
-            <p className="text-2xl font-black text-green-600">{fmtM(selSat.total)}</p>
-            <p className="text-[10px] text-green-600 mt-0.5">{selSat.compOps} operaciones · {selSat.workerBreakdown.length} operarios</p>
-          </div>
-
-          {/* Desglose dentro del modal */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Desglose por operario</p>
-            <div className="space-y-1">
-              {selSat.workerBreakdown.map((w) => (
-                <div key={w.id} className="flex items-center justify-between px-3 py-1.5 bg-gray-50 rounded-lg text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700">{w.initials}</div>
-                    <span className="font-medium text-gray-800">{w.name}</span>
-                  </div>
-                  <span className="font-bold text-green-600 font-mono">{fmtM(w.earnings)}</span>
-                </div>
-              ))}
+      {/* SATÉLITES */}
+      {tab==='satelites' && (
+        <div className="space-y-3">
+          {satSummary.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">🏭</p>
+              <p className="text-sm text-gray-500">Sin satélites activos</p>
             </div>
-          </div>
-
-          {/* Subir foto */}
-          <div className="mb-4">
-            <p className="text-xs font-semibold text-gray-700 mb-2">
-              📸 Foto del comprobante
-              <span className="text-gray-400 font-normal ml-1">(opcional · máx 2MB)</span>
-            </p>
-            <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl p-4 cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors">
-              {photoPreview ? (
-                <img src={photoPreview} alt="Comprobante" className="max-h-40 rounded-lg object-contain" />
-              ) : (
-                <div className="text-center">
-                  <p className="text-3xl mb-2">📷</p>
-                  <p className="text-sm font-medium text-gray-600">Clic para subir foto</p>
-                  <p className="text-xs text-gray-400 mt-0.5">JPG o PNG · máx 2MB</p>
+          )}
+          {satSummary.map(s => (
+            <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{s.name}</p>
+                  <p className="text-[10px] text-gray-400">{s.city} · {s.compOps} operaciones</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] text-gray-400">Total a pagar</p>
+                  <p className="text-xl font-black text-green-600">{fmtM(s.total)}</p>
+                </div>
+              </div>
+              {s.workerBreakdown.length > 0 && (
+                <div className="space-y-1 mb-3">
+                  {s.workerBreakdown.map(w => (
+                    <div key={w.id} className="flex justify-between text-xs px-3 py-1.5 bg-gray-50 rounded-lg">
+                      <span className="text-gray-700">{w.name}</span>
+                      <span className="font-bold text-green-600">{fmtM(w.earnings)}</span>
+                    </div>
+                  ))}
                 </div>
               )}
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} className="hidden" />
-            </label>
-            {photoPreview && (
-              <button onClick={() => { setPhoto(null); setPhotoPreview(null); }} className="mt-2 text-xs text-red-500 hover:text-red-700">
-                ✕ Quitar foto
+              <button onClick={() => openPaySat(s)}
+                className="w-full py-2 text-white text-xs font-bold rounded-lg"
+                style={{background: s.total > 0 ? '#15803d' : '#9ca3af'}}
+                disabled={s.total === 0}>
+                💳 Registrar pago — {fmtM(s.total)}
               </button>
-            )}
-          </div>
-
-          {/* Observaciones */}
-          <div className="mb-5">
-            <p className="text-xs font-semibold text-gray-700 mb-1">
-              Observaciones
-              <span className="text-gray-400 font-normal ml-1">(opcional)</span>
-            </p>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ej: Transferencia Bancolombia nro. 1234567890..."
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none h-16 focus:outline-none focus:border-orange-400"
-            />
-          </div>
-
-          {/* Botones */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowModal(false)}
-              className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={confirmPayment}
-              disabled={saving}
-              className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:opacity-90"
-              style={{ background: '#e85d26' }}
-            >
-              {saving ? 'Registrando...' : '✅ Confirmar y generar recibo'}
-            </button>
-          </div>
-        </Modal>
+            </div>
+          ))}
+        </div>
       )}
-    </div>
-  );
-}
 
-// ─── HISTORIAL DE PAGOS ───────────────────────────────────────────────────────
-function HistorialPagos({ payments, satellites }) {
-  const sorted = [...payments].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-  if (sorted.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-4xl mb-3">📋</p>
-        <p className="font-medium text-gray-700">Sin pagos registrados</p>
-        <p className="text-sm text-gray-400 mt-1">Los pagos confirmados aparecerán aquí</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-2">
-      {sorted.map((p) => {
-        const sat = satellites.find((s) => s.id === p.satId) || { name: p.satName, city: '' };
-        return (
-          <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-mono text-xs font-bold text-blue-700">{p.recId}</span>
-                  <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Pagado</span>
+      {/* HISTORIAL */}
+      {tab==='historial' && (
+        <div className="space-y-3">
+          {payments.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">📋</p>
+              <p className="text-sm text-gray-500">Sin pagos registrados</p>
+            </div>
+          )}
+          {[...payments].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).map(p => (
+            <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs font-bold text-blue-700">{p.recId}</span>
+                    <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Pagado</span>
+                    <span className="text-[9px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                      {p.tipo==='elrohi'?'👷 ELROHI':'🏭 Satélite'}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900">{p.workerName||p.satName}</p>
+                  <p className="text-[10px] text-gray-400">{p.periodo||p.date}</p>
+                  <p className="text-sm font-black text-green-600 mt-1">{fmtM(p.total)}</p>
                 </div>
-                <p className="text-sm font-bold text-gray-900">{p.satName}</p>
-                <p className="text-[10px] text-gray-400">{p.date} · {p.compOps} operaciones</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[9px] text-gray-400">Total pagado</p>
-                <p className="text-base font-black text-green-600">{fmtM(p.total)}</p>
+                <button onClick={() => {
+                  if (p.tipo==='elrohi') {
+                    printRecibo({ recId:p.recId, nombre:p.workerName, periodo:p.periodo, rol:p.rol, detalle:p.detalle||[], total:p.total, notas:p.notas, foto:p.foto });
+                  } else {
+                    const rows=(p.workers||[]).map(w=>({concepto:w.name,valor:w.earnings}));
+                    printRecibo({ recId:p.recId, nombre:p.satName, periodo:p.date, rol:'Satélite', detalle:rows, total:p.total, notas:p.notas, foto:p.photoBase64 });
+                  }
+                }}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex-shrink-0">
+                  🖨️ Reimprimir
+                </button>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            {p.notes && (
-              <p className="text-xs text-gray-500 italic bg-gray-50 rounded-lg px-3 py-2 mb-3">"{p.notes}"</p>
-            )}
+      {/* MODAL PAGO */}
+      {showModal && (selWorker || selSat) && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:480}}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-900">
+                {selWorker ? `Pago — ${selWorker.name}` : `Pago — ${selSat.name}`}
+              </h2>
+              <button onClick={()=>setShowModal(false)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+            </div>
 
-            {p.photoBase64 && (
-              <div className="mb-3">
-                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1">Comprobante</p>
-                <img src={p.photoBase64} alt="Comprobante" className="max-h-32 rounded-lg border border-gray-200 object-contain" />
+            {/* Resumen */}
+            {selWorker && (()=>{
+              const liq = calcLiquidacion(selWorker);
+              return (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                  <p className="text-xs text-green-700 mb-1">Período: {quincena.label}</p>
+                  <div className="space-y-1 mb-2">
+                    {liq.detalle.map((d,i)=>(
+                      <div key={i} className="flex justify-between text-xs text-green-700">
+                        <span>{d.concepto}</span>
+                        <span className="font-bold">{fmtM(d.valor)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-green-200 pt-2 flex justify-between">
+                    <span className="text-sm font-bold text-green-800">Total a pagar</span>
+                    <span className="text-xl font-black text-green-700">{fmtM(liq.total)}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {selSat && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                <p className="text-2xl font-black text-green-600">{fmtM(selSat.total)}</p>
+                <p className="text-[10px] text-green-600 mt-0.5">{selSat.compOps} operaciones · {selSat.workerBreakdown.length} operarios</p>
               </div>
             )}
 
-            <button
-              onClick={() => printReceipt(sat, p.total, p.workers || [], p.photoBase64, p.recId, p.notes)}
-              className="text-[10px] text-gray-600 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg font-medium hover:bg-gray-100"
-            >
-              🖨️ Reimprimir recibo
-            </button>
+            {/* Foto comprobante */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-700 mb-2">📸 Comprobante <span className="text-gray-400 font-normal">(opcional)</span></p>
+              <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl p-3 cursor-pointer hover:border-orange-400">
+                {photoPreview
+                  ? <img src={photoPreview} alt="Comprobante" className="max-h-32 rounded-lg object-contain" />
+                  : <div className="text-center"><p className="text-2xl mb-1">📷</p><p className="text-xs text-gray-500">Clic para subir</p></div>
+                }
+                <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
+              </label>
+              {photoPreview && <button onClick={()=>{setPhoto(null);setPhotoPreview(null);}} className="mt-1 text-xs text-red-500">✕ Quitar</button>}
+            </div>
+
+            {/* Notas */}
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Observaciones</label>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+                placeholder="Ej: Transferencia Bancolombia #1234567..."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none h-14 focus:outline-none" />
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={()=>setShowModal(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+              <button onClick={confirmarPago} disabled={saving}
+                className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                style={{background:'#15803d'}}>
+                {saving?'Registrando...':'✅ Confirmar y generar recibo'}
+              </button>
+            </div>
           </div>
-        );
-      })}
+        </div>
+      )}
     </div>
   );
 }
