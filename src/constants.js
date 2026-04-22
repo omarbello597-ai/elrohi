@@ -14,33 +14,31 @@ export const ROLE_META = {
 
 // ─── LOT STATUSES ─────────────────────────────────────────────────────────────
 export const LOT_STATUS = {
-  nuevo:                      { label: 'Nuevo',                  cls: 'bg-gray-100 text-gray-600',       step: 1  },
-  recibido_alistamiento:      { label: 'Recibido Alistamiento',  cls: 'bg-blue-100 text-blue-700',       step: 2  },
-  en_corte:                   { label: 'En Corte',               cls: 'bg-orange-100 text-orange-800',   step: 3  },
-  entregar_admin:             { label: 'Entregado para flujo a Admin', cls: 'bg-amber-100 text-amber-800', step: 4 },
-  asignacion:                 { label: 'Asign. Satélite',        cls: 'bg-violet-100 text-violet-800',   step: 5  },
-  costura:                    { label: 'En Costura',             cls: 'bg-sky-100 text-sky-800',         step: 6  },
-  listo_remision_tintoreria:  { label: 'Listo p/Tintorería',     cls: 'bg-green-100 text-green-700',     step: 7  },
-  tintoreria:                 { label: 'En Tintorería',          cls: 'bg-indigo-100 text-indigo-800',   step: 8  },
-  listo_bodega:               { label: 'Listo — Asignar Bodega', cls: 'bg-cyan-100 text-cyan-800',       step: 9  },
-  bodega_lonas:               { label: 'Bodega Lonas',           cls: 'bg-emerald-100 text-emerald-800', step: 10 },
-  bodega_calidad:             { label: 'Bodega Control Calidad', cls: 'bg-teal-100 text-teal-800',       step: 10 },
-  en_operaciones_elrohi:      { label: 'Operaciones ELROHI',     cls: 'bg-purple-100 text-purple-800',   step: 11 },
-  en_revision_calidad:        { label: 'En Revisión Calidad',    cls: 'bg-pink-100 text-pink-800',       step: 12 },
-  despachado:                 { label: 'Despachado',             cls: 'bg-gray-100 text-gray-500',       step: 13 },
+  nuevo:                 { label: 'Nuevo',                  cls: 'bg-gray-100 text-gray-600',      step: 1  },
+  recibido_alistamiento: { label: 'Recibido Alistamiento',  cls: 'bg-blue-100 text-blue-700',      step: 2  },
+  en_corte:              { label: 'En Corte',               cls: 'bg-orange-100 text-orange-800',  step: 3  },
+  entregar_admin:        { label: 'Entregar a Admin',       cls: 'bg-amber-100 text-amber-800',    step: 4  },
+  asignacion:            { label: 'Asign. Satélite',        cls: 'bg-violet-100 text-violet-800',  step: 5  },
+  costura:               { label: 'En Costura',             cls: 'bg-sky-100 text-sky-800',        step: 6  },
+  tintoreria:            { label: 'En Tintorería',          cls: 'bg-indigo-100 text-indigo-800',  step: 7  },
+  listo_bodega:          { label: 'Listo — Asignar Bodega', cls: 'bg-cyan-100 text-cyan-800',      step: 8  },
+  en_bodega_1:           { label: 'Bodega 1',               cls: 'bg-emerald-100 text-emerald-800',step: 9  },
+  en_bodega_2:           { label: 'Bodega 2',               cls: 'bg-teal-100 text-teal-800',      step: 9  },
+  en_operaciones:        { label: 'En Operaciones',         cls: 'bg-purple-100 text-purple-800',  step: 10 },
+  despachado:            { label: 'Despachado',             cls: 'bg-gray-100 text-gray-500',      step: 11 },
 };
 
 export const LOT_STATUS_STEPS = [
-  ['nuevo',                    'Nuevo'        ],
-  ['en_corte',                 'Corte'        ],
-  ['asignacion',               'Satélite'     ],
-  ['costura',                  'Costura'      ],
-  ['tintoreria',               'Tintorería'   ],
-  ['listo_bodega',             'Bodega'       ],
-  ['en_operaciones_elrohi',    'Operaciones'  ],
-  ['en_revision_calidad',      'Calidad'      ],
-  ['despachado',               'Despachado'   ],
+  ['nuevo',                 'Nuevo'         ],
+  ['en_corte',              'Corte'         ],
+  ['asignacion',            'Satélite'      ],
+  ['costura',               'Costura'       ],
+  ['tintoreria',            'Tintorería'    ],
+  ['listo_bodega',          'Bodega'        ],
+  ['en_operaciones',        'Operaciones'   ],
+  ['despachado',            'Despachado'    ],
 ];
+
 export const LOT_PRIORITY = {
   normal:  { label: 'Normal',  cls: 'bg-gray-100 text-gray-600'   },
   urgente: { label: 'Urgente', cls: 'bg-amber-100 text-amber-800' },
@@ -67,17 +65,16 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto','/listas-precios'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto','/listas-precios'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config'],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario'],
   nomina:         ['/nomina'],
-  despachos:      ['/bodegas', '/pedidos', '/quincena'],
+  despachos:      ['/pedidos','/inventario'],
   corte:          ['/corte','/operaciones-elrohi','/quincena'],
   admin_satelite: ['/taller','/asignar-ops'],
   operario:       ['/mis-ops','/quincena'],
   tintoreria:     ['/tintoreria'],
   terminacion:    ['/operaciones-elrohi','/quincena'],
-  bodega_op:      ['/bodegas', '/bodega-lonas', '/quincena'],
-
+  bodega_op:      ['/bodegas','/operaciones-elrohi','/quincena'],
 };
 
 export const NAV_ITEMS = {
@@ -88,7 +85,7 @@ export const NAV_ITEMS = {
   '/bodegas':            { label: 'Bodegas',            icon: 'Warehouse'       },
   '/operaciones-elrohi': { label: 'Operaciones',        icon: 'Layers'          },
   '/gestion-operarios':  { label: 'Operarios ELROHI',   icon: 'Users'           },
-  '/inventario':         { label: 'Inventario',         icon: 'Box'             },
+  '/inventario':         { label: 'Inventario Insumos', icon: 'Box'             },
   '/nomina':             { label: 'Nómina',             icon: 'DollarSign'      },
   '/config':             { label: 'Configuración',      icon: 'Settings'        },
   '/corte':              { label: 'Área de Corte',      icon: 'Scissors'        },
@@ -98,10 +95,6 @@ export const NAV_ITEMS = {
   '/quincena':           { label: 'Mi Quincena',        icon: 'DollarSign'      },
   '/tintoreria':         { label: 'Tintorería',         icon: 'Palette'         },
   '/remision':           { label: 'Remisión Corte',     icon: 'FileText'        },
-  '/recepcion-tinto':    { label: 'Recibir Tintorería', icon: 'Layers' },
-  '/bodega-calidad':     { label: 'Bodega Control Calidad', icon: 'CheckSquare' },
-  '/bodega-lonas':       { label: 'Bodega Lonas',           icon: 'Package' },
-  '/listas-precios': { label: 'Listas de Precios', icon: 'DollarSign' },
 };
 
 export const ACCENT = '#e85d26';
