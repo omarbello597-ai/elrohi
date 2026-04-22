@@ -48,7 +48,7 @@ function TiempoChip({ ms, activo }) {
 }
 
 export default function TrazabilidadScreen() {
-  const { lots, users, satellites } = useData();
+  const { lots, users, satellites, ops } = useData();
   const [busqueda, setBusqueda] = useState('');
   const [mesActivo, setMesActivo] = useState(new Date().getMonth());
   const [añoActivo, setAñoActivo] = useState(new Date().getFullYear());
@@ -322,7 +322,9 @@ export default function TrazabilidadScreen() {
                       })()}
                       <div className="space-y-1.5">
                         {lot.lotOps.map((op,i) => {
-                          const worker = users.find(u=>u.id===op.wId);
+                          const worker  = users.find(u=>u.id===op.wId);
+                          const opData  = ops.find(o=>o.id===op.opId);
+                          const opNombre = op.name || opData?.name || op.opId;
                           const durMs  = op.startedAt && op.doneAt ? new Date(op.doneAt)-new Date(op.startedAt) : null;
                           const enCurso = op.startedAt && !op.doneAt && op.status==='en_proceso';
                           const tiempoActual = enCurso ? Date.now()-new Date(op.startedAt).getTime() : null;
@@ -330,7 +332,7 @@ export default function TrazabilidadScreen() {
                             <div key={i} className="bg-white rounded-xl border border-gray-100 p-3">
                               <div className="flex items-center gap-2 mb-1.5">
                                 <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':op.status==='en_proceso'?'bg-blue-500':'bg-gray-300'}`} />
-                                <span className="flex-1 text-xs font-bold text-gray-800">{op.name||op.opId}</span>
+                                <span className="flex-1 text-xs font-bold text-gray-800">{opNombre}</span>
                                 <span className="text-[10px] text-gray-400">{op.qty?.toLocaleString('es-CO')} pzas</span>
                                 {(durMs||tiempoActual) && <TiempoChip ms={durMs||tiempoActual} activo={enCurso} />}
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':op.status==='en_proceso'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}`}>
