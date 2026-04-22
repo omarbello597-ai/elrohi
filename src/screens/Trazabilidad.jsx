@@ -48,7 +48,7 @@ function TiempoChip({ ms, activo }) {
 }
 
 export default function TrazabilidadScreen() {
-  const { lots } = useData();
+  const { lots, users, satellites } = useData();
   const [busqueda, setBusqueda] = useState('');
   const [mesActivo, setMesActivo] = useState(new Date().getMonth());
   const [añoActivo, setAñoActivo] = useState(new Date().getFullYear());
@@ -307,18 +307,56 @@ export default function TrazabilidadScreen() {
                   {lot.lotOps?.length > 0 && (
                     <div className="mb-4">
                       <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operaciones de costura</p>
-                      <div className="space-y-1">
+                      {/* Satélite asignado */}
+                      {lot.satId && (()=>{
+                        const sat = satellites.find(s=>s.id===lot.satId);
+                        return sat ? (
+                          <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                            <span className="text-base">🏭</span>
+                            <div>
+                              <p className="text-xs font-bold text-amber-800">{sat.name}</p>
+                              <p className="text-[9px] text-amber-600">{sat.city} · Admin: {sat.adminName||'—'}</p>
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                      <div className="space-y-1.5">
                         {lot.lotOps.map((op,i) => {
-                          const durMs = op.startedAt && op.doneAt ? new Date(op.doneAt)-new Date(op.startedAt) : null;
+                          const worker = users.find(u=>u.id===op.wId);
+                          const durMs  = op.startedAt && op.doneAt ? new Date(op.doneAt)-new Date(op.startedAt) : null;
+                          const enCurso = op.startedAt && !op.doneAt && op.status==='en_proceso';
+                          const tiempoActual = enCurso ? Date.now()-new Date(op.startedAt).getTime() : null;
                           return (
-                            <div key={i} className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-100 text-xs">
-                              <span className={`w-2 h-2 rounded-full ${op.status==='completado'?'bg-green-500':'bg-gray-300'}`} />
-                              <span className="flex-1 text-gray-700">{op.name||op.opId}</span>
-                              <span className="text-gray-400">{op.qty} pzas</span>
-                              {durMs && <TiempoChip ms={durMs} activo={false} />}
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}`}>
-                                {op.status==='completado'?'✓ Listo':'Pendiente'}
-                              </span>
+                            <div key={i} className="bg-white rounded-xl border border-gray-100 p-3">
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':op.status==='en_proceso'?'bg-blue-500':'bg-gray-300'}`} />
+                                <span className="flex-1 text-xs font-bold text-gray-800">{op.name||op.opId}</span>
+                                <span className="text-[10px] text-gray-400">{op.qty?.toLocaleString('es-CO')} pzas</span>
+                                {(durMs||tiempoActual) && <TiempoChip ms={durMs||tiempoActual} activo={enCurso} />}
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':op.status==='en_proceso'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}`}>
+                                  {op.status==='completado'?'✓ Listo':op.status==='en_proceso'?'⚡ Activa':'Pendiente'}
+                                </span>
+                              </div>
+                              {/* Operario y tiempos */}
+                              <div className="flex items-center gap-3 mt-1">
+                                {worker ? (
+                                  <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-medium">
+                                    👤 {worker.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-gray-400 italic">Sin asignar</span>
+                                )}
+                                {op.startedAt && (
+                                  <span className="text-[9px] text-gray-400">
+                                    Inicio: {new Date(op.startedAt).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+                                  </span>
+                                )}
+                                {op.doneAt && (
+                                  <span className="text-[9px] text-gray-400">
+                                    Fin: {new Date(op.doneAt).toLocaleString('es-CO',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           );
                         })}
