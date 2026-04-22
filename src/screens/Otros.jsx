@@ -133,16 +133,16 @@ export function SatelitesScreen() {
 // ─── INVENTARIO ───────────────────────────────────────────────────────────────
 export function InventarioScreen() {
   const { invGarments, supplies } = useData();
-  const [tab, setTab] = useState('prendas');
+  const [tab, setTab] = useState('insumos');
   const alertSup = supplies.filter((s) => s.qty <= s.min);
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
-        <h1 className="text-sm font-bold text-gray-900 flex-1">Inventario</h1>
+        <h1 className="text-sm font-bold text-gray-900 flex-1">Inventario de Insumos</h1>
         {alertSup.length > 0 && <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-full">⚠ {alertSup.length} insumos bajos</span>}
         <div className="flex bg-gray-100 rounded-lg p-0.5">
-          {[['prendas', 'Prendas'], ['insumos', 'Insumos']].map(([k, l]) => (
+          {[['insumos', 'Insumos']].map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)}
               className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
               style={{ background: tab === k ? '#fff' : 'transparent', color: tab === k ? '#111827' : '#6b7280', fontWeight: tab === k ? 700 : 400 }}>
@@ -199,6 +199,82 @@ export function InventarioScreen() {
 }
 
 // ─── NÓMINA ───────────────────────────────────────────────────────────────────
+export function NominaScreen() {
+  const { lots, satellites, ops, satOpVals, users } = useData();
+
+  const summary = satellites.filter((s) => s.active).map((s) => {
+    const satLots    = lots.filter((l) => l.satId === s.id);
+    const satWorkers = users.filter((u) => u.satId === s.id && u.role === 'operario');
+
+    // ✅ Total = valor_efectivo × piezas por cada operación completada
+    const total = satLots.flatMap((l) =>
+      (l.lotOps || []).filter((lo) => lo.status === 'completado').map((lo) => ({ ...lo, satId: l.satId }))
+    ).reduce((acc, lo) => acc + getOpVal(ops, satOpVals, lo.satId, lo.opId) * lo.qty, 0);
+
+    const compOps = satLots.flatMap((l) => (l.lotOps || []).filter((lo) => lo.status === 'completado')).length;
+
+    // Worker breakdown
+    const workerBreakdown = satWorkers.map((w) => ({
+      ...w, earnings: workerQuincena(w.id, lots, ops, satOpVals),
+    }));
+
+    return { ...s, total, compOps, workerBreakdown };
+  }).sort((a, b) => b.total - a.total);
+
+  const grand = summary.reduce((a, s) => a + s.total, 0);
+  const [expanded, setExpanded] = useState(null);
+
+  return (
+    <div>
+      <h1 className="text-sm font-bold text-gray-900 mb-4">Nómina — Quincena Actual</h1>
+
+      {/* Grand total */}
+      <div className="rounded-2xl p-5 mb-5 text-white" style={{ background: 'linear-gradient(135deg,#1e2d45,#2d4a6e)' }}>
+        <p className="text-xs text-blue-300 uppercase tracking-wider mb-1">Total a pagar</p>
+        <p className="text-3xl font-black" style={{ letterSpacing: '-0.04em' }}>{fmtM(grand)}</p>
+        <p className="text-xs text-blue-300 mt-1">
+          {summary.reduce((a, s) => a + s.compOps, 0)} operaciones · {summary.length} satélites activos
+        </p>
+      </div>
+
+      {/* Satellite breakdown */}
+      <div className="space-y-2">
+        {summary.map((s) => (
+          <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
+                 onClick={() => setExpanded(expanded === s.id ? null : s.id)}>
+              <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center text-lg flex-shrink-0">🏭</div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-gray-900">{s.name}</p>
+                <p className="text-[10px] text-gray-400">{s.city} · {s.workerBreakdown.length} operarios · {s.compOps} ops completadas</p>
+              </div>
+              <div className="text-right mr-2">
+                <p className="text-[9px] text-gray-400">Monto</p>
+                <p className="text-base font-black text-green-600">{fmtM(s.total)}</p>
+              </div>
+              <button className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-[10px] font-bold hover:bg-green-200">Pagar</button>
+            </div>
+
+            {expanded === s.id && s.workerBreakdown.length > 0 && (
+              <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-2">Desglose por operario</p>
+                <div className="space-y-1.5">
+                  {s.workerBreakdown.map((w) => (
+                    <div key={w.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 text-xs">
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-700">{w.initials}</div>
+                      <span className="flex-1 font-medium text-gray-800">{w.name}</span>
+                      <span className="font-bold text-green-600 font-mono">{fmtM(w.earnings)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 export function ConfigScreen() {
