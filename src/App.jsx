@@ -26,6 +26,7 @@ import BodegaLonasScreen       from './screens/BodegaLonas';
 import OperacionesElrohiScreen from './screens/OperacionesElrohi';
 import RecepcionTintoreria     from './screens/RecepcionTintoreria';
 import ListasPreciosScreen from './screens/ListasPrecios';
+import TrazabilidadScreen from './screens/Trazabilidad';
 
 import { NAV_CONFIG } from './constants';
 
@@ -83,6 +84,7 @@ const ALL_ROUTES = [
   { path: '/recepcion-tinto',    component: RecepcionTintoreria,   roles: ['gerente','admin_elrohi'] },
   { path: '/remision',           component: RemisionScreen,        roles: ['gerente','admin_elrohi','corte','admin_satelite'] },
   { path: '/listas-precios', component: ListasPreciosScreen, roles: ['gerente','admin_elrohi'] },
+  { path: '/trazabilidad', component: TrazabilidadScreen, roles: ['gerente','admin_elrohi'] },
 ];
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
