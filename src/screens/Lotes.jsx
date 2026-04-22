@@ -76,7 +76,7 @@ export default function LotesScreen() {
   const [selLotId, setSelLotId] = useState(null);
 
   // Excluir lotes en Bodega Lonas y Despachados del panel de producción
-  const STATUS_PRODUCCION = Object.keys(LOT_STATUS).filter(s => !['bodega_lonas','despachado'].includes(s));
+  const STATUS_PRODUCCION = Object.keys(LOT_STATUS).filter(s => !['bodega_lonas','bodega_calidad','en_operaciones_elrohi','en_revision_calidad','despachado'].includes(s));
   const lotsEnProd = lots.filter(l => STATUS_PRODUCCION.includes(l.status));
   const filtered = filter === 'all' ? lotsEnProd : lots.filter(l => l.status === filter);
   const detail   = lots.find(l => l.id === selLotId);
@@ -249,13 +249,7 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
               ✓ Aprobar calidad → Bodega Lonas
             </button>
           )}
-          {['bodega_lonas','bodega_calidad'].includes(lot.status) && isAdmin && (
-            <button onClick={() => advance('despachado')} disabled={saving}
-              className="text-xs font-bold px-3 py-2 text-white rounded-lg"
-              style={{background:'#1a3a6b'}}>
-              🚚 Despachar
-            </button>
-          )}
+
         </div>
 
         {/* Timeline de pasos */}
