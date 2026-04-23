@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logo from '../assets/LogoELROHI.jpeg';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -7,8 +8,7 @@ import { NAV_CONFIG, NAV_ITEMS, ROLE_META, ACCENT } from '../constants';
 const NAV_ICONS = {
   LayoutDashboard: '⊞', ShoppingBag: '📋', Package: '📦', Factory: '🏭',
   Box: '🗄', DollarSign: '💵', Settings: '⚙', Scissors: '✂',
-  Zap: '⚡', Wrench: '🔧', Palette: '🎨', Layers: '🪡', FileText: '📄',
-  Warehouse: '📦', Users: '👥',
+  Zap: '⚡', Wrench: '🔧', Palette: '🎨', Layers: '🪡',
 };
 
 export default function Layout({ children }) {
@@ -40,9 +40,7 @@ export default function Layout({ children }) {
         {/* Logo */}
         <div className="flex items-center justify-between px-3 py-4 border-b border-gray-800">
           {sideOpen && (
-            <span className="text-lg font-black tracking-tighter text-white">
-              🧵 <span style={{ color: ACCENT }}>EL</span>ROHI
-            </span>
+            <img src={logo} alt="ELROHI" style={{height:36, width:'auto', objectFit:'contain', borderRadius:6}} />
           )}
           <button
             onClick={() => setSideOpen(!sideOpen)}
