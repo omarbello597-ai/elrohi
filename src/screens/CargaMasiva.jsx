@@ -159,8 +159,15 @@ export default function CargaMasivaScreen() {
           const desc  = String(r[descKey] || r['DESCRIPCION'] || r['descripcion'] || '').trim();
           const talla = String(r['TALLAS'] || r['Tallas'] || r['tallas'] || r['TALLA'] || '').trim();
           const tipo2 = String(r['TIPO'] || r['Tipo'] || r['tipo'] || '').trim();
-          const precioStr = String(r.PRECIO || r.precio || '0').replace(/[^\d]/g,'');
-          const precio = +precioStr || 0;
+          // Colombian format: 20.200 = twenty thousand two hundred
+          // Remove spaces, then if has dot remove it (thousands sep), if has comma treat as decimal
+          const rawPrecio = String(r['PRECIO'] || r['Precio'] || r['precio'] || '0').trim();
+          const precioNum = rawPrecio
+            .replace(/\s/g,'')           // remove spaces
+            .replace(/\./g,'')           // remove dots (thousands separator in Colombia)
+            .replace(',','.')             // comma to decimal point if any
+            .replace(/[^\d.]/g,'');      // remove any other non-numeric
+          const precio = +precioNum || 0;
           if (!desc && !num) return;
           const key = num || desc.slice(0,30);
           if (!productosMap[key]) {
