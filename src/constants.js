@@ -65,8 +65,8 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config', '/trazabilidad', '/clientes'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario', '/trazabilidad','/clientes'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config', '/trazabilidad', '/clientes','/carga-masiva'],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario', '/trazabilidad','/clientes','/carga-masiva'],
   nomina:         ['/nomina'],
   despachos:      ['/pedidos','/inventario'],
   corte:          ['/corte','/operaciones-elrohi','/quincena'],
@@ -97,6 +97,7 @@ export const NAV_ITEMS = {
   '/remision':           { label: 'Remisión Corte',     icon: 'FileText'        },
   '/trazabilidad':       { label: 'Trazabilidad', icon: 'Activity' },
   '/clientes': { label: 'Clientes', icon: 'Users' },
+  '/carga-masiva': { label: 'Carga Masiva', icon: 'Upload' },
 };
 
 export const ACCENT = '#e85d26';
