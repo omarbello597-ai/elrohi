@@ -2,11 +2,19 @@ import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { addDocument, updateDocument, listenCol } from '../services/db';
 import { ACCENT } from '../constants';
-import * as XLSX from 'xlsx';
+// xlsx se carga dinámicamente desde CDN
+const getXLSX = () => new Promise((resolve) => {
+  if (window.XLSX) { resolve(window.XLSX); return; }
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.onload = () => resolve(window.XLSX);
+  document.head.appendChild(script);
+});
 import toast from 'react-hot-toast';
 
 // ── TEMPLATES DE DESCARGA ─────────────────────────────────────────────────────
-const downloadTemplate = (tipo) => {
+const downloadTemplate = async (tipo) => {
+  const XLSX = await getXLSX();
   let headers, ejemplo, nombre;
   if (tipo === 'clientes') {
     headers = ['RAZON_SOCIAL','NIT','DIRECCION','TELEFONO','CIUDAD','FORMA_PAGO','IMPUESTO'];
@@ -32,7 +40,8 @@ const downloadTemplate = (tipo) => {
 };
 
 // ── PARSEAR EXCEL ──────────────────────────────────────────────────────────────
-const parseExcel = (file) => new Promise((resolve, reject) => {
+const parseExcel = (file) => new Promise(async (resolve, reject) => {
+  const XLSX = await getXLSX();
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
@@ -200,7 +209,7 @@ export default function CargaMasivaScreen() {
           {/* Instrucciones */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
             <p className="text-xs font-bold text-blue-800 mb-2">📋 Instrucciones</p>
-            <p className="text-[10px] text-blue-700 mb-2">{t.desc}. Descarga la plantilla, llena los datos y sube el archivo.</p>
+            <p className="text-[10px] text-blue-700 mb-2">{t.desc}. Descarga la plantilla CSV, llena los datos en Excel y guarda como CSV antes de subir.</p>
             <button onClick={()=>downloadTemplate(t.key)}
               className="text-[10px] font-bold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               ⬇ Descargar plantilla Excel
@@ -223,7 +232,7 @@ export default function CargaMasivaScreen() {
                   <p className="text-xs text-gray-400 mt-1">.xlsx o .xls</p>
                 </div>
               )}
-              <input type="file" accept=".xlsx,.xls,.csv" onChange={e=>handleFile(e,t.key)} className="hidden" />
+              <input type="file" accept=".csv,.txt" onChange={e=>handleFile(e,t.key)} className="hidden" />
             </label>
           </div>
 
