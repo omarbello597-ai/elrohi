@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import logo from '../assets/LogoELROHI.jpeg';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getUser } from '../services/db';
 import { NAV_CONFIG, ROLE_META, ACCENT } from '../constants';
 
 export default function LoginScreen() {
@@ -12,53 +12,29 @@ export default function LoginScreen() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
 
-const handleLogin = async (e) => {
-  e.preventDefault();
-  if (!email || !password) { setError('Ingresa tu correo y contraseña'); return; }
-  setLoading(true);
-  setError('');
-  try {
-    const result = await login(email.trim(), password);
-    const profile = await getUser(result.user.uid);
-    const NAV = {
-      gerente: '/dashboard', admin_elrohi: '/dashboard',
-      nomina: '/nomina', despachos: '/pedidos',
-      corte: '/corte', admin_satelite: '/taller',
-      operario: '/mis-ops', tintoreria: '/tintoreria',
-      pespunte: '/pespunte', bodega: '/bodega',
-    };
-    navigate(profile?.role ? (NAV[profile.role] || '/dashboard') : '/');
-  } catch (err) {
-    setError('Correo o contraseña incorrectos');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Quick-access demo buttons
-  const DEMO_LOGINS = [
-    { label: 'Gerente General',  email: 'gerente@elrohi.com'    },
-    { label: 'Admin ELROHI',     email: 'admin@elrohi.com'      },
-    { label: 'Admin Satélite',   email: 'sat1@elrohi.com'       },
-    { label: 'Operario',         email: 'op1@elrohi.com'        },
-    { label: 'Área de Corte',    email: 'corte@elrohi.com'      },
-    { label: 'Tintorería',       email: 'tintoreria@elrohi.com' },
-    { label: 'Pespunte',         email: 'pespunte@elrohi.com'   },
-    { label: 'Bodega',           email: 'bodega@elrohi.com'     },
-  ];
-
-  const quickLogin = (demoEmail) => {
-    setEmail(demoEmail);
-    setPassword('elrohi2024');
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!email || !password) { setError('Ingresa tu correo y contraseña'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      await login(email.trim(), password);
+      // Navigate to first allowed page after login — AuthContext sets profile
+      navigate('/dashboard');
+    } catch (err) {
+      setError('Correo o contraseña incorrectos');
+    } finally {
+      setLoading(false);
+    }
   };
+
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: '#111827' }}>
       {/* Logo */}
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-black text-white tracking-tighter">
-          🧵 <span style={{ color: ACCENT }}>EL</span>ROHI
-        </h1>
+        <img src={logo} alt="ELROHI" className="h-20 w-auto mx-auto mb-3 rounded-xl object-contain" />
         <p className="text-gray-400 text-sm mt-1">Sistema de Gestión de Producción</p>
       </div>
 
@@ -105,24 +81,7 @@ const handleLogin = async (e) => {
           </button>
         </form>
 
-        {/* Demo quick access */}
-        <div className="bg-gray-800/60 border border-gray-700 rounded-2xl p-4">
-          <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-3">
-            Acceso demo rápido · contraseña: elrohi2024
-          </p>
-          <div className="grid grid-cols-2 gap-1.5">
-            {DEMO_LOGINS.map((d) => (
-              <button
-                key={d.email}
-                onClick={() => quickLogin(d.email)}
-                className="text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-              >
-                <p className="text-gray-200 text-[11px] font-medium">{d.label}</p>
-                <p className="text-gray-500 text-[9px]">{d.email}</p>
-              </button>
-            ))}
-          </div>
-        </div>
+
       </div>
     </div>
   );
