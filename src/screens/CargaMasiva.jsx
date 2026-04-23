@@ -154,9 +154,11 @@ export default function CargaMasivaScreen() {
         const productosMap = {};
         rows.forEach((r, i) => {
           const num   = String(r['#'] || r.NUM || r.num || '').trim();
-          const desc  = String(r['DESCRIPCIÓN PRODUCTO'] || r['DESCRIPCION PRODUCTO'] || r.DESCRIPCION || r.descripcion || '').trim();
-          const talla = String(r.TALLAS || r.talla || r.TALLA || '').trim();
-          const tipo2 = String(r.TIPO || r.tipo || '').trim();
+          const rawKeys = Object.keys(r);
+          const descKey = rawKeys.find(k => k.includes('DESCRIP') || k.includes('Descrip')) || '';
+          const desc  = String(r[descKey] || r['DESCRIPCION'] || r['descripcion'] || '').trim();
+          const talla = String(r['TALLAS'] || r['Tallas'] || r['tallas'] || r['TALLA'] || '').trim();
+          const tipo2 = String(r['TIPO'] || r['Tipo'] || r['tipo'] || '').trim();
           const precioStr = String(r.PRECIO || r.precio || '0').replace(/[^\d]/g,'');
           const precio = +precioStr || 0;
           if (!desc && !num) return;
@@ -308,7 +310,14 @@ export default function CargaMasivaScreen() {
                     {preview.slice(0,10).map((row,i)=>(
                       <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                         {Object.entries(row).filter(([k])=>k!=='active'&&k!=='satId'&&k!=='initials').map(([k,v])=>(
-                          <td key={k} className="px-3 py-1.5 text-gray-700 whitespace-nowrap">{String(v)}</td>
+                          <td key={k} className="px-3 py-1.5 text-gray-700 whitespace-nowrap max-w-xs truncate">
+                            {Array.isArray(v)
+                              ? v.map(p => typeof p === 'object' ? `${p.talla}: $${p.precio?.toLocaleString('es-CO')}` : String(p)).join(' | ')
+                              : typeof v === 'object' && v !== null
+                              ? JSON.stringify(v)
+                              : String(v)
+                            }
+                          </td>
                         ))}
                       </tr>
                     ))}
