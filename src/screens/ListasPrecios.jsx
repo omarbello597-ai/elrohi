@@ -94,12 +94,27 @@ export default function ListasPreciosScreen() {
                 <span className="text-2xl">💰</span>
               </div>
               <div className="space-y-1 mb-3">
-                {GARMENT_TYPES.map(g => (
-                  <div key={g.id} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600">{g.name}</span>
-                    <span className="font-bold text-gray-900">{fmtM(lista.precios?.[g.id] || 0)}</span>
+                {lista.productos?.length > 0 ? (
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">{lista.productos.length} productos cargados</p>
+                    {lista.productos.slice(0,3).map((p,i) => (
+                      <div key={i} className="flex items-center justify-between text-xs py-0.5">
+                        <span className="text-gray-600 truncate flex-1 mr-2" style={{maxWidth:180}}>{p.descripcion}</span>
+                        <span className="font-bold text-gray-900 text-[10px] flex-shrink-0">
+                          {p.precios?.[0] ? fmtM(p.precios[0].precio) : '—'}
+                        </span>
+                      </div>
+                    ))}
+                    {lista.productos.length > 3 && <p className="text-[10px] text-gray-400">... y {lista.productos.length - 3} más</p>}
                   </div>
-                ))}
+                ) : (
+                  GARMENT_TYPES.map(g => (
+                    <div key={g.id} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">{g.name}</span>
+                      <span className="font-bold text-gray-900">{fmtM(lista.precios?.[g.id] || 0)}</span>
+                    </div>
+                  ))
+                )}
               </div>
               <div className="flex gap-2 mt-3">
                 <button onClick={() => setVista(lista.id)}
