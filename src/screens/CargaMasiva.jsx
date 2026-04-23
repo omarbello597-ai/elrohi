@@ -148,6 +148,28 @@ export default function CargaMasivaScreen() {
           if (!nombre) errs.push(`Fila ${i+2}: falta nombre de operación`);
           return { name: nombre, val, active: true };
         });
+      } else if (tipo === 'listas_precios') {
+        // Formato: # | DESCRIPCIÓN PRODUCTO | TALLAS | PRECIO | TIPO
+        // Agrupar productos — mismo # = mismo producto con diferentes tallas/precios
+        const productosMap = {};
+        rows.forEach((r, i) => {
+          const num   = String(r['#'] || r.NUM || r.num || '').trim();
+          const desc  = String(r['DESCRIPCIÓN PRODUCTO'] || r['DESCRIPCION PRODUCTO'] || r.DESCRIPCION || r.descripcion || '').trim();
+          const talla = String(r.TALLAS || r.talla || r.TALLA || '').trim();
+          const tipo2 = String(r.TIPO || r.tipo || '').trim();
+          const precioStr = String(r.PRECIO || r.precio || '0').replace(/[^\d]/g,'');
+          const precio = +precioStr || 0;
+          if (!desc && !num) return;
+          const key = num || desc.slice(0,30);
+          if (!productosMap[key]) {
+            productosMap[key] = { num, descripcion: desc, tipo: tipo2, precios: [], active: true };
+          }
+          if (talla && precio > 0) {
+            productosMap[key].precios.push({ talla, precio });
+          }
+        });
+        parsed = Object.values(productosMap).filter(p => p.descripcion && p.precios.length > 0);
+        if (parsed.length === 0) errs.push('No se encontraron productos válidos');
       }
 
       setErrors(errs);
@@ -166,13 +188,32 @@ export default function CargaMasivaScreen() {
     setSaving(true);
     let ok = 0; let fail = 0;
     try {
-      const col = tipo === 'clientes' ? 'clients' :
-                  tipo === 'operarios' ? 'users' : 'operations';
-      for (const item of preview) {
+      const col = tipo === 'clientes'      ? 'clients' :
+                  tipo === 'operarios'     ? 'users' :
+                  tipo === 'listas_precios'? 'listasPrecios' : 'operations';
+
+      if (tipo === 'listas_precios') {
+        // Para listas de precios: el nombre de la lista viene del input del usuario
+        const nombreLista = window.prompt('¿Nombre de esta lista de precios?\nEj: Lista Contado IVA');
+        if (!nombreLista) { setSaving(false); return; }
+        const descripcion = window.prompt('Descripción (opcional)\nEj: Clientes contado con IVA') || '';
+        // Guardar todos los productos en una sola lista
         try {
-          await addDocument(col, item);
-          ok++;
-        } catch { fail++; }
+          await addDocument('listasPrecios', {
+            nombre: nombreLista,
+            descripcion,
+            productos: preview,
+            active: true,
+          });
+          ok = preview.length;
+        } catch { fail = 1; }
+      } else {
+        for (const item of preview) {
+          try {
+            await addDocument(col, item);
+            ok++;
+          } catch { fail++; }
+        }
       }
       setResultado({ ok, fail, tipo });
       setPreview([]); setFile(null);
@@ -182,9 +223,10 @@ export default function CargaMasivaScreen() {
   };
 
   const TABS = [
-    { key:'clientes',    label:'🏢 Clientes',    col:'clients',    desc:'Carga masiva de clientes desde Excel' },
-    { key:'operarios',   label:'👷 Operarios',   col:'users',      desc:'Carga masiva de operarios ELROHI' },
-    { key:'operaciones', label:'⚡ Operaciones', col:'operations', desc:'Carga masiva de operaciones de costura' },
+    { key:'clientes',      label:'🏢 Clientes',       col:'clients',       desc:'Carga masiva de clientes desde CSV' },
+    { key:'operarios',     label:'👷 Operarios',      col:'users',         desc:'Carga masiva de operarios ELROHI' },
+    { key:'operaciones',   label:'⚡ Operaciones',    col:'operations',    desc:'Carga masiva de operaciones de costura' },
+    { key:'listas_precios',label:'💰 Listas Precios', col:'listasPrecios', desc:'Carga masiva de listas de precios por referencia' },
   ];
 
   return (
