@@ -180,30 +180,49 @@ export default function ListasPreciosScreen() {
             <p className="text-[10px] font-bold text-white uppercase tracking-wider">Precios por referencia</p>
           </div>
           <div className="p-4 space-y-3">
-            {GARMENT_TYPES.map(g => (
-              <div key={g.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-800">{g.name}</p>
-                  <p className="text-[10px] text-gray-400">{g.g === 'H' ? 'Hombre' : 'Mujer'}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">$</span>
-                  <input
-                    type="number"
-                    min={0}
-                    defaultValue={listaActual.precios?.[g.id] || 0}
-                    onBlur={e => updatePrecio(listaActual.id, g.id, e.target.value)}
-                    className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-right focus:outline-none focus:border-orange-400"
-                    style={{ color: '#1a3a6b' }}
-                  />
-                </div>
-                <div className="text-right w-24">
-                  <p className="text-sm font-black" style={{ color: ACCENT }}>
+            {/* Productos cargados desde Excel */}
+            {listaActual.productos?.length > 0 ? (
+              <div className="space-y-2">
+                {listaActual.productos.map((p, i) => (
+                  <div key={i} className="p-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1">
+                        <p className="text-xs font-bold text-gray-800">{p.descripcion}</p>
+                        <p className="text-[9px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded w-fit mt-0.5">{p.tipo}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {p.precios?.map((t, j) => (
+                        <div key={j} className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-2 py-1">
+                          <span className="text-[10px] text-gray-500 font-medium">{t.talla}</span>
+                          <span className="text-[10px] font-black" style={{color:'#1a3a6b'}}>{fmtM(t.precio)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Precios por referencia básica (manual) */
+              GARMENT_TYPES.map(g => (
+                <div key={g.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">{g.name}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">$</span>
+                    <input type="number" min={0}
+                      defaultValue={listaActual.precios?.[g.id] || 0}
+                      onBlur={e => updatePrecio(listaActual.id, g.id, e.target.value)}
+                      className="w-28 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-right focus:outline-none focus:border-orange-400"
+                      style={{ color: '#1a3a6b' }} />
+                  </div>
+                  <p className="text-sm font-black w-24 text-right" style={{color:ACCENT}}>
                     {fmtM(listaActual.precios?.[g.id] || 0)}
                   </p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
           <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
             <p className="text-[10px] text-gray-400">💡 Los precios se guardan automáticamente al salir de cada campo</p>
