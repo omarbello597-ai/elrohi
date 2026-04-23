@@ -29,6 +29,7 @@ import ListasPreciosScreen from './screens/ListasPrecios';
 import TrazabilidadScreen from './screens/Trazabilidad';
 import { NAV_CONFIG } from './constants';
 import ClientesScreen from './screens/Clientes';
+import CargaMasivaScreen from './screens/CargaMasiva';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
@@ -86,6 +87,7 @@ const ALL_ROUTES = [
   { path: '/listas-precios', component: ListasPreciosScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/trazabilidad', component: TrazabilidadScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/clientes', component: ClientesScreen, roles: ['gerente','admin_elrohi','despachos'] },
+  { path: '/carga-masiva', component: CargaMasivaScreen, roles: ['gerente','admin_elrohi'] },
 ];
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
