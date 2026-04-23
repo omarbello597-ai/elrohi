@@ -65,8 +65,8 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config', '/trazabilidad'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario', '/trazabilidad'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config', '/trazabilidad', '/clientes'],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario', '/trazabilidad','/clientes'],
   nomina:         ['/nomina'],
   despachos:      ['/pedidos','/inventario'],
   corte:          ['/corte','/operaciones-elrohi','/quincena'],
@@ -96,6 +96,7 @@ export const NAV_ITEMS = {
   '/tintoreria':         { label: 'Tintorería',         icon: 'Palette'         },
   '/remision':           { label: 'Remisión Corte',     icon: 'FileText'        },
   '/trazabilidad':       { label: 'Trazabilidad', icon: 'Activity' },
+  '/clientes': { label: 'Clientes', icon: 'Users' },
 };
 
 export const ACCENT = '#e85d26';
