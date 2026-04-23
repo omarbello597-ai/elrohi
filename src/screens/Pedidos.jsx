@@ -136,7 +136,7 @@ export default function PedidosScreen() {
   useEffect(() => {
     const u1 = listenCol('despachos',     setDespachos,  orderBy('createdAt','desc'));
     const u2 = listenCol('facturas',      setFacturas,   orderBy('createdAt','desc'));
-    const u3 = listenCol('clients',       setClientes,   orderBy('nombre','asc'));
+    const u3 = listenCol('clients',       setClientes);
     const u4 = listenCol('listasPrecios', setListas,     orderBy('createdAt','desc'));
     return () => { u1(); u2(); u3(); u4(); };
   }, []);
