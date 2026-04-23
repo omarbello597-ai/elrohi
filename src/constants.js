@@ -65,8 +65,8 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config', '/trazabilidad', '/clientes','/carga-masiva'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario', '/trazabilidad','/clientes','/carga-masiva'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config', '/trazabilidad', '/clientes','/carga-masiva', /listas-precios],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario', '/trazabilidad','/clientes','/carga-masiva', /listas-precios],
   nomina:         ['/nomina'],
   despachos:      ['/pedidos','/inventario'],
   corte:          ['/corte','/operaciones-elrohi','/quincena'],
