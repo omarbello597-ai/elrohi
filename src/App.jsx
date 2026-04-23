@@ -27,8 +27,8 @@ import OperacionesElrohiScreen from './screens/OperacionesElrohi';
 import RecepcionTintoreria     from './screens/RecepcionTintoreria';
 import ListasPreciosScreen from './screens/ListasPrecios';
 import TrazabilidadScreen from './screens/Trazabilidad';
-
 import { NAV_CONFIG } from './constants';
+import ClientesScreen from './screens/Clientes';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
@@ -85,6 +85,7 @@ const ALL_ROUTES = [
   { path: '/remision',           component: RemisionScreen,        roles: ['gerente','admin_elrohi','corte','admin_satelite'] },
   { path: '/listas-precios', component: ListasPreciosScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/trazabilidad', component: TrazabilidadScreen, roles: ['gerente','admin_elrohi'] },
+  { path: '/clientes', component: ClientesScreen, roles: ['gerente','admin_elrohi','despachos'] },
 ];
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
