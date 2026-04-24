@@ -355,7 +355,7 @@ function NuevoFormato({ profile, onBack }) {
       {/* HEADER */}
       <div className="bg-white rounded-xl border-2 border-blue-200 overflow-hidden mb-4">
         <div className="flex items-center gap-3 p-3 border-b border-blue-100" style={{background:'#f0f4ff'}}>
-          <div className="w-14 h-10 flex-shrink-0">
+          <div className="w-20 h-14 flex-shrink-0">
             <img src={logo} alt="ELROHI" className="w-full h-full object-contain rounded" />
           </div>
           <div className="flex-1 text-center">
