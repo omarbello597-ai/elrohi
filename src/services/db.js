@@ -51,13 +51,13 @@ export const saveClient = (data) =>
   data.id ? updateDocument('clients', data.id, data) : addDocument('clients', data);
 
 // ─── SATELLITES ───────────────────────────────────────────────────────────────
-export const listenSatellites = (cb) => listenCol('satellites', cb, orderBy('name'));
+export const listenSatellites = (cb) => listenCol('Sateliteselrohi', cb, orderBy('name'));
 
 export const saveSatellite = (data) =>
-  data.id ? updateDocument('satellites', data.id, data) : addDocument('satellites', data);
+  data.id ? updateDocument('Sateliteselrohi', data.id, data) : addDocument('Sateliteselrohi', data);
 
 export const toggleSatellite = (id, active) =>
-  updateDocument('satellites', id, { active });
+  updateDocument('Sateliteselrohi', id, { active });
 
 // ─── OPERATIONS (global) ──────────────────────────────────────────────────────
 export const listenOperations = (cb) => listenCol('operations', cb, orderBy('gtId'));
