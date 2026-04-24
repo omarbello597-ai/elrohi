@@ -347,7 +347,16 @@ export default function BodegaLonasScreen() {
                       </button>
                     )}
                     {isAdmin && p.status==='para_facturar' && (
-                      <button onClick={()=>{setShowFact(p);setFactForm({aplicaIva:false,notas:'',listaId:''}); }}
+                      <button onClick={()=>{
+      // Auto-select lista based on client type
+      const listaAuto = listasActivas.find(l =>
+        p.impuesto === 'remision_mayorista'
+          ? l.nombre.toLowerCase().includes('remis')
+          : l.nombre.toLowerCase().includes('contado') || l.nombre.toLowerCase().includes('iva')
+      );
+      setShowFact(p);
+      setFactForm({aplicaIva: p.impuesto==='iva', notas:'', listaId: listaAuto?.id||''});
+    }}
                         className="text-xs font-bold px-3 py-2 rounded-lg text-white"
                         style={{background:'#1a3a6b'}}>
                         🧾 Generar Factura
