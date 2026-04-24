@@ -102,9 +102,13 @@ export const sumarLoteAInventario = async (lot) => {
 
 // Reservar unidades en alistamiento cuando se toma un pedido
 export const reservarParaAlistamiento = async (items) => {
+  if (!items || !items.length) return;
   const batch = writeBatch(db);
   for (const item of items) {
+    if (!item.gtId || !item.qty) continue;
     const ref = doc(db, 'inventario', item.gtId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) continue; // skip if not in inventory
     batch.update(ref, {
       disponible: increment(-(item.qty || 0)),
       enAlistamiento: increment(item.qty || 0),
