@@ -86,7 +86,7 @@ function printRemisionTinto(lot, satName, remData) {
 
 export default function TallerScreen() {
   const { profile }             = useAuth();
-  const { lots, users, satellites } = useData();
+  const { lots, users, satellites, ops, satOpVals } = useData();
   const [tab, setTab]           = useState('activos');
   const [showRemision, setShowRemision] = useState(null);
 
