@@ -151,6 +151,18 @@ export default function CargaMasivaScreen() {
           });
           parsed = Object.values(map).filter(p => p.descripcion && p.precios.length > 0);
           if (!parsed.length) errs.push('No se encontraron productos válidos');
+      } else if (tipo === 'tarifas_satelite') {
+        parsed = rows.map((r, i) => {
+          // headers are uppercased by parser so try both cases
+          const desc = (r['DESCRIPCION'] || r['descripcion'] || r['DESCRIPCIÓN'] || '').trim().toUpperCase();
+          if (!desc) { errs.push(`Fila ${i+2}: falta descripcion`); return null; }
+          const conf = parsePrecio(r['CONFECCION'] || r['confeccion'] || '0');
+          const term = parsePrecio(r['TERMINACION'] || r['terminacion'] || '0');
+          const rem  = parsePrecio(r['REMATE']      || r['remate']      || '0');
+          const tot  = parsePrecio(r['TOTAL']        || r['total']        || '0') || (conf + term + rem);
+          return { descripcion: desc, confeccion: conf, terminacion: term, remate: rem, total: tot, active: true };
+        }).filter(Boolean);
+        if (!parsed.length) errs.push('No se encontraron tarifas válidas');
         }
 
         setErrors(errs);
