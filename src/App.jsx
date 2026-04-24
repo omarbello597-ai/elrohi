@@ -73,7 +73,7 @@ const ALL_ROUTES = [
   { path: '/corte',              component: CorteElrohiScreen,     roles: ['gerente','admin_elrohi','corte'] },
   { path: '/taller',             component: TallerScreen,          roles: ['admin_satelite'] },
   { path: '/asignar-ops',        component: AsignarOpsScreen,      roles: ['admin_satelite'] },
-  { path: '/mis-ops',            component: MisOpsScreen,          roles: ['operario','pespunte'] },
+  { path: '/mis-ops',            component: MisOpsScreen,          roles: ['operario','pespunte','terminacion'] },
   { path: '/quincena',           component: QuincenaScreen,        roles: ['operario','pespunte','corte','bodega_op','terminacion'] },
   { path: '/tintoreria',         component: TintoriaScreen,        roles: ['gerente','admin_elrohi','tintoreria'] },
   { path: '/pespunte',           component: PespunteScreen,        roles: ['gerente','admin_elrohi','pespunte'] },
