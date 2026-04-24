@@ -30,6 +30,8 @@ import TrazabilidadScreen from './screens/Trazabilidad';
 import { NAV_CONFIG } from './constants';
 import ClientesScreen from './screens/Clientes';
 import CargaMasivaScreen from './screens/CargaMasiva';
+import CuentaCobroScreen    from './screens/CuentaCobro';
+import TarifasSateliteScreen from './screens/TarifasSatelite';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
@@ -88,7 +90,10 @@ const ALL_ROUTES = [
   { path: '/trazabilidad', component: TrazabilidadScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/clientes', component: ClientesScreen, roles: ['gerente','admin_elrohi','despachos'] },
   { path: '/carga-masiva', component: CargaMasivaScreen, roles: ['gerente','admin_elrohi'] },
+  { path: '/cuenta-cobro',     component: CuentaCobroScreen,    roles: ['gerente','admin_elrohi','admin_satelite'] },
+  { path: '/tarifas-satelite', component: TarifasSateliteScreen, roles: ['gerente','admin_elrohi'] }, 
 ];
+
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
 function AppRoutes() {
