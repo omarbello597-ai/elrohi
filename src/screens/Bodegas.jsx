@@ -6,7 +6,6 @@ import { advanceLotStatus } from '../services/db_timeline';
 import { gLabel, fmtM } from '../utils';
 import { GARMENT_TYPES, SIZES, ACCENT } from '../constants';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 
 const BODEGAS_DEF = [
   {
@@ -57,7 +56,6 @@ export default function BodegasScreen() {
   const [opsConOp,   setOpsConOp]   = useState([]);
   const [customOp,   setCustomOp]   = useState({ name:'', val:'' });
   const [saving,     setSaving]     = useState(false);
-  const navigate = useNavigate();
 
   const isAdmin = ['gerente','admin_elrohi'].includes(profile?.role);
 
@@ -191,7 +189,7 @@ export default function BodegasScreen() {
             const lotes = lotesEnBodega(b.id);
             const totalPzas = lotes.reduce((a,l)=>a+(l.totalPieces||0),0);
             return (
-              <button key={b.id} onClick={()=> b.id === 'bodega_lonas' ? navigate('/bodega-lonas') : setVista(b.id)}
+              <button key={b.id} onClick={()=>setVista(b.id)}
                 className="bg-white rounded-xl border-2 p-5 text-left hover:shadow-md transition-all"
                 style={{borderColor:`${b.color}40`}}>
                 <div className="flex items-start justify-between mb-3">
@@ -210,6 +208,41 @@ export default function BodegasScreen() {
             );
           })}
         </div>
+
+        {/* MODAL ASIGNAR DESTINO */}
+        {selLot && (
+          <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+            <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:480}}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold text-gray-900">Asignar destino — {selLot.code}</h2>
+                <button onClick={()=>setSelLot(null)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">{selLot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {selLot.deadline}</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">¿A dónde va este lote?</p>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {[
+                  { val:'bodega_lonas',   label:'📦 Bodega Lonas',           desc:'Listo para despacho a clientes', color:'#2563eb' },
+                  { val:'bodega_calidad', label:'🔍 Bodega Control Calidad',  desc:'Necesita operaciones internas',  color:'#7c3aed' },
+                ].map(opt=>(
+                  <button key={opt.val} onClick={()=>setBodegaDest(opt.val)}
+                    className="p-3 rounded-xl border-2 text-left transition-all"
+                    style={{borderColor:bodegaDest===opt.val?opt.color:'#e5e7eb',background:bodegaDest===opt.val?`${opt.color}10`:'#fff'}}>
+                    <p className="text-sm font-bold mb-1" style={{color:opt.color}}>{opt.label}</p>
+                    <p className="text-[10px] text-gray-500">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setSelLot(null)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+                <button onClick={()=>asignar('bodega')} disabled={saving}
+                  className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                  style={{background:bodegaDest==='bodega_lonas'?'#2563eb':'#7c3aed'}}>
+                  {saving?'Asignando...':'✅ Confirmar destino'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -360,11 +393,7 @@ export default function BodegasScreen() {
                                   }}
                                   className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none focus:border-orange-400">
                                   <option value="">— Seleccionar operario —</option>
-                                  {users.filter(u=>
-                                  !u.satId &&
-                                  u.active!==false &&
-                                  ['corte','bodega_op','terminacion','pespunte','operario','despachos'].includes(u.role)
-                                  ).map(w=>(
+                                  {users.filter(u=>u.active!==false).map(w=>(
                                     <option key={w.id} value={w.id}>{w.name} ({w.role})</option>
                                   ))}
                                 </select>
