@@ -12,6 +12,7 @@ export function MisOpsScreen() {
   const { profile }              = useAuth();
   const { lots, ops, satOpVals } = useData();
 
+  // Operaciones de costura (satélite)
   const myLots   = lots.filter((l) => l.satId === profile.satId && l.status === 'costura');
   const allOps   = myLots.flatMap((l) =>
     (l.lotOps || []).map((lo) => ({
@@ -20,10 +21,24 @@ export function MisOpsScreen() {
       lotCode: l.code,
       satId:   l.satId,
       op:      ops.find((o) => o.id === lo.opId),
+      tipo:    'costura',
     }))
   );
 
-  const mine  = allOps.filter((o) => o.wId === profile.id);
+  // Operaciones internas ELROHI (terminacion/control calidad)
+  const lotesElrohi = lots.filter(l => ['en_operaciones_elrohi','bodega_calidad'].includes(l.status));
+  const opsElrohi   = lotesElrohi.flatMap(l =>
+    (l.opsElrohi || [])
+      .filter(op => op.wId === profile.id)
+      .map(op => ({
+        ...op,
+        lotId:   l.id,
+        lotCode: l.code,
+        tipo:    'elrohi',
+      }))
+  );
+
+  const mine  = [...allOps.filter((o) => o.wId === profile.id), ...opsElrohi];
   const avail = allOps.filter((o) => o.status === 'pendiente' && !o.wId);
 
   const take = async (lotId, loId) => {
@@ -33,11 +48,30 @@ export function MisOpsScreen() {
     } catch { toast.error('Error'); }
   };
 
-  const complete = async (lotId, loId) => {
+  const complete = async (lotId, loId, tipo) => {
     try {
-      await updateLotOp(lotId, loId, { status: 'completado', done: today() });
-      toast.success('¡Operación completada!');
-    } catch { toast.error('Error'); }
+      if (tipo === 'elrohi') {
+        // Operación interna ELROHI
+        const lot = lots.find(l=>l.id===lotId);
+        if (!lot) return;
+        const opsElrohiUpd = (lot.opsElrohi||[]).map(op =>
+          op.id===loId ? {...op, status:'completado', doneAt:new Date().toISOString()} : op
+        );
+        const allDone = opsElrohiUpd.every(op=>op.status==='completado');
+        const { updateDocument } = await import('../services/db');
+        const { advanceLotStatus } = await import('../services/db_timeline');
+        if (allDone) {
+          await advanceLotStatus(lot.id,'en_revision_calidad',profile.id,profile.name,{opsElrohi:opsElrohiUpd});
+          toast.success('✅ Todas las operaciones completas — lote en revisión de calidad');
+        } else {
+          await updateDocument('lots', lotId, {opsElrohi:opsElrohiUpd});
+          toast.success('¡Operación completada!');
+        }
+      } else {
+        await updateLotOp(lotId, loId, { status: 'completado', done: today() });
+        toast.success('¡Operación completada!');
+      }
+    } catch(e) { console.error(e); toast.error('Error'); }
   };
 
   return (
@@ -67,7 +101,7 @@ export function MisOpsScreen() {
                   </div>
                   <div>
                     {lo.status === 'en_proceso' && (
-                      <button onClick={() => complete(lo.lotId, lo.id)}
+                      <button onClick={() => complete(lo.lotId, lo.id, lo.tipo)}
                         className="px-4 py-2 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600">
                         ✓ Terminé
                       </button>
