@@ -77,7 +77,7 @@ const ALL_ROUTES = [
   { path: '/quincena',           component: QuincenaScreen,        roles: ['operario','pespunte','corte','bodega_op','terminacion'] },
   { path: '/tintoreria',         component: TintoriaScreen,        roles: ['gerente','admin_elrohi','tintoreria'] },
   { path: '/pespunte',           component: PespunteScreen,        roles: ['gerente','admin_elrohi','pespunte'] },
-  { path: '/bodegas',            component: BodegasScreen,         roles: ['gerente','admin_elrohi','bodega_op'] },
+  { path: '/bodegas',            component: BodegasScreen,         roles: ['gerente','admin_elrohi','bodega_op','terminacion'] },
   { path: '/bodega-calidad',     component: BodegaCalidadScreen,   roles: ['gerente','admin_elrohi','bodega_op','terminacion'] },
   { path: '/bodega-lonas',       component: BodegaLonasScreen,     roles: ['gerente','admin_elrohi','bodega_op','despachos'] },
   { path: '/operaciones-elrohi', component: OperacionesElrohiScreen, roles: ['gerente','admin_elrohi','corte','bodega_op','terminacion','pespunte'] },
