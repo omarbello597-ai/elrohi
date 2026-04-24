@@ -67,7 +67,7 @@ function printCuenta(cc, satName, logoBase64) {
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
   </head><body><div style="max-width:800px;margin:20px auto;padding:0 20px">
     <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1a3a6b">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #14405A">
       <div>
         ${logoBase64?`<img src="${logoBase64}" style="height:60px;width:auto;object-fit:contain;border-radius:6px" />`:''}
         <div style="font-size:10px;color:#6b7280;margin-top:4px">NIT. 901.080.234-7</div>
@@ -75,7 +75,7 @@ function printCuenta(cc, satName, logoBase64) {
       </div>
       <div style="text-align:right">
         <div style="font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.1em">CUENTA DE COBRO</div>
-        <div style="font-size:24px;font-weight:900;color:#e85d26;font-family:monospace">N° ${cc.numero}</div>
+        <div style="font-size:24px;font-weight:900;color:#2878B4;font-family:monospace">N° ${cc.numero}</div>
         <div style="font-size:11px;color:#6b7280">Fecha: ${cc.fecha}</div>
       </div>
     </div>
@@ -111,8 +111,8 @@ function printCuenta(cc, satName, logoBase64) {
         ${(cc.descuentos||[]).length>0?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb"><span style="font-size:12px;color:#dc2626">Descuentos</span><span style="font-size:12px;font-weight:600;color:#dc2626">-${fmtM(cc.totalDescuentos||0)}</span></div>`:''}
         ${(cc.adicionales||[]).length>0?`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb"><span style="font-size:12px;color:#15803d">Adicionales</span><span style="font-size:12px;font-weight:600;color:#15803d">+${fmtM(cc.totalAdicionales||0)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1a3a6b">
-          <span style="font-size:14px;font-weight:900;color:#1a3a6b">TOTAL</span>
-          <span style="font-size:18px;font-weight:900;color:#e85d26">${fmtM(cc.total||0)}</span>
+          <span style="font-size:14px;font-weight:900;color:#14405A">TOTAL</span>
+          <span style="font-size:18px;font-weight:900;color:#2878B4">${fmtM(cc.total||0)}</span>
         </div>
       </div>
     </div>
