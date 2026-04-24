@@ -369,7 +369,18 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
           </Select>
           <div className="flex gap-2 mt-3">
             <Btn variant="secondary" onClick={()=>setShowAssign(false)} className="flex-1">Cancelar</Btn>
-            <Btn onClick={()=>advance('costura',{satId:selSat})} disabled={!selSat||saving} className="flex-1">Asignar</Btn>
+            <Btn onClick={async()=>{
+              // Build lotOps from global operations
+              const lotOps = ops.filter(o=>o.active!==false).map(o=>({
+                id: `lo_${lot.id}_${o.id}`,
+                opId: o.id,
+                name: o.name,
+                qty: lot.totalPieces || 0,
+                status: 'pendiente',
+                wId: null,
+              }));
+              advance('costura',{satId:selSat, lotOps});
+            }} disabled={!selSat||saving} className="flex-1">Asignar</Btn>
           </div>
         </Modal>
       )}
