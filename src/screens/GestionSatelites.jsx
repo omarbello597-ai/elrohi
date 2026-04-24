@@ -59,10 +59,10 @@ export default function GestionSatelitesScreen() {
         active:      true,
       };
       if (editSat) {
-        await updateDocument('satellites', editSat.id, data);
+        await updateDocument('Sateliteselrohi', editSat.id, data);
         toast.success('✅ Satélite actualizado');
       } else {
-        await addDocument('satellites', data);
+        await addDocument('Sateliteselrohi', data);
         toast.success('✅ Satélite creado');
       }
       setShowModal(false);
@@ -72,7 +72,7 @@ export default function GestionSatelitesScreen() {
 
   const toggleActive = async (s) => {
     try {
-      await updateDocument('satellites', s.id, { active: !s.active });
+      await updateDocument('Sateliteselrohi', s.id, { active: !s.active });
       toast.success(s.active ? 'Satélite desactivado' : 'Satélite activado');
     } catch { toast.error('Error'); }
   };
@@ -86,7 +86,7 @@ export default function GestionSatelitesScreen() {
         fecha: new Date().toISOString().split('T')[0],
         id: Date.now().toString(),
       }];
-      await updateDocument('satellites', satId, { incentivos });
+      await updateDocument('Sateliteselrohi', satId, { incentivos });
       toast.success('✅ Incentivo registrado');
       setShowIncent(null);
       setIncentForm({ nombre:'', valor:'', descripcion:'' });
