@@ -33,6 +33,7 @@ import CargaMasivaScreen from './screens/CargaMasiva';
 import CuentaCobroScreen    from './screens/CuentaCobro';
 import TarifasSateliteScreen from './screens/TarifasSatelite';
 
+
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
   const { profile, loading } = useAuth();
@@ -91,7 +92,8 @@ const ALL_ROUTES = [
   { path: '/clientes', component: ClientesScreen, roles: ['gerente','admin_elrohi','despachos'] },
   { path: '/carga-masiva', component: CargaMasivaScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/cuenta-cobro',     component: CuentaCobroScreen,    roles: ['gerente','admin_elrohi','admin_satelite'] },
-  { path: '/tarifas-satelite', component: TarifasSateliteScreen, roles: ['gerente','admin_elrohi'] }, 
+  { path: '/tarifas-satelite', component: TarifasSateliteScreen, roles: ['gerente','admin_elrohi'] },
+  
 ];
 
 
