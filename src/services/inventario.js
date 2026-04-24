@@ -134,14 +134,18 @@ export const liberarAlistamiento = async (items) => {
 
 // Descontar del inventario al facturar
 export const descontarInventario = async (items) => {
+  if (!items || !items.length) return;
   const batch = writeBatch(db);
   for (const item of items) {
+    if (!item.gtId) continue; // skip items without gtId
     const ref = doc(db, 'inventario', item.gtId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) continue;
     batch.update(ref, {
       enAlistamiento: increment(-(item.qty || 0)),
       total: increment(-(item.qty || 0)),
       updatedAt: new Date().toISOString(),
     });
   }
-  await batch.commit();
+  if (batch._mutations?.length > 0) await batch.commit();
 };
