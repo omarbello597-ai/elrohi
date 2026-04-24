@@ -76,19 +76,19 @@ function printFormato(fc, logoBase64='') {
 
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>${fc.nombreDoc}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style></head><body>
   <div style="max-width:960px;margin:10px auto;border:1.5px solid #1a3a6b">
-    <div style="border-bottom:2px solid #1a3a6b;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div style="border-bottom:2px solid #14405A;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#F7F7F7">
       <img src="${logoBase64}" style="width:72px;height:56px;object-fit:contain;border-radius:4px" />
-      <div style="text-align:center;flex:1"><div style="font-size:17px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div><div style="font-size:9px;color:#1a3a6b">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div></div>
-      <div style="border:2px solid #1a3a6b;padding:4px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#1a3a6b">CORTE</div><div style="font-size:13px;font-weight:900;color:#e85d26;font-family:monospace">${fc.nombreDoc}</div></div>
+      <div style="text-align:center;flex:1"><div style="font-size:17px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div><div style="font-size:9px;color:#14405A">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div></div>
+      <div style="border:2px solid #14405A;padding:4px 10px;text-align:center;background:#F7F7F7"><div style="font-size:9px;font-weight:700;color:#14405A">CORTE</div><div style="font-size:13px;font-weight:900;color:#2878B4;font-family:monospace">${fc.nombreDoc}</div></div>
     </div>
     <div style="display:flex;border-bottom:1px solid #1a3a6b">
       <div style="border-right:1px solid #1a3a6b;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="font-size:8px;font-weight:700;color:#1a3a6b">FECHA</span><span style="font-size:12px;font-weight:700;color:#1a3a6b">${fc.date||todayFmt()}</span></div>
       <div style="flex:1;padding:6px 14px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Operario de Corte:</span><span style="font-size:13px;font-weight:700;color:#1a3a6b">${fc.operarioNombre||''}</span></div>
       <div style="padding:6px 14px;display:flex;align-items:center;gap:8px;border-left:1px solid #1a3a6b"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Lote:</span><span style="font-size:11px;font-weight:700;color:#e85d26;font-family:monospace">${fc.lotCode||''}</span></div>
     </div>
-    <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">REFERENCIAS — PRENDAS</div>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#e8eef7;font-size:9px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:${s.includes('/')?'32':'28'}px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#dce6f5;font-size:9px;font-weight:700;color:#1a3a6b;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
-    <div style="background:#e85d26;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">ESPECIFICACIONES DE TELA</div>
+    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">REFERENCIAS — PRENDAS</div>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#deeaf5;font-size:9px;font-weight:700;color:#14405A;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:${s.includes('/')?'32':'28'}px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#c5daf0;font-size:9px;font-weight:700;color:#14405A;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
+    <div style="background:#2878B4;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">ESPECIFICACIONES DE TELA</div>
     <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="border:1px solid #1a3a6b;padding:3px 8px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:left;width:200px">Tipo de tela</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:center;width:160px">Metros usados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#dc2626;text-align:center;width:160px">Metros desechados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:8px;font-weight:700;color:#92400e;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${espRows}</tbody></table>
     <div style="border-top:1px solid #1a3a6b;padding:7px 12px;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="flex:1;border-bottom:1px solid #1a3a6b;min-height:18px;display:inline-block;font-size:11px;padding:0 4px">${fc.nota||''}</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #1a3a6b">
@@ -354,16 +354,16 @@ function NuevoFormato({ profile, onBack }) {
 
       {/* HEADER */}
       <div className="bg-white rounded-xl border-2 border-blue-200 overflow-hidden mb-4">
-        <div className="flex items-center gap-3 p-3 border-b border-blue-100" style={{background:'#f0f4ff'}}>
+        <div className="flex items-center gap-3 p-3 border-b" style={{background:'#F7F7F7',borderColor:'#3C78B4'}}>
           <div className="w-20 h-14 flex-shrink-0">
             <img src={logo} alt="ELROHI" className="w-full h-full object-contain rounded" />
           </div>
           <div className="flex-1 text-center">
-            <p className="text-sm font-black" style={{color:'#1a3a6b'}}>Dotaciones <span style={{color:ACCENT}}>EL ROHI</span></p>
-            <p className="text-[9px]" style={{color:'#1a3a6b'}}>NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</p>
+            <p className="text-sm font-black"><span style={{color:'#2878B4'}}>Dotaciones </span><span style={{color:'#14405A'}}>EL·ROHI</span></p>
+            <p className="text-[9px]" style={{color:'#14405A'}}>NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</p>
           </div>
-          <div className="border-2 border-blue-800 px-2 py-1.5 text-center flex-shrink-0 rounded">
-            <p className="text-[9px] font-bold" style={{color:'#1a3a6b'}}>CORTE</p>
+          <div className="border-2 px-2 py-1.5 text-center flex-shrink-0 rounded" style={{borderColor:'#14405A'}}>
+            <p className="text-[9px] font-bold" style={{color:'#14405A'}}>CORTE</p>
             <input value={numCorte} onChange={e=>setNumCorte(e.target.value)}
               className="w-16 text-center bg-transparent border-none outline-none font-black font-mono text-xs" style={{color:ACCENT}} />
           </div>
