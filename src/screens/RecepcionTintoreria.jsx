@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { addDocument, updateDocument, listenCol } from '../services/db';
@@ -8,224 +8,444 @@ import { ACCENT } from '../constants';
 import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-// ─── SEMÁFORO ─────────────────────────────────────────────────────────────────
-const Semaforo = ({ status }) => {
-  const cfg = {
-    verde:    { bg:'#dcfce7', color:'#15803d', label:'✓ Completo'          },
-    amarillo: { bg:'#fef9c3', color:'#92400e', label:'⚠ Validando faltante' },
-    rojo:     { bg:'#fee2e2', color:'#dc2626', label:'✕ Pérdida confirmada'  },
+// ── CANVAS FIRMA ──────────────────────────────────────────────────────────────
+function FirmaCanvas({ label, onSign, signed }) {
+  const canvasRef = useRef(null);
+  const drawing   = useRef(false);
+  const clear = () => {
+    const c = canvasRef.current;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.fillStyle='#f9f9f7'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.strokeStyle='#e5e7eb'; ctx.strokeRect(0,0,c.width,c.height);
   };
-  const c = cfg[status] || cfg.amarillo;
-  return <span style={{background:c.bg,color:c.color,fontSize:'9px',fontWeight:700,padding:'2px 8px',borderRadius:20}}>{c.label}</span>;
-};
+  const getPos = (e, c) => {
+    const r = c.getBoundingClientRect();
+    const touch = e.touches?.[0]||e;
+    return { x:(touch.clientX-r.left)*(c.width/r.width), y:(touch.clientY-r.top)*(c.height/r.height) };
+  };
+  const start = (e) => { e.preventDefault(); drawing.current=true; const c=canvasRef.current; const ctx=c.getContext('2d'); const p=getPos(e,c); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
+  const move  = (e) => { e.preventDefault(); if(!drawing.current) return; const c=canvasRef.current; const ctx=c.getContext('2d'); const p=getPos(e,c); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#1a3a6b'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke(); };
+  const end   = (e) => { e.preventDefault(); drawing.current=false; onSign(canvasRef.current.toDataURL()); };
+  useEffect(() => { const c=canvasRef.current; if(c){const ctx=c.getContext('2d'); ctx.fillStyle='#f9f9f7'; ctx.fillRect(0,0,c.width,c.height); ctx.strokeStyle='#e5e7eb'; ctx.strokeRect(0,0,c.width,c.height);} },[]);
+  return (
+    <div className="mb-3">
+      <p className="text-xs font-semibold text-gray-700 mb-1">{label}</p>
+      <div className="relative">
+        <canvas ref={canvasRef} width={500} height={120}
+          className="border border-gray-200 rounded-xl w-full touch-none"
+          style={{background:'#f9f9f7',cursor:'crosshair'}}
+          onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
+          onTouchStart={start} onTouchMove={move} onTouchEnd={end} />
+        <button onClick={clear} className="absolute top-1 right-1 text-[9px] bg-white border border-gray-200 px-2 py-0.5 rounded text-gray-500">Limpiar</button>
+        {signed && <span className="absolute bottom-1 right-1 text-[9px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded">✓ Firmado</span>}
+      </div>
+    </div>
+  );
+}
+
+const TIPOS_NOVEDAD = [
+  { value: 'faltante_tintoreria', label: 'Faltante Tintorería',     color: '#dc2626', desc: 'Se descuenta del pago a tintorería' },
+  { value: 'faltante_satelite',   label: 'Faltante Satélite',       color: '#d97706', desc: 'Se descuenta del pago al satélite' },
+  { value: 'entrega_parcial',     label: 'Entrega Parcial',         color: '#2563eb', desc: 'Faltan prendas en proceso — llegará en otra remisión' },
+  { value: 'danio',               label: 'Daño / Mancha',           color: '#7c3aed', desc: 'Prenda dañada o manchada' },
+];
 
 export default function RecepcionTintoreria() {
   const { profile } = useAuth();
-  const { lots } = useData();
-  const [tab, setTab] = useState('pendientes');
+  const { lots, users } = useData();
+  const [remisiones, setRemisiones] = useState([]);
   const [recepciones, setRecepciones] = useState([]);
-  const [selLotId, setSelLotId] = useState('');
-  const [recibido, setRecibido] = useState({});
-  const [novedades, setNovedades] = useState('');
+  const [tab, setTab] = useState('pendientes');
+
+  // Modal remisión (tintorería genera entrega)
+  const [showRemision, setShowRemision] = useState(null);
+  const [conteoEntrega, setConteoEntrega] = useState({});
+  const [novedades, setNovedades] = useState([]);
+  const [firmaTinto, setFirmaTinto]   = useState(null);
+  const [firmaAdmin, setFirmaAdmin]   = useState(null);
   const [saving, setSaving] = useState(false);
 
+  // Modal recepción (admin recibe con semáforo)
+  const [showRecepcion, setShowRecepcion] = useState(null);
+  const [semaforo, setSemaforo] = useState('verde');
+  const [obsAdmin, setObsAdmin] = useState('');
+
   useEffect(() => {
-    const unsub = listenCol('recepcionesTinto', setRecepciones, orderBy('createdAt','desc'));
-    return unsub;
+    const u1 = listenCol('remisionesTinto',   setRemisiones,  orderBy('createdAt','desc'));
+    const u2 = listenCol('recepcionesTinto',  setRecepciones, orderBy('createdAt','desc'));
+    return () => { u1(); u2(); };
   }, []);
 
+  const isTinto = profile?.role === 'tintoreria';
   const isAdmin = ['gerente','admin_elrohi'].includes(profile?.role);
 
-  // Lotes en tintorería listos para recibir
-  const tintoLots = lots.filter(l => l.status === 'tintoreria');
-  const selLot = lots.find(l => l.id === selLotId);
+  // Lotes en tintorería
+  const lotesEnTinto = lots.filter(l => l.status === 'tintoreria');
+  // Remisiones pendientes de recepción por admin
+  const remisionesPendientes = remisiones.filter(r => r.status === 'enviada');
 
-  const calcSemaforo = (gtId, original, recibidas) => {
-    if (!recibidas && recibidas !== 0) return null;
-    const rec = +recibidas || 0;
-    if (rec >= original) return 'verde';
-    if (rec > 0)         return 'amarillo';
-    return 'rojo';
+  const openRemision = (lot) => {
+    const conteo = {};
+    lot.garments?.forEach(g => { conteo[g.gtId] = g.total; });
+    setConteoEntrega(conteo);
+    setNovedades([]);
+    setFirmaTinto(null);
+    setFirmaAdmin(null);
+    setShowRemision(lot);
   };
 
-  const confirmarRecepcion = async () => {
-    if (!selLot) { toast.error('Selecciona un lote'); return; }
+  const addNovedad = () => setNovedades(prev => [...prev, { tipo:'faltante_tintoreria', gtId:'gt1', qty:0, descripcion:'' }]);
+  const updNovedad = (i, key, val) => setNovedades(prev => { const n=[...prev]; n[i]={...n[i],[key]:val}; return n; });
+  const removeNovedad = (i) => setNovedades(prev => prev.filter((_,idx)=>idx!==i));
+
+  const totalEntregado = Object.values(conteoEntrega).reduce((a,b)=>a+(+b||0),0);
+  const totalNovedad   = novedades.reduce((a,n)=>a+(+n.qty||0),0);
+
+  const generarRemision = async () => {
+    if (!firmaTinto) { toast.error('Falta firma de tintorería'); return; }
     setSaving(true);
     try {
-      const garmentReview = selLot.garments?.map(g => {
-        const rec = +recibido[g.gtId] || 0;
-        const semaforo = calcSemaforo(g.gtId, g.total, rec);
-        const faltante = g.total - rec;
-        return { gtId: g.gtId, original: g.total, recibido: rec, faltante: Math.max(0,faltante), semaforo };
-      });
+      const remData = {
+        lotId:        showRemision.id,
+        lotCode:      showRemision.code,
+        status:       'enviada',
+        conteoEntrega,
+        totalEntregado,
+        novedades,
+        totalNovedades: totalNovedad,
+        firmaTintoreria: firmaTinto,
+        firmaAdmin:      firmaAdmin || null,
+        generadoPor:   profile?.name,
+        tintoreriaId:  profile?.id,
+      };
+      await addDocument('remisionesTinto', remData);
+      // Avanzar lote a estado especial si hay entrega parcial
+      const hayParcial = novedades.some(n=>n.tipo==='entrega_parcial');
+      if (!hayParcial) {
+        await advanceLotStatus(showRemision.id, 'listo_recepcion_admin', profile?.id, profile?.name);
+      }
+      toast.success('✅ Remisión generada — esperando recepción de Admin');
+      setShowRemision(null);
+    } catch(e) { console.error(e); toast.error('Error'); }
+    finally { setSaving(false); }
+  };
 
-      const todoVerde = garmentReview.every(g => g.semaforo === 'verde');
-      const hayRojo   = garmentReview.some(g => g.semaforo === 'rojo');
-      const statusRecepcion = todoVerde ? 'completo' : hayRojo ? 'perdida' : 'validando';
-
+  const recibirLote = async (remision, lot) => {
+    setSaving(true);
+    try {
+      // Registrar recepción
       await addDocument('recepcionesTinto', {
-        lotId: selLot.id, lotCode: selLot.code,
-        garmentReview, novedades,
-        statusRecepcion,
+        remisionId:   remision.id,
+        lotId:        lot.id,
+        lotCode:      lot.code,
+        semaforo,
+        observaciones: obsAdmin,
+        recibidoPor:  profile?.name,
+        conteoRecibido: remision.conteoEntrega,
+        novedades:    remision.novedades,
+      });
+      // Actualizar remisión
+      await updateDocument('remisionesTinto', remision.id, {
+        status:      'recibida',
+        semaforo,
         recibidoPor: profile?.name,
-        recibidoPorId: profile?.id,
-        fecha: new Date().toISOString().split('T')[0],
+        firmaAdminRecepcion: firmaAdmin,
       });
-
-      await advanceLotStatus(selLot.id, 'listo_bodega', profile?.id, profile?.name, {
-        recepcionTinto: { garmentReview, statusRecepcion, novedades },
+      // Avanzar estado del lote
+      const nuevoStatus = semaforo === 'rojo' ? 'listo_bodega' :
+                          semaforo === 'amarillo' ? 'tintoreria' : 'listo_bodega';
+      await advanceLotStatus(lot.id, nuevoStatus, profile?.id, profile?.name, {
+        semaforo,
+        novedadesTinto: remision.novedades,
       });
-
-      toast.success('✅ Recepción registrada — lote listo para bodega');
-      setSelLotId(''); setRecibido({}); setNovedades('');
+      toast.success(`✅ Lote recibido con semáforo ${semaforo === 'verde' ? '🟢' : semaforo === 'amarillo' ? '🟡' : '🔴'}`);
+      setShowRecepcion(null);
     } catch(e) { console.error(e); toast.error('Error'); }
     finally { setSaving(false); }
   };
 
   return (
     <div>
-      <h1 className="text-sm font-bold text-gray-900 mb-4">Recepción de Tintorería</h1>
+      <h1 className="text-sm font-bold text-gray-900 mb-1">Tintorería</h1>
+      <p className="text-xs text-gray-400 mb-4">Gestión de entregas y recepciones con tintorería</p>
 
+      {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
-        {[['nueva','Recibir Lote'],['historial','Historial']].map(([k,l])=>(
+        {[
+          ['pendientes', isTinto ? `📦 Lotes (${lotesEnTinto.length})` : `📦 Por recibir (${remisionesPendientes.length})`],
+          ['historial',  '📋 Historial'],
+        ].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
-            style={{background:tab===k?'#fff':'transparent',color:tab===k?'#111827':'#6b7280',fontWeight:tab===k?700:400,boxShadow:tab===k?'0 1px 3px rgba(0,0,0,0.08)':'none'}}>
+            style={{background:tab===k?'#fff':'transparent',color:tab===k?'#111827':'#6b7280',
+              fontWeight:tab===k?700:400,boxShadow:tab===k?'0 1px 3px rgba(0,0,0,0.08)':'none'}}>
             {l}
           </button>
         ))}
       </div>
 
-      {tab === 'nueva' && (
-        <div>
-          {/* Selector de lote */}
-          <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Lotes en tintorería — selecciona el que vas a recibir
-            </label>
-            <select value={selLotId} onChange={e => setSelLotId(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-indigo-400">
-              <option value="">— Seleccionar lote —</option>
-              {tintoLots.map(l => (
-                <option key={l.id} value={l.id}>
-                  {l.code} · {l.totalPieces?.toLocaleString('es-CO')} pzs
-                  {l.corteNumero ? ` · Corte #${l.corteNumero}` : ''}
-                </option>
-              ))}
-            </select>
-            {tintoLots.length === 0 && (
-              <p className="text-xs text-gray-400 mt-2">No hay lotes en tintorería actualmente.</p>
-            )}
-          </div>
-
-          {selLot && (
-            <>
-              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-mono text-xs font-bold text-blue-700">{selLot.code}</span>
-                  {selLot.corteNumero && <span className="text-[9px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-bold">Corte #{selLot.corteNumero}</span>}
-                </div>
-                <p className="text-xs text-indigo-700">Total original: <strong>{selLot.totalPieces?.toLocaleString('es-CO')} piezas</strong></p>
-              </div>
-
-              {/* Tabla de recepción */}
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                <div className="px-4 py-3 border-b border-gray-100" style={{background:'#1a3a6b'}}>
-                  <p className="text-[10px] font-bold text-white uppercase tracking-wider">Conteo de prendas recibidas de Tintorería</p>
-                </div>
-                <table className="w-full border-collapse text-xs">
-                  <thead>
-                    <tr style={{background:'#f9fafb'}}>
-                      <th className="px-3 py-2 text-left text-gray-500 font-medium">Prenda</th>
-                      <th className="px-3 py-2 text-center text-gray-500 font-medium">Enviadas</th>
-                      <th className="px-3 py-2 text-center text-gray-600 font-bold">Recibidas</th>
-                      <th className="px-3 py-2 text-center text-gray-500 font-medium">Faltante</th>
-                      <th className="px-3 py-2 text-center text-gray-500 font-medium">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selLot.garments?.map((g,i) => {
-                      const rec = recibido[g.gtId];
-                      const semaforo = rec !== undefined ? calcSemaforo(g.gtId, g.total, rec) : null;
-                      const faltante = rec !== undefined ? Math.max(0, g.total - (+rec||0)) : null;
-                      return (
-                        <tr key={i} className="border-t border-gray-100">
-                          <td className="px-3 py-2.5 font-medium text-gray-800">{gLabel(g.gtId)}</td>
-                          <td className="px-3 py-2.5 text-center font-bold text-blue-700">{g.total?.toLocaleString('es-CO')}</td>
-                          <td className="px-3 py-2.5">
-                            <input type="number" min={0} max={g.total} value={rec||''}
-                              onChange={e => setRecibido(r => ({...r,[g.gtId]:e.target.value}))}
-                              placeholder={g.total}
-                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-center text-sm font-bold focus:outline-none focus:border-indigo-400"
-                              style={{color: semaforo==='verde'?'#15803d':semaforo==='rojo'?'#dc2626':'#1a3a6b'}} />
-                          </td>
-                          <td className="px-3 py-2.5 text-center">
-                            {faltante !== null && <span style={{color:faltante>0?'#dc2626':'#15803d',fontWeight:700}}>{faltante > 0 ? `-${faltante}` : '✓'}</span>}
-                          </td>
-                          <td className="px-3 py-2.5 text-center">
-                            {semaforo && <Semaforo status={semaforo} />}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Novedades y observaciones</label>
-                <textarea value={novedades} onChange={e=>setNovedades(e.target.value)}
-                  placeholder="Registra aquí cualquier novedad: prendas con defectos, manchas, faltantes, etc."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none h-20 focus:outline-none focus:border-indigo-400" />
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 text-xs text-amber-800">
-                💡 Si hay faltantes quedará en <strong>amarillo</strong> para validar con el satélite. Si finalmente no aparecen las prendas, el estado pasará a <strong>rojo</strong> y se asignará la pérdida a quien corresponda.
-              </div>
-
-              <button onClick={confirmarRecepcion} disabled={saving}
-                className="w-full py-3 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-                style={{background:'#1a3a6b'}}>
-                {saving ? 'Registrando...' : '📥 Confirmar recepción y pasar a Bodega'}
-              </button>
-            </>
+      {/* TINTORERÍA — ve los lotes que tiene */}
+      {tab==='pendientes' && isTinto && (
+        <div className="space-y-3">
+          {lotesEnTinto.length===0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">🎨</p>
+              <p className="font-medium text-gray-700">Sin lotes en tintorería</p>
+            </div>
           )}
+          {lotesEnTinto.map(lot=>(
+            <div key={lot.id} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
+                    <span className="text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">🎨 En Tintorería</span>
+                  </div>
+                  <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {lot.garments?.map((g,i)=>(
+                      <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                        {gLabel(g.gtId)}: {g.total}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={()=>openRemision(lot)}
+                  className="text-xs font-bold px-3 py-2 rounded-lg text-white flex-shrink-0"
+                  style={{background:ACCENT}}>
+                  📋 Generar remisión de entrega
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {tab === 'historial' && (
+      {/* ADMIN — ve remisiones pendientes de recibir */}
+      {tab==='pendientes' && isAdmin && (
         <div className="space-y-3">
-          {recepciones.length === 0 && (
+          {remisionesPendientes.length===0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
-              <p className="text-4xl mb-3">📋</p>
+              <p className="text-3xl mb-2">📬</p>
+              <p className="font-medium text-gray-700">Sin remisiones pendientes</p>
+            </div>
+          )}
+          {remisionesPendientes.map(rem=>{
+            const lot = lots.find(l=>l.id===rem.lotId);
+            return (
+              <div key={rem.id} className="bg-white rounded-xl border-2 border-amber-200 p-4">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-mono text-xs font-bold text-blue-700">{rem.lotCode}</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">⏳ Pendiente recepción</span>
+                    </div>
+                    <p className="text-xs text-gray-600">Total entregado: <strong>{rem.totalEntregado} piezas</strong></p>
+                    {rem.novedades?.length>0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {rem.novedades.map((n,i)=>{
+                          const tipo = TIPOS_NOVEDAD.find(t=>t.value===n.tipo);
+                          return (
+                            <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full font-bold mr-1"
+                              style={{background:`${tipo?.color}20`,color:tipo?.color}}>
+                              ⚠ {tipo?.label}: {n.qty} pzas — {n.descripcion}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={()=>{setShowRecepcion(rem);setSemaforo('verde');setObsAdmin('');setFirmaAdmin(null);}}
+                    className="text-xs font-bold px-3 py-2 rounded-lg text-white flex-shrink-0"
+                    style={{background:'#1a3a6b'}}>
+                    📥 Recibir con semáforo
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* HISTORIAL */}
+      {tab==='historial' && (
+        <div className="space-y-3">
+          {recepciones.length===0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">📋</p>
               <p className="font-medium text-gray-700">Sin recepciones registradas</p>
             </div>
           )}
-          {recepciones.map(r => (
+          {recepciones.map(r=>(
             <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{r.semaforo==='verde'?'🟢':r.semaforo==='amarillo'?'🟡':'🔴'}</span>
                 <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-mono text-xs font-bold text-blue-700">{r.lotCode}</span>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${r.statusRecepcion==='completo'?'bg-green-100 text-green-700':r.statusRecepcion==='perdida'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}`}>
-                      {r.statusRecepcion==='completo'?'✓ Completo':r.statusRecepcion==='perdida'?'✕ Pérdida':'⚠ Validando'}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-400">{r.fecha} · Recibido por: {r.recibidoPor}</p>
+                  <p className="text-xs font-bold text-gray-800">{r.lotCode}</p>
+                  <p className="text-[10px] text-gray-400">{r.recibidoPor} · {r.conteoRecibido ? Object.values(r.conteoRecibido).reduce((a,b)=>a+(+b||0),0)+' piezas' : ''}</p>
+                  {r.novedades?.length>0 && <p className="text-[9px] text-red-500 mt-0.5">⚠ {r.novedades.length} novedades</p>}
                 </div>
               </div>
-              {r.garmentReview?.map((g,i) => (
-                <div key={i} className="flex items-center gap-3 text-xs py-1 border-b border-gray-50">
-                  <span className="flex-1 text-gray-700">{gLabel(g.gtId)}</span>
-                  <span className="text-blue-600">Enviadas: {g.original}</span>
-                  <span className="text-gray-700">Recibidas: <strong>{g.recibido}</strong></span>
-                  {g.faltante > 0 && <span className="text-red-600 font-bold">-{g.faltante}</span>}
-                  <Semaforo status={g.semaforo} />
-                </div>
-              ))}
-              {r.novedades && <p className="text-xs text-gray-500 italic mt-2 bg-gray-50 rounded p-2">"{r.novedades}"</p>}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* MODAL REMISIÓN DE ENTREGA (Tintorería) */}
+      {showRemision && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:16,overflowY:'auto'}}>
+          <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:560,marginTop:16,marginBottom:16}}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-900">Remisión de Entrega — {showRemision.code}</h2>
+              <button onClick={()=>setShowRemision(null)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+            </div>
+
+            {/* Conteo de entrega */}
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Conteo de prendas a entregar</p>
+            <div className="space-y-2 mb-4">
+              {showRemision.garments?.map(g=>(
+                <div key={g.gtId} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2">
+                  <span className="text-xs font-bold text-gray-700 flex-1">{gLabel(g.gtId)}</span>
+                  <span className="text-[10px] text-gray-400">Recibido: {g.total}</span>
+                  <input type="number" min={0} max={g.total}
+                    value={conteoEntrega[g.gtId]||0}
+                    onChange={e=>setConteoEntrega(prev=>({...prev,[g.gtId]:+e.target.value}))}
+                    className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:border-orange-400" />
+                </div>
+              ))}
+              <div className="flex justify-between text-xs font-bold px-3 py-2 bg-blue-50 rounded-xl">
+                <span className="text-blue-700">Total a entregar</span>
+                <span className="text-blue-800">{totalEntregado} piezas</span>
+              </div>
+            </div>
+
+            {/* Novedades */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Novedades</p>
+              <button onClick={addNovedad} className="text-xs text-orange-600 font-medium hover:underline">+ Agregar novedad</button>
+            </div>
+            {novedades.length===0 && (
+              <p className="text-[10px] text-gray-400 mb-3 italic">Sin novedades — entrega completa</p>
+            )}
+            {novedades.map((n,i)=>{
+              const tipo = TIPOS_NOVEDAD.find(t=>t.value===n.tipo);
+              return (
+                <div key={i} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Tipo de novedad</label>
+                      <select value={n.tipo} onChange={e=>updNovedad(i,'tipo',e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:outline-none">
+                        {TIPOS_NOVEDAD.map(t=><option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 mb-1">Cantidad</label>
+                      <input type="number" min={0} value={n.qty}
+                        onChange={e=>updNovedad(i,'qty',+e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-center focus:outline-none" />
+                    </div>
+                  </div>
+                  {tipo && (
+                    <p className="text-[9px] mb-2 px-2 py-1 rounded-lg font-medium"
+                      style={{background:`${tipo.color}15`,color:tipo.color}}>
+                      ℹ {tipo.desc}
+                    </p>
+                  )}
+                  <input value={n.descripcion} onChange={e=>updNovedad(i,'descripcion',e.target.value)}
+                    placeholder="Descripción de la novedad..."
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none mb-1" />
+                  <button onClick={()=>removeNovedad(i)} className="text-[10px] text-red-500 hover:underline">✕ Quitar</button>
+                </div>
+              );
+            })}
+
+            {/* Firmas */}
+            <div className="mt-4">
+              <FirmaCanvas label="✍ Firma Tintorería *" onSign={setFirmaTinto} signed={!!firmaTinto} />
+              <FirmaCanvas label="✍ Firma Admin ELROHI (opcional — puede firmar al recibir)" onSign={setFirmaAdmin} signed={!!firmaAdmin} />
+            </div>
+
+            <div className="flex gap-2 mt-2">
+              <button onClick={()=>setShowRemision(null)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+              <button onClick={generarRemision} disabled={saving||!firmaTinto}
+                className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                style={{background:ACCENT}}>
+                {saving?'Generando...':'📋 Generar remisión'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RECEPCIÓN (Admin) */}
+      {showRecepcion && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:480}}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-900">Recepción — {showRecepcion.lotCode}</h2>
+              <button onClick={()=>setShowRecepcion(null)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+            </div>
+
+            {/* Resumen remisión */}
+            <div className="bg-gray-50 rounded-xl p-3 mb-4">
+              <p className="text-xs font-bold text-gray-700 mb-1">Resumen remisión tintorería:</p>
+              <p className="text-xs text-gray-600">Total entregado: <strong>{showRecepcion.totalEntregado} piezas</strong></p>
+              {showRecepcion.novedades?.length>0 && (
+                <div className="mt-2 space-y-1">
+                  {showRecepcion.novedades.map((n,i)=>{
+                    const tipo=TIPOS_NOVEDAD.find(t=>t.value===n.tipo);
+                    return (
+                      <div key={i} className="text-[10px] px-2 py-1 rounded-lg font-medium"
+                        style={{background:`${tipo?.color}15`,color:tipo?.color}}>
+                        ⚠ {tipo?.label}: {n.qty} pzas — {n.descripcion}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Semáforo */}
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Semáforo de recepción</p>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {[
+                { val:'verde',    emoji:'🟢', label:'Completo',   desc:'Todo en orden',           color:'#15803d' },
+                { val:'amarillo', emoji:'🟡', label:'Parcial',    desc:'Faltan prendas en proceso',color:'#d97706' },
+                { val:'rojo',     emoji:'🔴', label:'Novedad',    desc:'Faltantes o daños',        color:'#dc2626' },
+              ].map(s=>(
+                <button key={s.val} onClick={()=>setSemaforo(s.val)}
+                  className="p-3 rounded-xl border-2 text-center transition-all"
+                  style={{borderColor:semaforo===s.val?s.color:'#e5e7eb',background:semaforo===s.val?`${s.color}10`:'#fff'}}>
+                  <p className="text-2xl mb-1">{s.emoji}</p>
+                  <p className="text-xs font-bold" style={{color:s.color}}>{s.label}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">{s.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Observaciones</label>
+              <textarea value={obsAdmin} onChange={e=>setObsAdmin(e.target.value)}
+                placeholder="Notas adicionales de recepción..."
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none h-14 focus:outline-none" />
+            </div>
+
+            <FirmaCanvas label="✍ Firma Admin ELROHI *" onSign={setFirmaAdmin} signed={!!firmaAdmin} />
+
+            <div className="flex gap-2">
+              <button onClick={()=>setShowRecepcion(null)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+              <button onClick={()=>{
+                const lot=lots.find(l=>l.id===showRecepcion.lotId);
+                if(lot) recibirLote(showRecepcion, lot);
+              }} disabled={saving||!firmaAdmin}
+                className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                style={{background:'#1a3a6b'}}>
+                {saving?'Recibiendo...':'✅ Confirmar recepción'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
