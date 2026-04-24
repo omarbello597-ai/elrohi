@@ -194,7 +194,7 @@ export default function CargaMasivaScreen() {
             tipo==='listas_precios'  ? 'listasPrecios' :
             tipo==='tarifas_satelite'? 'tarifasSatelite' : 'operations';
         for (const item of preview) {
-          try { await addDocument(col, item); ok++; } catch { fail++; }
+          try { await addDocument(col, item); ok++; } catch(err) { console.error('Error:', err); fail++; }
         }
       }
       setResultado({ ok, fail, tipo });
