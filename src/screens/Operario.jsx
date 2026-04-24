@@ -41,10 +41,21 @@ export function MisOpsScreen() {
   const mine  = [...allOps.filter((o) => o.wId === profile.id), ...opsElrohi];
   const avail = allOps.filter((o) => o.status === 'pendiente' && !o.wId);
 
-  const take = async (lotId, loId) => {
+  const take = async (lotId, loId, tipo) => {
     try {
-      await updateLotOp(lotId, loId, { wId: profile.id, status: 'en_proceso' });
-      toast.success('Operación tomada');
+      if (tipo === 'elrohi') {
+        const lot = lots.find(l=>l.id===lotId);
+        if (!lot) return;
+        const opsElrohiUpd = (lot.opsElrohi||[]).map(op =>
+          op.id===loId ? {...op, status:'en_proceso', startedAt:new Date().toISOString()} : op
+        );
+        const { updateDocument } = await import('../services/db');
+        await updateDocument('lots', lotId, {opsElrohi:opsElrohiUpd});
+        toast.success('¡Operación iniciada!');
+      } else {
+        await updateLotOp(lotId, loId, { wId: profile.id, status: 'en_proceso' });
+        toast.success('Operación tomada');
+      }
     } catch { toast.error('Error'); }
   };
 
@@ -92,7 +103,7 @@ export function MisOpsScreen() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{lo.status === 'completado' ? '✅' : lo.status === 'en_proceso' ? '⚡' : '○'}</span>
-                      <span className="text-sm font-bold text-gray-900">{lo.op?.name || '?'}</span>
+                      <span className="text-sm font-bold text-gray-900">{lo.name || lo.op?.name || lo.opId}</span>
                     </div>
                     <p className="text-[10px] text-gray-400 mb-1">{lo.lotCode} · {lo.qty} piezas</p>
                     <p className="text-xs font-bold" style={{ color: lo.status === 'completado' ? '#10b981' : '#374151' }}>
@@ -107,7 +118,7 @@ export function MisOpsScreen() {
                       </button>
                     )}
                     {lo.status === 'pendiente' && (
-                      <button onClick={() => take(lo.lotId, lo.id)}
+                      <button onClick={() => take(lo.lotId, lo.id, lo.tipo)}
                         className="px-4 py-2 text-white rounded-lg text-xs font-bold"
                         style={{ background: ACCENT }}>
                         ▶ Iniciar
@@ -138,7 +149,7 @@ export function MisOpsScreen() {
                     <p className="text-sm font-semibold text-gray-800">{lo.op?.name || '?'}</p>
                     <p className="text-[10px] text-gray-400">{lo.lotCode} · {lo.qty} pzs · {fmtM(valUnit)}/pza = <strong>{fmtM(valTot)}</strong></p>
                   </div>
-                  <button onClick={() => take(lo.lotId, lo.id)}
+                  <button onClick={() => take(lo.lotId, lo.id, lo.tipo)}
                     className="text-xs font-semibold px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg border border-blue-200">
                     Tomar
                   </button>
