@@ -18,9 +18,11 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      await login(email.trim(), password);
-      // Navigate to first allowed page after login — AuthContext sets profile
-      navigate('/dashboard');
+      const cred = await login(email.trim(), password);
+      const { getUser } = await import('../services/db');
+      const prof = await getUser(cred.user.uid);
+      const home = NAV_CONFIG[prof?.role]?.[0] || '/dashboard';
+      navigate(home);
     } catch (err) {
       setError('Correo o contraseña incorrectos');
     } finally {
