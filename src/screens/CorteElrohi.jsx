@@ -5,10 +5,10 @@ import { addDocument, updateDocument, listenCol } from '../services/db';
 import { advanceLotStatus } from '../services/db_timeline';
 import { GARMENT_TYPES, SIZES, LOT_PRIORITY, ACCENT } from '../constants';
 import { EmptyState } from '../components/ui';
-import { gLabel, today, fmtM } from '../utils';
+import { gLabel, genLotCode, today, fmtM } from '../utils';
 import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
-import { getNextCorteNum } from '../services/consecutivos';
+import logo from '../assets/LogoELROHI.jpeg';
 
 const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','34','36','38','40','42','44'];
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -24,13 +24,13 @@ const CORTE_STATES = [
   { key: 'nuevo',                 label: 'Nuevo',                 cls: 'bg-gray-100 text-gray-600'     },
   { key: 'recibido_alistamiento', label: 'Recibido Alistamiento', cls: 'bg-blue-100 text-blue-700'     },
   { key: 'en_corte',              label: 'En Corte',              cls: 'bg-orange-100 text-orange-800' },
-  { key: 'entregar_admin',        label: 'Entregado a Admin para flujo',      cls: 'bg-amber-100 text-amber-800'   },
+  { key: 'entregar_admin',        label: 'Entregar a Admin',      cls: 'bg-amber-100 text-amber-800'   },
 ];
 
 const nextStateMap = {
   nuevo:                 { next: 'recibido_alistamiento', label: '📥 Recibir para alistamiento', color: '#2563eb' },
   recibido_alistamiento: { next: 'en_corte',              label: '✂ Iniciar corte',              color: '#ea580c' },
-  en_corte:              { next: 'entregar_admin',        label: '📦 Entregado a Admin para flujo',          color: '#d97706' },
+  en_corte:              { next: 'entregar_admin',        label: '📦 Entregar al Admin',          color: '#d97706' },
 };
 
 // ─── CANVAS DE FIRMA ─────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ function FirmaCanvas({ onSave, label }) {
     <div style={{marginBottom:10}}>
       <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:5}}>{label}</p>
       <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
-        <canvas ref={canvasRef} width={1200} height={120}
+        <canvas ref={canvasRef} width={340} height={70}
           style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
           onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
           onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
@@ -64,30 +64,30 @@ function FirmaCanvas({ onSave, label }) {
 }
 
 // ─── IMPRIMIR FORMATO ─────────────────────────────────────────────────────────
-function printFormato(fc) {
+function printFormato(fc, logoBase64='') {
   const lot = fc.lot || {};
   const garmentRows = (lot.garments||[]).map((g,i)=>{
     const sizes = SIZES_REF.map(s=>{const key=s.split('/')[0]; const val=g.sizes?.[key]||''; return `<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${val||''}</td>`;}).join('');
-    return `<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;font-weight:500;color:#1a3a6b">${gLabel(g.gtId)}</td>${sizes}<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#dce6f5">${g.total?.toLocaleString('es-CO')||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic;background:#fdfbff">${fc.comentariosRef?.[i]||''}</td></tr>`;
+    return `<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;font-weight:500;color:#1a3a6b">${g.descripcionRef||gLabel(g.gtId)}</td>${sizes}<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#dce6f5">${g.total?.toLocaleString('es-CO')||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#fff0e0;color:#e85d26">${fc.cortesRef?.[i]||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic;background:#fdfbff">${fc.comentariosRef?.[i]||''}</td></tr>`;
   }).join('');
-  const emptyRef = Array(Math.max(0,5-(lot.garments||[]).length)).fill(0).map(()=>`<tr><td style="border:1px solid #1a3a6b;height:22px"></td>${SIZES_REF.map(()=>'<td style="border:1px solid #1a3a6b"></td>').join('')}<td style="border:1px solid #1a3a6b;background:#dce6f5"></td><td style="border:1px solid #1a3a6b;background:#fdfbff"></td></tr>`).join('');
+  const emptyRef = Array(Math.max(0,5-(lot.garments||[]).length)).fill(0).map(()=>`<tr><td style="border:1px solid #1a3a6b;height:22px"></td>${SIZES_REF.map(()=>'<td style="border:1px solid #1a3a6b"></td>').join('')}<td style="border:1px solid #1a3a6b;background:#dce6f5"></td><td style="border:1px solid #1a3a6b;background:#fff0e0"></td><td style="border:1px solid #1a3a6b;background:#fdfbff"></td></tr>`).join('');
   const espRows = (fc.especificaciones||[]).map(e=>`<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;height:22px">${e.tipoTela||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${e.metrosUsados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;color:#dc2626">${e.metrosDesechados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;font-style:italic">${e.comentario||''}</td></tr>`).join('');
   const firmaBox = (label,img,nombre,fecha) => `<div style="text-align:center;padding:6px 14px">${img?`<img src="${img}" style="height:44px;display:block;margin:0 auto 3px;border-bottom:1px solid #1a3a6b;width:80%">`:`<div style="height:44px;border-bottom:1px solid #1a3a6b;margin:0 16px"></div>`}<div style="font-size:9px;font-weight:700;color:#1a3a6b">${label}</div>${nombre?`<div style="font-size:9px;color:#374151">${nombre}</div>`:''}${fecha?`<div style="font-size:8px;color:#6b7280">${fecha}</div>`:''}</div>`;
 
   const html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>${fc.nombreDoc}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style></head><body>
   <div style="max-width:960px;margin:10px auto;border:1.5px solid #1a3a6b">
     <div style="border-bottom:2px solid #1a3a6b;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <div style="width:72px;height:56px;border:1.5px dashed #9ca3af;border-radius:4px;display:flex;align-items:center;justify-content:center"><span style="font-size:8px;color:#9ca3af;text-align:center">Logo<br>cliente</span></div>
+      <img src="${logoBase64}" style="width:72px;height:56px;object-fit:contain;border-radius:4px" />
       <div style="text-align:center;flex:1"><div style="font-size:17px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div><div style="font-size:9px;color:#1a3a6b">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div></div>
       <div style="border:2px solid #1a3a6b;padding:4px 10px;text-align:center"><div style="font-size:9px;font-weight:700;color:#1a3a6b">CORTE</div><div style="font-size:13px;font-weight:900;color:#e85d26;font-family:monospace">${fc.nombreDoc}</div></div>
     </div>
     <div style="display:flex;border-bottom:1px solid #1a3a6b">
       <div style="border-right:1px solid #1a3a6b;padding:4px 10px;display:flex;align-items:center;gap:6px"><span style="font-size:8px;font-weight:700;color:#1a3a6b">FECHA</span><span style="font-size:12px;font-weight:700;color:#1a3a6b">${fc.date||todayFmt()}</span></div>
       <div style="flex:1;padding:6px 14px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Operario de Corte:</span><span style="font-size:13px;font-weight:700;color:#1a3a6b">${fc.operarioNombre||''}</span></div>
-      <div style="padding:6px 14px;display:flex;align-items:center;gap:8px;border-left:1px solid #1a3a6b"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Corte N°:</span><span style="font-size:11px;font-weight:700;color:#e85d26;font-family:monospace">${fc.numCorte||''}</span></div>
+      <div style="padding:6px 14px;display:flex;align-items:center;gap:8px;border-left:1px solid #1a3a6b"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Lote:</span><span style="font-size:11px;font-weight:700;color:#e85d26;font-family:monospace">${fc.lotCode||''}</span></div>
     </div>
     <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">REFERENCIAS — PRENDAS</div>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#e8eef7;font-size:9px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:${s.includes('/')?'32':'28'}px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#dce6f5;font-size:9px;font-weight:700;color:#1a3a6b;text-align:center">TOTAL</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#e8eef7;font-size:9px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:${s.includes('/')?'32':'28'}px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#dce6f5;font-size:9px;font-weight:700;color:#1a3a6b;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
     <div style="background:#e85d26;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">ESPECIFICACIONES DE TELA</div>
     <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="border:1px solid #1a3a6b;padding:3px 8px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:left;width:200px">Tipo de tela</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:center;width:160px">Metros usados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#dc2626;text-align:center;width:160px">Metros desechados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:8px;font-weight:700;color:#92400e;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${espRows}</tbody></table>
     <div style="border-top:1px solid #1a3a6b;padding:7px 12px;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="flex:1;border-bottom:1px solid #1a3a6b;min-height:18px;display:inline-block;font-size:11px;padding:0 4px">${fc.nota||''}</span></div>
@@ -269,21 +269,28 @@ export default function CorteElrohiScreen() {
 
 // ─── NUEVO FORMATO ─────────────────────────────────────────────────────────────
 function NuevoFormato({ profile, onBack }) {
-  const [numCorte, setNumCorte] = useState('');
-  const [loadingNum, setLoadingNum] = useState(true);
-  useEffect(() => {
-    getNextCorteNum().then(num => {
-    setNumCorte(num);
-    setLoadingNum(false);
-  });
-}, []);
-  
+  const [numCorte,  setNumCorte]  = useState('18');
   const [priority,  setPriority]  = useState('normal');
   const [deadline,  setDeadline]  = useState('');
   const [descripcion, setDescripcion] = useState('');
+  const [listas,    setListas]    = useState([]);
+  // Cargar listas de precios para obtener referencias reales
+  useEffect(() => {
+    const unsub = listenCol('listasPrecios', setListas);
+    return unsub;
+  }, []);
+  // Productos de todas las listas activas (sin duplicados)
+  const productosDisp = [];
+  const vistos = new Set();
+  listas.filter(l=>l.active!==false&&!l.eliminado).forEach(l => {
+    (l.productos||[]).forEach(p => {
+      const key = p.descripcion;
+      if (!vistos.has(key)) { vistos.add(key); productosDisp.push(p); }
+    });
+  });
   // Referencias — múltiples filas
   const [items, setItems] = useState([
-    { gtId: 'gt1', sizes: {}, total: 0, corte: '', comentario: '' },
+    { gtId: 'gt1', descripcionRef: '', sizes: {}, total: 0, corte: '', comentario: '' },
   ]);
   const [specs, setSpecs] = useState(
     Array(4).fill(null).map(()=>({tipoTela:'',metrosUsados:'',metrosDesechados:'',comentario:''}))
@@ -295,7 +302,7 @@ function NuevoFormato({ profile, onBack }) {
 
   const nombreDoc = genDocName(numCorte);
 
-  const addItem    = () => setItems(f => [...f, { gtId: 'gt1', sizes: {}, total: 0, corte: '', comentario: '' }]);
+  const addItem    = () => setItems(f => [...f, { gtId: 'gt1', descripcionRef: '', sizes: {}, total: 0, corte: '', comentario: '' }]);
   const removeItem = (i) => { if(items.length===1){toast.error('Debe haber al menos una referencia');return;} setItems(f=>f.filter((_,idx)=>idx!==i)); };
   const updItem    = (i, k, v) => setItems(f => {
     const its=[...f]; its[i]={...its[i],[k]:v};
@@ -313,13 +320,13 @@ function NuevoFormato({ profile, onBack }) {
     if (!nombre)      { toast.error('Escribe tu nombre'); return; }
     setSaving(true);
     try {
-      const code = `Corte-${numCorte}`;
+      const code    = genLotCode();
       const nowISO  = new Date().toISOString();
       const lotData = {
         code, descripcion: descripcion||code, clientId: null,
         status: 'nuevo', priority, satId: null,
         created: today(), deadline,
-        garments: items.filter(i=>i.total>0).map(({gtId,sizes,total})=>({gtId,sizes,total})),
+        garments: items.filter(i=>i.total>0).map(({gtId,sizes,total,descripcionRef})=>({gtId,sizes,total,descripcionRef})),
         totalPieces: totalPiezas, lotOps: [], opsElrohi: [],
         notes: nota, novelties: [], bodega: null, createdBy: profile?.id,
         timeline: [{ status:'nuevo', entró: nowISO, salió:null, duracionMs:null, duracion:null, cambiadoPor: nombre, cambiadoPorId: profile?.id }],
@@ -357,11 +364,8 @@ function NuevoFormato({ profile, onBack }) {
           </div>
           <div className="border-2 border-blue-800 px-2 py-1.5 text-center flex-shrink-0 rounded">
             <p className="text-[9px] font-bold" style={{color:'#1a3a6b'}}>CORTE</p>
-            <input value={loadingNum ? '...' : numCorte} onChange={e=>setNumCorte(e.target.value)}
-              disabled={loadingNum}
-              className={`w-16 text-center bg-transparent border-none outline-none font-black font-mono text-xs ${loadingNum ? 'opacity-40' : ''}`}
-              style={{color:ACCENT}} />
-            
+            <input value={numCorte} onChange={e=>setNumCorte(e.target.value)}
+              className="w-16 text-center bg-transparent border-none outline-none font-black font-mono text-xs" style={{color:ACCENT}} />
           </div>
         </div>
         <div className="flex border-b border-blue-100 bg-white flex-wrap">
@@ -405,7 +409,7 @@ function NuevoFormato({ profile, onBack }) {
                   <th key={s} className="border border-blue-200 px-0 py-1.5 text-[8px] text-blue-700 font-bold text-center" style={{width: s.includes('/')?'30px':'26px'}}>{s}</th>
                 ))}
                 <th className="border border-blue-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{background:'#dce6f5',color:'#1a3a6b',width:'44px'}}>TOTAL</th>
-                
+                <th className="border border-blue-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{background:'#fff0e0',color:ACCENT,width:'46px'}}>#CORTE</th>
                 <th className="border border-blue-200 px-1 py-1.5 text-[8px] font-bold italic text-center" style={{background:'#f5f0fa',color:'#4a3a6b',width:'86px'}}>Comentarios</th>
                 <th className="border border-blue-200 px-1 py-1.5 text-center" style={{width:'28px'}}></th>
               </tr>
@@ -413,11 +417,23 @@ function NuevoFormato({ profile, onBack }) {
             <tbody>
               {items.map((item,i) => (
                 <tr key={i} style={{background: i%2===0 ? '#fff' : '#fafafa'}}>
-                  <td className="border border-blue-100 px-1 py-1">
-                    <select value={item.gtId} onChange={e=>updItem(i,'gtId',e.target.value)}
-                      className="w-full border-none bg-transparent outline-none font-medium" style={{fontSize:'10px',color:'#1a3a6b'}}>
-                      {GARMENT_TYPES.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
+                  <td className="border border-blue-100 px-1 py-1" style={{minWidth:120}}>
+                    {productosDisp.length > 0 ? (
+                      <select value={item.descripcionRef||''} onChange={e=>{
+                        const prod = productosDisp.find(p=>p.descripcion===e.target.value);
+                        updItem(i,'descripcionRef',e.target.value);
+                        if(prod) updItem(i,'gtId', prod.gtId||'gt1');
+                      }}
+                        className="w-full border-none bg-transparent outline-none font-medium" style={{fontSize:'9px',color:'#1a3a6b'}}>
+                        <option value="">— Seleccionar ref —</option>
+                        {productosDisp.map((p,j)=><option key={j} value={p.descripcion}>{p.descripcion} ({p.tipo})</option>)}
+                      </select>
+                    ) : (
+                      <select value={item.gtId} onChange={e=>updItem(i,'gtId',e.target.value)}
+                        className="w-full border-none bg-transparent outline-none font-medium" style={{fontSize:'10px',color:'#1a3a6b'}}>
+                        {GARMENT_TYPES.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}
+                      </select>
+                    )}
                   </td>
                   {SIZES_REF.map(s => {
                     const key = s.split('/')[0];
@@ -433,7 +449,12 @@ function NuevoFormato({ profile, onBack }) {
                   <td className="border border-blue-100 px-1 py-1 text-center font-bold" style={{background:'#f0f4f8',color:'#1a3a6b'}}>
                     {item.total > 0 ? item.total.toLocaleString('es-CO') : '—'}
                   </td>
-                  
+                  <td className="border border-blue-100 p-0" style={{background:'#fff8f0'}}>
+                    <input type="text" value={item.corte||''} onChange={e=>updItem(i,'corte',e.target.value)}
+                      placeholder="590"
+                      className="w-full text-center border-none outline-none bg-transparent font-bold"
+                      style={{fontSize:'10px',color:ACCENT,padding:'4px 2px'}} />
+                  </td>
                   <td className="border border-blue-100 p-0" style={{background:'#fdfbff'}}>
                     <input type="text" value={item.comentario||''} onChange={e=>updItem(i,'comentario',e.target.value)}
                       placeholder="Obs..."
@@ -455,6 +476,7 @@ function NuevoFormato({ profile, onBack }) {
                   return <td key={s} className="border border-blue-100 px-1 py-1.5 text-center font-bold" style={{color:sum>0?'#1a3a6b':'#d1d5db',fontSize:'10px'}}>{sum>0?sum:'—'}</td>;
                 })}
                 <td className="border border-blue-100 px-1 py-1.5 text-center font-black text-blue-900" style={{background:'#dce6f5',fontSize:'11px'}}>{totalPiezas.toLocaleString('es-CO')}</td>
+                <td className="border border-blue-100" style={{background:'#fff0e0'}}></td>
                 <td className="border border-blue-100" style={{background:'#fdfbff'}}></td>
                 <td className="border border-blue-100"></td>
               </tr>
