@@ -69,15 +69,15 @@ export const OPS_ELROHI_DEFAULT = [
 ];
 
 export const NAV_CONFIG = {
-  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto','/bodega-calidad','/bodega-lonas','/listas-precios','/trazabilidad','/clientes','/carga-masiva'],
-  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto','/bodega-calidad','/bodega-lonas','/listas-precios','/trazabilidad','/clientes','/carga-masiva'],
+  gerente:        ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/nomina','/config','/recepcion-tinto','/bodega-calidad','/bodega-lonas','/listas-precios','/trazabilidad','/clientes','/carga-masiva','/cuenta-cobro','/tarifas-satelite'],
+  admin_elrohi:   ['/dashboard','/pedidos','/lotes','/corte','/satelites','/bodegas','/operaciones-elrohi','/gestion-operarios','/inventario','/recepcion-tinto','/bodega-calidad','/bodega-lonas','/listas-precios','/trazabilidad','/clientes','/carga-masiva','/cuenta-cobro','/tarifas-satelite'],
   nomina:         ['/nomina'],
   despachos:      ['/bodegas','/bodega-lonas','/pedidos','/quincena'],
   corte:          ['/corte','/quincena'],
-  admin_satelite: ['/taller','/asignar-ops'],
+  admin_satelite: ['/taller','/asignar-ops','/cuenta-cobro'],
   operario:       ['/mis-ops','/quincena'],
   tintoreria:     ['/recepcion-tinto'],
-  terminacion: ['/bodegas','/bodega-calidad','/mis-ops','/quincena'],
+  terminacion:    ['/operaciones-elrohi','/quincena'],
   bodega_op:      ['/bodegas','/bodega-lonas','/bodega-calidad','/quincena'],
 };
 
@@ -105,6 +105,8 @@ export const NAV_ITEMS = {
   '/trazabilidad':       { label: 'Trazabilidad',           icon: 'Activity'        },
   '/clientes':           { label: 'Clientes',               icon: 'Users'           },
   '/carga-masiva':       { label: 'Carga Masiva',           icon: 'Upload'          },
+  '/cuenta-cobro':       { label: 'Cuenta de Cobro',        icon: 'FileText'        },
+  '/tarifas-satelite':   { label: 'Tarifas Satélite',       icon: 'DollarSign'      },
 };
 
 export const ACCENT = '#e85d26';
