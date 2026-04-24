@@ -190,17 +190,19 @@ export default function CargaMasivaScreen() {
   };
 
   const TABS = [
-    { key:'clientes',      label:'🏢 Clientes'      },
-    { key:'operarios',     label:'👷 Operarios'     },
-    { key:'operaciones',   label:'⚡ Operaciones'   },
-    { key:'listas_precios',label:'💰 Listas Precios'},
+    { key:'clientes',        label:'🏢 Clientes'        },
+    { key:'operarios',       label:'👷 Operarios'       },
+    { key:'operaciones',     label:'⚡ Operaciones'     },
+    { key:'listas_precios',  label:'💰 Listas Precios'  },
+    { key:'tarifas_satelite',label:'🏭 Tarifas Satélite'},
   ];
 
   const DESCS = {
-    clientes:      'Columnas: RAZON_SOCIAL; NIT; DIRECCION; TELEFONO; CIUDAD; FORMA_PAGO; IMPUESTO',
-    operarios:     'Columnas: NOMBRE; APELLIDO; CEDULA; TELEFONO; EMAIL; ROL; TIPO_SALARIO; SALARIO_FIJO',
-    operaciones:   'Columnas: NOMBRE_OPERACION; VALOR_UNITARIO',
-    listas_precios:'Columnas: #; DESCRIPCIÓN PRODUCTO; TALLAS; PRECIO; TIPO — separador punto y coma (;)',
+    clientes:        'Columnas: RAZON_SOCIAL; NIT; DIRECCION; TELEFONO; CIUDAD; FORMA_PAGO; IMPUESTO',
+    operarios:       'Columnas: NOMBRE; APELLIDO; CEDULA; TELEFONO; EMAIL; ROL; TIPO_SALARIO; SALARIO_FIJO',
+    operaciones:     'Columnas: NOMBRE_OPERACION; VALOR_UNITARIO',
+    listas_precios:  'Columnas: #; DESCRIPCIÓN PRODUCTO; TALLAS; PRECIO; TIPO — separador punto y coma (;)',
+    tarifas_satelite:'Columnas: descripcion; confeccion; terminacion; remate; total',
   };
 
   return (
