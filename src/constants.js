@@ -110,3 +110,14 @@ export const NAV_ITEMS = {
 };
 
 export const ACCENT = '#e85d26';
+
+// ─── COLORES CORPORATIVOS ELROHI ──────────────────────────────────────────────
+export const BRAND = {
+  azulMedio:   '#2878B4',  // "DOTACIONES"
+  azulOscuro:  '#14405A',  // "EL·ROHI"
+  azulCielo:   '#3C78B4',  // trazos
+  cyanClaro:   '#64C8DC',  // trazos
+  cyanMuyClaro:'#64C8F0',  // trazos
+  fondo:       '#F7F7F7',  // fondo
+  azulPetroleo:'#143C50',  // olas inferiores
+};
