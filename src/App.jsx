@@ -82,7 +82,7 @@ const ALL_ROUTES = [
   { path: '/bodega-lonas',       component: BodegaLonasScreen,     roles: ['gerente','admin_elrohi','bodega_op','despachos'] },
   { path: '/operaciones-elrohi', component: OperacionesElrohiScreen, roles: ['gerente','admin_elrohi','corte','bodega_op','terminacion','pespunte'] },
   { path: '/gestion-operarios',  component: GestionOperariosScreen,roles: ['gerente','admin_elrohi'] },
-  { path: '/recepcion-tinto',    component: RecepcionTintoreria,   roles: ['gerente','admin_elrohi'] },
+  { path: '/recepcion-tinto',    component: RecepcionTintoreria,   roles: ['gerente','admin_elrohi','tintoreria'] },
   { path: '/remision',           component: RemisionScreen,        roles: ['gerente','admin_elrohi','corte','admin_satelite'] },
   { path: '/listas-precios', component: ListasPreciosScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/trazabilidad', component: TrazabilidadScreen, roles: ['gerente','admin_elrohi'] },
