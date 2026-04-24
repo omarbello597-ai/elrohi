@@ -77,7 +77,7 @@ export const NAV_CONFIG = {
   admin_satelite: ['/taller','/asignar-ops'],
   operario:       ['/mis-ops','/quincena'],
   tintoreria:     ['/recepcion-tinto'],
-  terminacion:    ['/operaciones-elrohi','/quincena'],
+  terminacion: ['/bodegas','/bodega-calidad','/quincena'],
   bodega_op:      ['/bodegas','/bodega-lonas','/bodega-calidad','/quincena'],
 };
 
