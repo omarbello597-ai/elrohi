@@ -200,10 +200,14 @@ export function NominaScreen() {
   const satSummary = satellites.filter(s=>s.active).map(s => {
     const satLots    = lots.filter(l=>l.satId===s.id);
     const satWorkers = users.filter(u=>u.satId===s.id&&u.role==='operario');
-    const total      = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado'))
-      .reduce((acc,lo) => acc + getOpVal(ops,satOpVals,s.id,lo.opId)*lo.qty, 0);
-    const compOps    = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado')).length;
-    const workerBreakdown = satWorkers.map(w=>({...w, earnings: workerQuincena(w.id,lots,ops,satOpVals)}));
+    const compLotOps = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado'));
+    const total      = compLotOps.reduce((acc,lo) => acc + (lo.val||getOpVal(ops,satOpVals,s.id,lo.opId)||0)*(lo.qty||0), 0);
+    const compOps    = compLotOps.length;
+    const workerBreakdown = satWorkers.map(w=>({
+      ...w,
+      earnings: satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.wId===w.id&&lo.status==='completado'))
+        .reduce((a,lo)=>a+(lo.val||0)*(lo.qty||0),0)
+    }));
     const lastPayment = payments.filter(p=>p.satId===s.id)
       .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
     return { ...s, total, compOps, workerBreakdown, lastPayment };
@@ -432,9 +436,14 @@ export function NominaScreen() {
                 <span style={{color:'#e85d26'}}>{fmtM(s.total)}</span>
               </div>
 
-              <button onClick={()=>openPaySat(s)} disabled={s.total===0}
-                className="w-full py-2.5 text-white text-sm font-bold rounded-xl disabled:opacity-40"
-                style={{background:'#15803d'}}>
+              {s.total===0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-700 mb-2">
+                  ⚠ Sin operaciones completadas en este período — el pago sería de $0
+                </div>
+              )}
+              <button onClick={()=>openPaySat(s)}
+                className="w-full py-2.5 text-white text-sm font-bold rounded-xl"
+                style={{background: s.total>0?'#15803d':'#6b7280'}}>
                 💳 Registrar pago — {fmtM(s.total)}
               </button>
             </div>
