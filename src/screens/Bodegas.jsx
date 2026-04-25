@@ -19,7 +19,7 @@ const BODEGAS_DEF = [
   {
     id:    'bodega_calidad',
     label: 'Bodega Control de Calidad',
-    desc:  'Lotes en operaciones internas y revisión antes de pasar a Lonas',
+    desc:  'Cortes en operaciones internas y revisión antes de pasar a Lonas',
     icon:  '🔍',
     color: '#7c3aed',
     statuses: ['bodega_calidad', 'en_operaciones_elrohi', 'en_revision_calidad'],
@@ -117,22 +117,26 @@ export default function BodegasScreen() {
 
   const asignar = async (tipo) => {
     if (!selLot) return;
-    if (tipo !== 'bodega' && opsConOp.length===0) { toast.error('Selecciona al menos una operación'); return; }
-    if (tipo !== 'bodega' && opsConOp.some(o=>!o.operarioId)) { toast.error('Asigna un operario a cada operación'); return; }
+    // Si va a bodega_calidad y hay operaciones, validar que tengan operario
+    if (bodegaDest === 'bodega_calidad' && opsConOp.length > 0 && opsConOp.some(o=>!o.operarioId)) {
+      toast.error('Asigna un operario a cada operación'); return;
+    }
     setSaving(true);
     try {
       const opsElrohi = opsConOp.map(o=>({
         id:`oe_${selLot.id}_${o.opId}`,
         opId:o.opId, name:o.name, val:o.val,
-        qty: tipo==='parcial' ? totalOps : selLot.totalPieces,
-        status:'pendiente', wId:o.operarioId, workerName:o.operarioName, assignments:[],
+        qty: selLot.totalPieces,
+        status:'pendiente', wId:o.operarioId, workerName:o.operarioName,
       }));
-      const newStatus = tipo==='bodega' ? bodegaDest : 'en_operaciones_elrohi';
+      // Si va a bodega_calidad con operaciones -> en_operaciones_elrohi
+      const newStatus = bodegaDest === 'bodega_calidad' && opsConOp.length > 0
+        ? 'en_operaciones_elrohi'
+        : bodegaDest;
       await advanceLotStatus(selLot.id, newStatus, profile?.id, profile?.name, {
-        ...(tipo!=='bodega' ? { opsElrohi } : {}),
-        ...(tipo==='parcial' ? { bodegaSecundaria:bodegaDest, cantidadesBodega:cantBodega, cantidadesOps:cantOps, esParcial:true } : {}),
-        ...(tipo==='bodega'  ? { cantidadesBodega:cantBodega } : {}),
-        bodega: newStatus,
+        opsElrohi: opsElrohi.length > 0 ? opsElrohi : [],
+        cantidadesBodega: cantBodega,
+        bodega: bodegaDest,
       });
       toast.success('✅ Lote asignado correctamente');
       setSelLot(null);
@@ -218,7 +222,7 @@ export default function BodegasScreen() {
                 <button onClick={()=>setSelLot(null)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
               </div>
               <p className="text-xs text-gray-500 mb-4">{selLot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {selLot.deadline}</p>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">¿A dónde va este lote?</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">¿A dónde va este corte?</p>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {[
                   { val:'bodega_lonas',   label:'📦 Bodega Lonas',           desc:'Listo para despacho a clientes', color:'#2563eb' },
@@ -232,6 +236,43 @@ export default function BodegasScreen() {
                   </button>
                 ))}
               </div>
+              {/* Operaciones para Control de Calidad */}
+              {bodegaDest === 'bodega_calidad' && (
+                <div className="mb-4">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Operaciones internas</p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {opsConOp.map((op, i) => (
+                      <div key={i} className="bg-gray-50 rounded-xl p-2 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-xs font-bold text-gray-700 flex-1">{op.name}</span>
+                          <button onClick={() => toggleOp(op.opId)}
+                            className="text-[10px] text-red-500 hover:text-red-700">✕ Quitar</button>
+                        </div>
+                        <select value={op.operarioId} onChange={e=>setOperario(op.opId, e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none">
+                          <option value="">— Asignar operario —</option>
+                          {operariosElrohi.map(w=>(
+                            <option key={w.id} value={w.id}>{w.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Agregar operaciones */}
+                  <div className="mt-2">
+                    <p className="text-[10px] text-gray-400 mb-1">Agregar operación:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {OPS_INTERNAS.filter(op => !opsConOp.find(o=>o.opId===op.id)).map(op=>(
+                        <button key={op.id} onClick={()=>toggleOp(op.id)}
+                          className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-lg hover:bg-purple-100">
+                          + {op.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <button onClick={()=>setSelLot(null)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
                 <button onClick={()=>asignar('bodega')} disabled={saving}
@@ -264,7 +305,7 @@ export default function BodegasScreen() {
           <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
             <p className="text-4xl mb-3">📦</p>
             <p className="font-medium text-gray-700">Bodega vacía</p>
-            <p className="text-sm text-gray-400 mt-1">Los lotes aprobados por calidad aparecerán aquí</p>
+            <p className="text-sm text-gray-400 mt-1">Los cortes aprobados por calidad aparecerán aquí</p>
           </div>
         )}
 
@@ -320,7 +361,7 @@ export default function BodegasScreen() {
         {lotesCalidad.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
             <p className="text-4xl mb-3">🔍</p>
-            <p className="font-medium text-gray-700">Sin lotes en esta bodega</p>
+            <p className="font-medium text-gray-700">Sin cortes en esta bodega</p>
           </div>
         )}
 
