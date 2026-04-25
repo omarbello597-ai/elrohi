@@ -24,6 +24,9 @@ export default function OperacionesElrohiScreen() {
   const [showAddOp, setShowAddOp] = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [catFilter, setCatFilter] = useState('todos');
+  const [mainTab,   setMainTab]   = useState('lotes');
+  const [editOp,    setEditOp]    = useState(null);
+  const [editVal,   setEditVal]   = useState('');
 
   // Formulario nueva operación
   const [selCat,    setSelCat]    = useState('camisa');
@@ -193,12 +196,107 @@ export default function OperacionesElrohiScreen() {
     );
   }
 
+  // ── EDITAR VALOR OPERACIÓN ────────────────────────────────────────────────
+  const guardarEdicion = async () => {
+    if (!editOp || !editVal) return;
+    setSaving(true);
+    try {
+      const { updateDocument: upd } = await import('../services/db');
+      await upd('operacionesElrohi', editOp.id, { valorUnitario: +editVal||0 });
+      toast.success('✅ Valor actualizado');
+      setEditOp(null); setEditVal('');
+    } catch { toast.error('Error'); }
+    finally { setSaving(false); }
+  };
+
   // ── VISTA ADMIN ────────────────────────────────────────────────────────────
   return (
     <div>
       <h1 className="text-sm font-bold text-gray-900 mb-1">Operaciones ELROHI</h1>
-      <p className="text-xs text-gray-400 mb-4">Asigna operaciones a los operarios internos</p>
+      <p className="text-xs text-gray-400 mb-4">Catálogo de operaciones y asignación a lotes</p>
 
+      {/* Main tabs */}
+      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+        {[['lotes','📦 Lotes en proceso'],['catalogo','⚙️ Catálogo de operaciones']].map(([k,l])=>(
+          <button key={k} onClick={()=>setMainTab(k)}
+            className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
+            style={{background:mainTab===k?'#fff':'transparent',color:mainTab===k?'#111827':'#6b7280',
+              fontWeight:mainTab===k?700:400,boxShadow:mainTab===k?'0 1px 3px rgba(0,0,0,0.08)':'none'}}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* CATÁLOGO */}
+      {mainTab==='catalogo' && (
+        <div>
+          {/* Filtro por categoría */}
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {[{key:'todos',label:'Todos'},...CATEGORIAS].map(c=>(
+              <button key={c.key} onClick={()=>setCatFilter(c.key)}
+                className="text-xs px-3 py-1.5 rounded-lg border-2 font-medium transition-all"
+                style={{borderColor:catFilter===c.key?ACCENT:'#e5e7eb',background:catFilter===c.key?'#fff5f0':'#fff',color:catFilter===c.key?ACCENT:'#374151'}}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tabla por categoría */}
+          {CATEGORIAS.filter(c=>catFilter==='todos'||catFilter===c.key).map(cat=>{
+            const refs2 = [...new Set(catalogo.filter(o=>o.categoria===cat.key).map(o=>o.referencia))];
+            if (!refs2.length) return null;
+            return (
+              <div key={cat.key} className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
+                <div className="px-4 py-2.5 flex items-center gap-2" style={{background:'#14405A'}}>
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">{cat.label}</span>
+                  <span className="text-[10px] text-blue-200">{catalogo.filter(o=>o.categoria===cat.key).length} operaciones</span>
+                </div>
+                {refs2.map(ref=>{
+                  const opsRef = catalogo.filter(o=>o.categoria===cat.key&&o.referencia===ref);
+                  return (
+                    <div key={ref} className="border-b border-gray-50 last:border-0">
+                      <div className="px-4 py-2 bg-gray-50">
+                        <p className="text-xs font-bold text-gray-700">{ref}</p>
+                        {opsRef[0]?.metaLV > 0 && (
+                          <p className="text-[10px] text-gray-400">Meta: {opsRef[0].metaLV}/día Lun-Vie · {opsRef[0].metaSab}/día Sáb</p>
+                        )}
+                      </div>
+                      <div className="divide-y divide-gray-50">
+                        {opsRef.map((op,i)=>(
+                          <div key={i} className="flex items-center px-4 py-2 hover:bg-gray-50">
+                            <span className="text-xs text-gray-600 flex-1">{op.operacion}</span>
+                            {op.valorDesc && <span className="text-[10px] text-gray-400 mr-3 italic">{op.valorDesc}</span>}
+                            {editOp?.id===op.id ? (
+                              <div className="flex items-center gap-2">
+                                <input type="number" value={editVal} onChange={e=>setEditVal(e.target.value)}
+                                  className="w-24 border border-orange-300 rounded px-2 py-1 text-xs text-right focus:outline-none" />
+                                <button onClick={guardarEdicion} disabled={saving}
+                                  className="text-[10px] px-2 py-1 bg-green-100 text-green-700 rounded font-bold">✓</button>
+                                <button onClick={()=>{setEditOp(null);setEditVal('');}}
+                                  className="text-[10px] px-2 py-1 bg-gray-100 text-gray-600 rounded">✕</button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-green-700">{fmtM(op.valorUnitario)}</span>
+                                <button onClick={()=>{setEditOp(op);setEditVal(String(op.valorUnitario));}}
+                                  className="text-[10px] px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200">✏️</button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* LOTES */}
+      {mainTab==='lotes' && (
+      <>
       {/* Lista de lotes */}
       {!selLotId && (
         <div className="space-y-3">
@@ -405,6 +503,8 @@ export default function OperacionesElrohiScreen() {
             </button>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
