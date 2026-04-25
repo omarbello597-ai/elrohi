@@ -192,7 +192,7 @@ export default function TrazabilidadScreen() {
 
           return (
             <div key={lot.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              {/* Header del lote */}
+              {/* Header del corte */}
               <button
                 onClick={() => setSelLot(isOpen ? null : lot.id)}
                 className="w-full text-left p-4 hover:bg-gray-50 transition-colors">
