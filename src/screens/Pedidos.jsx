@@ -196,6 +196,34 @@ export default function PedidosScreen() {
 
   const totalPedido = items.reduce((a,i)=>a+(i.qty||0)*i.precioUnitario,0);
 
+  // Verificar disponibilidad en bodega e inventario en proceso
+  const checkDisponibilidad = () => {
+    if (!inventario || !lots) return [];
+    return items.filter(item=>item.descripcion).map(item=>{
+      // Buscar en inventario bodega lonas
+      const enBodega = (inventario||[]).filter(inv=>
+        inv.descripcion?.toLowerCase().includes(item.descripcion?.toLowerCase().split(' ')[0]) &&
+        inv.talla === item.talla
+      ).reduce((a,inv)=>a+(inv.qty||0),0);
+      // Buscar en cortes en proceso
+      const enProceso = lots.filter(l=>
+        !['despachado','nuevo'].includes(l.status)
+      ).flatMap(l=>l.garments||[]).filter(g=>
+        (g.descripcionRef||'').toLowerCase().includes(item.descripcion?.toLowerCase().split(' ')[0])
+      ).reduce((a,g)=>a+(g.total||0),0);
+      return {
+        descripcion: item.descripcion,
+        talla: item.talla,
+        qty: item.qty,
+        enBodega,
+        enProceso,
+        disponible: enBodega >= item.qty,
+        parcial: enBodega < item.qty && (enBodega + enProceso) >= item.qty,
+      };
+    });
+  };
+  const disponibilidad = checkDisponibilidad();
+
   const crearPedido = async () => {
     if (!selClienteId)              { toast.error('Selecciona un cliente'); return; }
     if (items.some(i=>!i.descripcion||!i.talla||!i.qty||i.qty<1)) {
