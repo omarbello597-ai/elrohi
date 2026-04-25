@@ -163,6 +163,23 @@ export default function CargaMasivaScreen() {
           return { descripcion: desc, confeccion: conf, terminacion: term, remate: rem, total: tot, active: true };
         }).filter(Boolean);
         if (!parsed.length) errs.push('No se encontraron tarifas válidas');
+      } else if (tipo === 'ops_elrohi') {
+        parsed = rows.map((r, i) => {
+          const operacion = (r['OPERACION']||r['operacion']||'').trim();
+          const referencia = (r['REFERENCIA']||r['referencia']||'').trim();
+          if (!operacion) { errs.push(`Fila ${i+2}: falta operacion`); return null; }
+          return {
+            categoria:    (r['CATEGORIA']||r['categoria']||'').trim().toLowerCase(),
+            referencia:   referencia,
+            operacion:    operacion,
+            valorUnitario: parsePrecio(r['VALORUNITARIO']||r['valorUnitario']||'0'),
+            valorDesc:    (r['VALORDESC']||r['valorDesc']||'').trim(),
+            metaLV:       +r['METALV']||+r['metaLV']||0,
+            metaSab:      +r['METASAB']||+r['metaSab']||0,
+            active:       true,
+          };
+        }).filter(Boolean);
+        if (!parsed.length) errs.push('No se encontraron operaciones válidas');
         }
 
         setErrors(errs);
@@ -189,10 +206,7 @@ export default function CargaMasivaScreen() {
         await addDocument('listasPrecios', { nombre: nombreLista, descripcion, productos: preview, active: true });
         ok = preview.length;
       } else {
-        const col = tipo==='clientes'        ? 'clients' :
-            tipo==='operarios'       ? 'users' :
-            tipo==='listas_precios'  ? 'listasPrecios' :
-            tipo==='tarifas_satelite'? 'tarifasSatelite' : 'operations';
+        const col = tipo==='clientes'?'clients':tipo==='operarios'?'users':'operations';
         for (const item of preview) {
           try { await addDocument(col, item); ok++; } catch { fail++; }
         }
@@ -210,6 +224,7 @@ export default function CargaMasivaScreen() {
     { key:'operaciones',     label:'⚡ Operaciones'     },
     { key:'listas_precios',  label:'💰 Listas Precios'  },
     { key:'tarifas_satelite',label:'🏭 Tarifas Satélite'},
+    { key:'ops_elrohi',      label:'🧵 Ops ELROHI'     },
   ];
 
   const DESCS = {
@@ -218,6 +233,7 @@ export default function CargaMasivaScreen() {
     operaciones:     'Columnas: NOMBRE_OPERACION; VALOR_UNITARIO',
     listas_precios:  'Columnas: #; DESCRIPCIÓN PRODUCTO; TALLAS; PRECIO; TIPO — separador punto y coma (;)',
     tarifas_satelite:'Columnas: descripcion; confeccion; terminacion; remate; total',
+    ops_elrohi:      'Columnas: categoria; referencia; operacion; valorUnitario; valorDesc; metaLV; metaSab',
   };
 
   return (
