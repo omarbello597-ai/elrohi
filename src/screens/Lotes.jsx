@@ -215,7 +215,7 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
           </div>
           {lot.lotOps?.length > 0 && (
             <div className="text-right">
-              <p className="text-xs text-gray-400">Valor total del lote</p>
+              <p className="text-xs text-gray-400">Valor total del corte</p>
               <p className="text-lg font-black text-gray-800">{fmtM(totalVal)}</p>
               <p className="text-xs text-green-600">Pagado: {fmtM(doneVal)}</p>
             </div>
@@ -364,7 +364,7 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
             <option value="">— Elegir satélite —</option>
             {satellites.filter(s=>s.active).map(s=>{
               const activeLots = lots.filter(l=>l.satId===s.id&&l.status==='costura').length;
-              return <option key={s.id} value={s.id}>{s.name} ({s.city}) — {activeLots} lotes activos</option>;
+              return <option key={s.id} value={s.id}>{s.name} ({s.city}) — {activeLots} cortes activos</option>;
             })}
           </Select>
           <div className="flex gap-2 mt-3">
