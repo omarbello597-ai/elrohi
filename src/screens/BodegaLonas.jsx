@@ -15,11 +15,12 @@ import toast from 'react-hot-toast';
 function printFactura(factura) {
   const itemRows = (factura.items||[]).map(item => {
     const subtotal = item.qty * item.precioUnitario;
-    return `<tr>
-      <td style="border:1px solid #e5e7eb;padding:6px 10px;font-size:11px">${item.descripcionRef||gLabel(item.gtId)}</td>
-      <td style="border:1px solid #e5e7eb;padding:6px 10px;text-align:center;font-size:11px;font-weight:600">${item.qty}</td>
-      <td style="border:1px solid #e5e7eb;padding:6px 10px;text-align:right;font-size:11px">${fmtM(item.precioUnitario)}</td>
-      <td style="border:1px solid #e5e7eb;padding:6px 10px;text-align:right;font-size:11px;font-weight:700">${fmtM(subtotal)}</td>
+    return `<tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:7px 10px;font-size:11px;color:#14405A;font-weight:500">${item.descripcionRef||item.descripcion||gLabel(item.gtId)}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11px;color:#6b7280">${item.talla||'—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11px;font-weight:700">${item.qty}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px">${fmtM(item.precioUnitario)}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px;font-weight:700;color:#14405A">${fmtM(subtotal)}</td>
     </tr>`;
   }).join('');
   const subtotalVal = (factura.items||[]).reduce((a,i)=>a+i.qty*i.precioUnitario,0);
@@ -27,48 +28,50 @@ function printFactura(factura) {
   const totalVal    = subtotalVal + ivaVal;
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Factura ${factura.numero}</title>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
-  </head><body><div style="max-width:800px;margin:20px auto;padding:0 20px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #1a3a6b">
+  </head><body><div style="max-width:800px;margin:20px auto;border:1.5px solid #14405A">
+    <div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:12px 20px;display:flex;justify-content:space-between;align-items:flex-start">
       <div>
-        <div style="font-size:20px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div>
-        <div style="font-size:10px;color:#6b7280;margin-top:4px">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div>
+        <div style="font-size:22px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>
+        <div style="font-size:9px;color:#14405A;margin-top:4px">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:11px;font-weight:700;color:#6b7280">FACTURA DE VENTA</div>
-        <div style="font-size:24px;font-weight:900;color:#e85d26;font-family:monospace">N° ${factura.numero}</div>
-        <div style="font-size:11px;color:#6b7280">Fecha: ${factura.fecha}</div>
+        <div style="font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.1em">FACTURA DE VENTA</div>
+        <div style="font-size:26px;font-weight:900;color:#2878B4;font-family:monospace">N° ${factura.numero}</div>
+        <div style="font-size:10px;color:#14405A">Fecha: ${factura.fecha}</div>
       </div>
     </div>
-    <div style="background:#f9fafb;border-radius:8px;padding:12px 16px;margin-bottom:20px">
-      <p style="font-size:11px;font-weight:700;margin-bottom:8px">DATOS DEL CLIENTE</p>
+    <div style="padding:10px 20px;border-bottom:1px solid #e5e7eb;background:#fff">
+      <p style="font-size:9px;font-weight:700;color:#14405A;letter-spacing:0.1em;margin-bottom:8px">DATOS DEL CLIENTE</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><span style="font-size:10px;color:#6b7280">Nombre:</span><br><span style="font-size:12px;font-weight:600">${factura.clienteNombre}</span></div>
-        <div><span style="font-size:10px;color:#6b7280">NIT / Cédula:</span><br><span style="font-size:12px;font-weight:600">${factura.clienteNit||'—'}</span></div>
-        <div><span style="font-size:10px;color:#6b7280">Dirección:</span><br><span style="font-size:12px;font-weight:600">${factura.clienteDireccion||'—'}</span></div>
-        <div><span style="font-size:10px;color:#6b7280">Ciudad:</span><br><span style="font-size:12px;font-weight:600">${factura.clienteCiudad||'—'}</span></div>
+        <div><span style="font-size:9px;color:#6b7280">Nombre:</span><br><span style="font-size:12px;font-weight:700;color:#14405A">${factura.clienteNombre}</span></div>
+        <div><span style="font-size:9px;color:#6b7280">NIT / Cédula:</span><br><span style="font-size:12px;font-weight:600">${factura.clienteNit||'—'}</span></div>
+        <div><span style="font-size:9px;color:#6b7280">Dirección:</span><br><span style="font-size:12px">${factura.clienteDireccion||'—'}</span></div>
+        <div><span style="font-size:9px;color:#6b7280">Ciudad:</span><br><span style="font-size:12px">${factura.clienteCiudad||'—'}</span></div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
-      <thead><tr style="background:#1a3a6b;color:#fff">
-        <th style="padding:8px 10px;font-size:11px;text-align:left">Referencia</th>
-        <th style="padding:8px 10px;font-size:11px;text-align:center">Cantidad</th>
-        <th style="padding:8px 10px;font-size:11px;text-align:right">Precio Unit.</th>
-        <th style="padding:8px 10px;font-size:11px;text-align:right">Subtotal</th>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#14405A;color:#fff">
+        <th style="padding:8px 10px;font-size:10px;text-align:left">Referencia</th>
+        <th style="padding:8px 10px;font-size:10px;text-align:center">Talla</th>
+        <th style="padding:8px 10px;font-size:10px;text-align:center">Cant.</th>
+        <th style="padding:8px 10px;font-size:10px;text-align:right">Precio Unit.</th>
+        <th style="padding:8px 10px;font-size:10px;text-align:right">Subtotal</th>
       </tr></thead>
       <tbody>${itemRows}</tbody>
     </table>
-    <div style="display:flex;justify-content:flex-end">
+    <div style="display:flex;justify-content:flex-end;padding:12px 20px;background:#F7F7F7;border-top:1px solid #e5e7eb">
       <div style="min-width:280px">
-        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e5e7eb">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e5e7eb">
           <span style="font-size:12px;color:#6b7280">Subtotal</span><span style="font-size:12px;font-weight:600">${fmtM(subtotalVal)}</span>
         </div>
-        ${factura.aplicaIva?`<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="font-size:12px;color:#6b7280">IVA 19%</span><span style="font-size:12px;font-weight:600">${fmtM(ivaVal)}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #1a3a6b">
-          <span style="font-size:14px;font-weight:900;color:#1a3a6b">TOTAL</span>
-          <span style="font-size:16px;font-weight:900;color:#e85d26">${fmtM(totalVal)}</span>
+        ${factura.aplicaIva?`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e5e7eb"><span style="font-size:12px;color:#6b7280">IVA 19%</span><span style="font-size:12px;font-weight:600">${fmtM(ivaVal)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:2px solid #14405A;margin-top:4px">
+          <span style="font-size:14px;font-weight:900;color:#14405A">TOTAL</span>
+          <span style="font-size:18px;font-weight:900;color:#e85d26">${fmtM(totalVal)}</span>
         </div>
       </div>
     </div>
+    ${factura.notas?`<div style="padding:8px 20px;border-top:1px solid #e5e7eb;font-size:10px;color:#6b7280"><strong>Notas:</strong> ${factura.notas}</div>`:''}
   </div><script>window.onload=()=>window.print();</script></body></html>`;
   const win=window.open('','_blank'); win.document.write(html); win.document.close();
 }
@@ -315,14 +318,27 @@ export default function BodegaLonasScreen() {
                     </div>
                     <p className="text-sm font-bold text-gray-900">{p.clienteNombre}</p>
                     <p className="text-[10px] text-gray-400">{p.clienteDireccion} · {p.clienteCiudad}</p>
-                    <div className="flex flex-wrap gap-1 mt-2">
+                    {/* Detalle completo para alistar */}
+                    <div className="mt-2 space-y-1">
                       {p.items?.map((item,i)=>(
-                        <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                          {item.descripcionRef||gLabel(item.gtId)}: <strong>{item.qty}</strong>
-                        </span>
+                        <div key={i} className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-gray-800">{item.descripcionRef||item.descripcion||gLabel(item.gtId)}</p>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {item.talla && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">Talla: {item.talla}</span>}
+                                {item.tipo   && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">{item.tipo}</span>}
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-black text-gray-900">{(+item.qty||0).toLocaleString('es-CO')} <span className="text-xs font-normal text-gray-400">und</span></p>
+                              {item.precioUnitario>0 && <p className="text-[10px] text-green-700 font-bold">{fmtM(item.precioUnitario)} c/u</p>}
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    {p.tomadoPor && <p className="text-[10px] text-blue-500 mt-1">Alistando: {p.tomadoPor}</p>}
+                    {p.tomadoPor && <p className="text-[10px] text-blue-500 mt-2 font-medium">📦 Alistando: {p.tomadoPor}</p>}
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     {isBodega && p.status==='pendiente' && (
@@ -415,13 +431,22 @@ export default function BodegaLonasScreen() {
               <button onClick={()=>setShowFact(null)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
             </div>
             <div className="bg-gray-50 rounded-xl p-3 mb-4">
-              <p className="text-xs font-bold text-gray-800">{showFact.clienteNombre}</p>
-              <div className="flex flex-wrap gap-1 mt-2">
+              <p className="text-xs font-bold text-gray-800 mb-2">{showFact.clienteNombre}</p>
+              <p className="text-[10px] text-gray-400 mb-2">{showFact.clienteDireccion} · {showFact.clienteCiudad}</p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {showFact.items?.map((item,i)=>(
-                  <span key={i} className="text-[9px] bg-white border border-gray-200 px-1.5 py-0.5 rounded">
-                    {item.descripcionRef||gLabel(item.gtId)}: {item.qty}
-                  </span>
+                  <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-100">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-gray-800">{item.descripcionRef||item.descripcion||gLabel(item.gtId)}</p>
+                      {item.talla && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">Talla: {item.talla}</span>}
+                    </div>
+                    <span className="text-sm font-black text-gray-900 flex-shrink-0">{item.qty} und</span>
+                  </div>
                 ))}
+              </div>
+              <div className="flex justify-between text-xs font-bold mt-2 pt-2 border-t border-gray-200">
+                <span className="text-gray-500">Total prendas</span>
+                <span className="text-gray-900">{(showFact.items||[]).reduce((a,i)=>a+(+i.qty||0),0).toLocaleString('es-CO')} und</span>
               </div>
             </div>
             <div className="mb-3">
