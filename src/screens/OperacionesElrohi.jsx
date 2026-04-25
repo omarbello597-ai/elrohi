@@ -1,432 +1,410 @@
-import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
-import { updateDocument } from '../services/db';
-import { ACCENT, OPS_ELROHI_DEFAULT } from '../constants';
-import { Modal, Select, EmptyState, ProgressBar } from '../components/ui';
-import { gLabel, cLabel, fmtM } from '../utils';
-import toast from 'react-hot-toast';
+import { useState, useEffect } from 'react';
+import { useAuth }   from '../contexts/AuthContext';
+import { useData }   from '../contexts/DataContext';
+import { updateDocument, listenCol } from '../services/db';
+import { ACCENT }    from '../constants';
+import { fmtM }      from '../utils';
+import { orderBy }   from 'firebase/firestore';
+import toast         from 'react-hot-toast';
 
-const genOpId = () => 'op_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-const genAssId = () => 'ass_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+const genOpId = () => 'oe_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+
+const CATEGORIAS = [
+  { key:'camisa',   label:'👔 Camisa'   },
+  { key:'pantalon', label:'👖 Pantalón' },
+  { key:'fusion',   label:'🔥 Fusión'   },
+  { key:'corte',    label:'✂️ Corte'    },
+];
 
 export default function OperacionesElrohiScreen() {
-  const { profile }            = useAuth();
-  const { lots, clients, users } = useData();
-  const [selLotId, setSelLotId] = useState(null);
+  const { profile }          = useAuth();
+  const { lots, users }      = useData();
+  const [catalogo,  setCatalogo]  = useState([]);
+  const [selLotId,  setSelLotId]  = useState(null);
   const [showAddOp, setShowAddOp] = useState(false);
-  const [showTakeOp, setShowTakeOp] = useState(null);
-  const [showReasign, setShowReasign] = useState(null);
-  const [saving, setSaving]    = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [catFilter, setCatFilter] = useState('todos');
 
-  const isAdmin = ['gerente','admin_elrohi'].includes(profile?.role);
-  const isOperario = ['corte','bodega_op','terminacion','pespunte'].includes(profile?.role) || isAdmin;
+  // Formulario nueva operación
+  const [selCat,    setSelCat]    = useState('camisa');
+  const [selRef,    setSelRef]    = useState('');
+  const [selOp,     setSelOp]     = useState('');
+  const [qty,       setQty]       = useState('');
 
-  // All internal ELROHI operarios
-  const elrohiOps = users.filter(u => ['corte','bodega_op','terminacion','pespunte'].includes(u.role));
+  useEffect(()=>{
+    const unsub = listenCol('operacionesElrohi', setCatalogo, orderBy('categoria','asc'));
+    return unsub;
+  },[]);
 
-  // Lots in operaciones
-  const opLots = lots.filter(l => ['en_operaciones','en_bodega_1','en_bodega_2'].includes(l.status));
+  const isAdmin    = ['gerente','admin_elrohi'].includes(profile?.role);
+  const isOperario = ['terminacion','bodega_op','corte'].includes(profile?.role);
+
+  // Operarios ELROHI internos
+  const operariosElrohi = users.filter(u =>
+    ['terminacion','bodega_op','corte'].includes(u.role) && u.active !== false
+  );
+
+  // Lotes en operaciones ELROHI
+  const opLots = lots.filter(l =>
+    ['en_operaciones_elrohi','bodega_calidad','en_revision_calidad'].includes(l.status)
+  );
 
   const selLot = lots.find(l => l.id === selLotId);
 
-  // ─── ADD OPERATION ────────────────────────────────────────────────────────
-  const [newOp, setNewOp] = useState({ name: '', val: '', totalQty: '', esEspecial: false, descripcion: '' });
+  // Catálogo filtrado por categoría
+  const refs = [...new Set(catalogo.filter(o=>o.categoria===selCat).map(o=>o.referencia))];
+  const opsDeRef = catalogo.filter(o=>o.categoria===selCat && o.referencia===selRef);
+  const opSelData = opsDeRef.find(o=>o.operacion===selOp);
 
-  const addOperation = async () => {
-    if (!newOp.name || !newOp.val || !newOp.totalQty) { toast.error('Completa todos los campos'); return; }
+  // Valor calculado
+  const valorTotal = opSelData ? (opSelData.valorUnitario * (+qty||0)) : 0;
+
+  const resetForm = () => { setSelCat('camisa'); setSelRef(''); setSelOp(''); setQty(''); };
+
+  // ── AGREGAR OPERACIÓN AL LOTE ──────────────────────────────────────────────
+  const agregarOp = async (operarioId) => {
+    if (!selRef||!selOp||!qty) { toast.error('Completa todos los campos'); return; }
+    if (!opSelData)             { toast.error('Operación no encontrada'); return; }
     setSaving(true);
     try {
-      const op = {
-        id:          genOpId(),
-        name:        newOp.name,
-        val:         +newOp.val,
-        totalQty:    +newOp.totalQty,
-        asignado:    0,
-        completado:  0,
-        esEspecial:  newOp.esEspecial,
-        descripcion: newOp.descripcion,
-        assignments: [],
+      const operario = users.find(u=>u.id===operarioId);
+      const newOp = {
+        id:            genOpId(),
+        categoria:     selCat,
+        referencia:    selRef,
+        operacion:     selOp,
+        valorUnitario: opSelData.valorUnitario,
+        valorDesc:     opSelData.valorDesc||'',
+        metaLV:        opSelData.metaLV||0,
+        metaSab:       opSelData.metaSab||0,
+        qty:           +qty,
+        vrTotal:       valorTotal,
+        wId:           operarioId,
+        workerName:    operario?.name||'',
+        status:        'pendiente',
+        startedAt:     null,
+        doneAt:        null,
       };
-      const opsElrohi = [...(selLot.opsElrohi || []), op];
+      const opsElrohi = [...(selLot.opsElrohi||[]), newOp];
       await updateDocument('lots', selLot.id, { opsElrohi });
-      toast.success('Operación agregada');
+      toast.success('✅ Operación asignada');
       setShowAddOp(false);
-      setNewOp({ name: '', val: '', totalQty: '', esEspecial: false, descripcion: '' });
-    } catch { toast.error('Error'); }
+      resetForm();
+    } catch(e){ console.error(e); toast.error('Error'); }
     finally { setSaving(false); }
   };
 
-  // ─── TAKE OPERATION (operario toma cantidad) ──────────────────────────────
-  const [takeQty, setTakeQty] = useState('');
+  // ── VISTA OPERARIO ─────────────────────────────────────────────────────────
+  if (isOperario && !isAdmin) {
+    const misLots = lots.filter(l =>
+      ['en_operaciones_elrohi','bodega_calidad'].includes(l.status)
+    );
+    const misOps = misLots.flatMap(l =>
+      (l.opsElrohi||[])
+        .filter(op=>op.wId===profile?.id)
+        .map(op=>({...op, lotId:l.id, lotCode:l.code}))
+    );
 
-  const takeOperation = async (opId) => {
-    if (!takeQty || +takeQty <= 0) { toast.error('Ingresa una cantidad válida'); return; }
-    const op = selLot.opsElrohi?.find(o => o.id === opId);
-    if (!op) return;
-    const disponible = op.totalQty - op.asignado;
-    if (+takeQty > disponible) { toast.error(`Solo hay ${disponible} piezas disponibles`); return; }
-    setSaving(true);
-    try {
-      const assignment = {
-        id:        genAssId(),
-        operarioId: profile.id,
-        operarioName: profile.name,
-        qty:       +takeQty,
-        status:    'en_proceso',
-        taken:     new Date().toISOString().split('T')[0],
-        done:      null,
-      };
-      const opsElrohi = selLot.opsElrohi.map(o =>
-        o.id === opId
-          ? { ...o, asignado: o.asignado + +takeQty, assignments: [...(o.assignments || []), assignment] }
-          : o
+    const iniciar = async (lotId, opId) => {
+      const lot = lots.find(l=>l.id===lotId);
+      if (!lot) return;
+      const upd = (lot.opsElrohi||[]).map(op=>
+        op.id===opId ? {...op, status:'en_proceso', startedAt:new Date().toISOString()} : op
       );
-      await updateDocument('lots', selLot.id, { opsElrohi });
-      toast.success(`✅ Tomaste ${takeQty} piezas de "${op.name}"`);
-      setShowTakeOp(null);
-      setTakeQty('');
-    } catch { toast.error('Error'); }
-    finally { setSaving(false); }
-  };
+      await updateDocument('lots', lotId, {opsElrohi:upd});
+      toast.success('¡Operación iniciada!');
+    };
 
-  // ─── COMPLETE ASSIGNMENT ──────────────────────────────────────────────────
-  const completeAssignment = async (opId, assId) => {
-    const op = selLot.opsElrohi?.find(o => o.id === opId);
-    if (!op) return;
-    const ass = op.assignments?.find(a => a.id === assId);
-    if (!ass) return;
-    try {
-      const opsElrohi = selLot.opsElrohi.map(o =>
-        o.id === opId ? {
-          ...o,
-          completado: o.completado + ass.qty,
-          assignments: o.assignments.map(a =>
-            a.id === assId ? { ...a, status: 'completado', done: new Date().toISOString().split('T')[0] } : a
-          ),
-        } : o
+    const terminar = async (lotId, opId) => {
+      const lot = lots.find(l=>l.id===lotId);
+      if (!lot) return;
+      const upd = (lot.opsElrohi||[]).map(op=>
+        op.id===opId ? {...op, status:'completado', doneAt:new Date().toISOString()} : op
       );
-      // Check if all ops complete
-      const allDone = opsElrohi.every(o => o.completado >= o.totalQty);
-      await updateDocument('lots', selLot.id, {
-        opsElrohi,
-        ...(allDone ? { status: 'despachado' } : {}),
+      const allDone = upd.every(op=>op.status==='completado');
+      await updateDocument('lots', lotId, {
+        opsElrohi: upd,
+        ...(allDone ? {status:'en_revision_calidad'} : {}),
       });
-      toast.success('¡Operación completada!');
-      if (allDone) toast.success('🎉 Todas las operaciones completas — lote listo para despacho');
-    } catch { toast.error('Error'); }
-  };
+      toast.success(allDone?'✅ ¡Todas las operaciones completadas!':'✅ ¡Operación completada!');
+    };
 
-  // ─── REASIGN ──────────────────────────────────────────────────────────────
-  const [reasignData, setReasignData] = useState({ qty: '', toOperarioId: '' });
+    return (
+      <div>
+        <h1 className="text-sm font-bold text-gray-900 mb-1">Mis Operaciones</h1>
+        <p className="text-xs text-gray-400 mb-4">{misOps.length} operaciones asignadas</p>
 
-  const reasign = async (opId, assId) => {
-    if (!reasignData.qty || !reasignData.toOperarioId) { toast.error('Completa los campos'); return; }
-    const op  = selLot.opsElrohi?.find(o => o.id === opId);
-    const ass = op?.assignments?.find(a => a.id === assId);
-    if (!ass || +reasignData.qty > ass.qty) { toast.error('Cantidad inválida'); return; }
-    const toOp = elrohiOps.find(u => u.id === reasignData.toOperarioId);
-    setSaving(true);
-    try {
-      const newQty = ass.qty - +reasignData.qty;
-      const newAss = {
-        id:           genAssId(),
-        operarioId:   toOp.id,
-        operarioName: toOp.name,
-        qty:          +reasignData.qty,
-        status:       'en_proceso',
-        taken:        new Date().toISOString().split('T')[0],
-        done:         null,
-        reasignadoPor: profile.name,
-      };
-      const opsElrohi = selLot.opsElrohi.map(o =>
-        o.id === opId ? {
-          ...o,
-          assignments: [
-            ...o.assignments.map(a => a.id === assId ? { ...a, qty: newQty } : a).filter(a => a.qty > 0),
-            newAss,
-          ],
-        } : o
-      );
-      await updateDocument('lots', selLot.id, { opsElrohi });
-      toast.success(`${reasignData.qty} piezas reasignadas a ${toOp.name}`);
-      setShowReasign(null);
-      setReasignData({ qty: '', toOperarioId: '' });
-    } catch { toast.error('Error'); }
-    finally { setSaving(false); }
-  };
+        {misOps.length===0 && (
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+            <p className="text-3xl mb-2">⚡</p>
+            <p className="font-medium text-gray-700">Sin operaciones asignadas</p>
+          </div>
+        )}
 
-  const opProgress = (op) => op.totalQty > 0 ? Math.round(op.completado / op.totalQty * 100) : 0;
-
-  return (
-    <div>
-      <h1 className="text-sm font-bold text-gray-900 mb-4">Operaciones ELROHI</h1>
-
-      {/* Selector de lote */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-        <label className="block text-xs font-semibold text-gray-600 mb-1">Seleccionar lote</label>
-        <select value={selLotId || ''} onChange={e => setSelLotId(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-purple-400">
-          <option value="">— Seleccionar lote en operaciones —</option>
-          {opLots.map(l => (
-            <option key={l.id} value={l.id}>
-              {l.code} · {cLabel(clients, l.clientId)} · {l.totalPieces?.toLocaleString('es-CO')} pzs
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {!selLot && opLots.length === 0 && (
-        <EmptyState emoji="🪡" title="Sin lotes en operaciones" sub="Los lotes asignados desde Bodegas aparecerán aquí" />
-      )}
-
-      {selLot && (
-        <div>
-          {/* Header del lote */}
-          <div className="bg-white rounded-xl border border-purple-200 p-4 mb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="font-mono text-xs font-bold text-blue-700">{selLot.code}</span>
-                <p className="text-sm font-bold text-gray-900">{cLabel(clients, selLot.clientId)}</p>
-                <p className="text-[10px] text-gray-400">
-                  {[...new Set(selLot.garments?.map(g => gLabel(g.gtId)))].join(', ')}
-                  {' · '}{selLot.totalPieces?.toLocaleString('es-CO')} piezas
-                </p>
+        <div className="space-y-3">
+          {misOps.map((op,i)=>(
+            <div key={i} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs font-bold text-blue-700">{op.lotCode}</span>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
+                      op.status==='completado'?'bg-green-100 text-green-700':
+                      op.status==='en_proceso' ?'bg-blue-100 text-blue-700':
+                      'bg-gray-100 text-gray-600'}`}>
+                      {op.status==='completado'?'✅ Completado':op.status==='en_proceso'?'🔄 En proceso':'⏳ Pendiente'}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900">{op.referencia}</p>
+                  <p className="text-xs text-gray-600">{op.operacion}</p>
+                  {op.valorDesc && <p className="text-[10px] text-gray-400 italic">{op.valorDesc}</p>}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs text-gray-500">{op.qty?.toLocaleString('es-CO')} pzas</p>
+                  <p className="text-xs text-gray-500">× {fmtM(op.valorUnitario)}</p>
+                  <p className="text-sm font-black text-green-700">{fmtM(op.vrTotal||op.qty*op.valorUnitario)}</p>
+                </div>
               </div>
-              {isAdmin && (
-                <button onClick={() => setShowAddOp(true)}
-                  className="text-xs font-bold px-3 py-1.5 rounded-lg text-white"
-                  style={{ background: ACCENT }}>
-                  + Agregar Operación
+
+              {op.metaLV > 0 && (
+                <p className="text-[10px] text-gray-400 mb-2">
+                  Meta: {op.metaLV}/día Lun-Vie · {op.metaSab}/día Sáb
+                </p>
+              )}
+
+              {op.status === 'pendiente' && (
+                <button onClick={()=>iniciar(op.lotId, op.id)}
+                  className="w-full py-2 text-white text-xs font-bold rounded-lg"
+                  style={{background:'#2878B4'}}>
+                  ▶ Iniciar
+                </button>
+              )}
+              {op.status === 'en_proceso' && (
+                <button onClick={()=>terminar(op.lotId, op.id)}
+                  className="w-full py-2 text-white text-xs font-bold rounded-lg"
+                  style={{background:'#15803d'}}>
+                  ✓ Terminé
                 </button>
               )}
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-          {/* Operaciones */}
-          {(!selLot.opsElrohi || selLot.opsElrohi.length === 0) ? (
-            <EmptyState emoji="⚙" title="Sin operaciones" sub={isAdmin ? "Agrega operaciones usando el botón de arriba" : "El admin aún no ha asignado operaciones"} />
-          ) : (
-            <div className="space-y-3">
-              {selLot.opsElrohi.map(op => {
-                const prog     = opProgress(op);
-                const disp     = op.totalQty - op.asignado;
-                const myAss    = op.assignments?.filter(a => a.operarioId === profile?.id && a.status === 'en_proceso') || [];
-                const canTake  = isOperario && disp > 0;
+  // ── VISTA ADMIN ────────────────────────────────────────────────────────────
+  return (
+    <div>
+      <h1 className="text-sm font-bold text-gray-900 mb-1">Operaciones ELROHI</h1>
+      <p className="text-xs text-gray-400 mb-4">Asigna operaciones a los operarios internos</p>
 
-                return (
-                  <div key={op.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                    {/* Op header */}
-                    <div className="p-4 border-b border-gray-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">{op.name}</span>
-                            {op.esEspecial && (
-                              <span className="text-[9px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-bold">⭐ Especial</span>
-                            )}
-                          </div>
-                          {op.descripcion && <p className="text-[10px] text-gray-400 mt-0.5">{op.descripcion}</p>}
-                          <div className="flex gap-3 text-[10px] text-gray-500 mt-1">
-                            <span>Total: <strong>{op.totalQty}</strong> pzs</span>
-                            <span>Asignado: <strong>{op.asignado}</strong></span>
-                            <span>Completado: <strong style={{ color: '#10b981' }}>{op.completado}</strong></span>
-                            <span>Disponible: <strong style={{ color: disp > 0 ? '#1d4ed8' : '#9ca3af' }}>{disp}</strong></span>
-                            <span>Valor: <strong>{fmtM(op.val)}/pza</strong></span>
-                          </div>
-                        </div>
-                        {canTake && (
-                          <button onClick={() => { setShowTakeOp(op.id); setTakeQty(''); }}
-                            className="text-xs font-bold px-3 py-1.5 rounded-lg text-white flex-shrink-0"
-                            style={{ background: '#7c3aed' }}>
-                            Tomar piezas
-                          </button>
-                        )}
-                      </div>
-                      <ProgressBar value={prog} color={prog === 100 ? 'bg-green-500' : 'bg-purple-500'} />
-                      <p className="text-[9px] text-right text-gray-400 mt-1">{prog}% completado</p>
+      {/* Lista de lotes */}
+      {!selLotId && (
+        <div className="space-y-3">
+          {opLots.length===0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">⚡</p>
+              <p className="font-medium text-gray-700">Sin lotes en operaciones internas</p>
+              <p className="text-xs text-gray-400 mt-1">Los lotes aparecen aquí cuando salen de Bodega Control Calidad</p>
+            </div>
+          )}
+          {opLots.map(lot=>{
+            const opsElrohi = lot.opsElrohi||[];
+            const total     = opsElrohi.length;
+            const hechas    = opsElrohi.filter(o=>o.status==='completado').length;
+            return (
+              <div key={lot.id} className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-orange-300 transition-all"
+                onClick={()=>setSelLotId(lot.id)}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
+                      <span className="text-[9px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">
+                        ⚡ Operaciones ELROHI
+                      </span>
                     </div>
-
-                    {/* Assignments */}
-                    {op.assignments?.length > 0 && (
-                      <div className="divide-y divide-gray-50">
-                        {op.assignments.map(ass => {
-                          const isMe = ass.operarioId === profile?.id;
-                          const valTot = op.val * ass.qty;
-                          return (
-                            <div key={ass.id} className="flex items-center gap-3 px-4 py-2.5 text-xs"
-                              style={{ background: isMe ? '#faf5ff' : '#fff' }}>
-                              <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-700 flex-shrink-0">
-                                {ass.operarioName?.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-800">{ass.operarioName}</p>
-                                <p className="text-[10px] text-gray-400">
-                                  {ass.qty} pzas · {fmtM(valTot)}
-                                  {ass.reasignadoPor && ` · Reasignado por ${ass.reasignadoPor}`}
-                                </p>
-                              </div>
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${ass.status === 'completado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {ass.status === 'completado' ? '✓ Listo' : '⚡ Activo'}
-                              </span>
-
-                              {/* Actions */}
-                              {isMe && ass.status === 'en_proceso' && (
-                                <div className="flex gap-1.5">
-                                  <button onClick={() => completeAssignment(op.id, ass.id)}
-                                    className="text-[9px] px-2 py-0.5 bg-green-100 text-green-700 rounded font-bold hover:bg-green-200">
-                                    ✓ Terminé
-                                  </button>
-                                  <button onClick={() => { setShowReasign({ opId: op.id, assId: ass.id, maxQty: ass.qty }); setReasignData({ qty: '', toOperarioId: '' }); }}
-                                    className="text-[9px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded font-bold hover:bg-amber-200">
-                                    ↩ Reasignar
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                    <p className="text-xs text-gray-600">{lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{hechas}/{total} operaciones completadas</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-400">Ver detalle →</p>
+                    {total > 0 && (
+                      <div className="mt-1 w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-green-500 transition-all"
+                          style={{width:`${total>0?Math.round(hechas/total*100):0}%`}} />
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Modal agregar operación */}
-      {showAddOp && selLot && (
-        <Modal title="Agregar Operación al Lote" onClose={() => setShowAddOp(false)}>
-          <div className="mb-3">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre de la operación</label>
-            <div className="flex gap-2 mb-2">
-              {OPS_ELROHI_DEFAULT.filter(o => o.active).map(o => (
-                <button key={o.id} onClick={() => setNewOp(f => ({ ...f, name: o.name, val: String(o.val) }))}
-                  className="text-[10px] px-2 py-1 bg-purple-50 text-purple-700 rounded border border-purple-200 hover:bg-purple-100">
-                  {o.name}
-                </button>
+      {/* Detalle del lote */}
+      {selLotId && selLot && (
+        <div>
+          <button onClick={()=>setSelLotId(null)} className="text-xs text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1">← Volver</button>
+
+          <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <span className="font-mono text-sm font-bold text-blue-700">{selLot.code}</span>
+                <p className="text-xs text-gray-500">{selLot.totalPieces?.toLocaleString('es-CO')} piezas</p>
+              </div>
+              <button onClick={()=>setShowAddOp(true)}
+                className="text-xs font-bold px-3 py-2 rounded-lg text-white"
+                style={{background:ACCENT}}>
+                + Asignar operación
+              </button>
+            </div>
+
+            {/* Operaciones asignadas */}
+            {(selLot.opsElrohi||[]).length===0 && (
+              <p className="text-xs text-gray-400 italic text-center py-4">Sin operaciones asignadas</p>
+            )}
+            <div className="space-y-2">
+              {(selLot.opsElrohi||[]).map((op,i)=>(
+                <div key={i} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <span className="text-xs font-bold text-gray-800">{op.referencia}</span>
+                        <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">{op.operacion}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                          op.status==='completado'?'bg-green-100 text-green-700':
+                          op.status==='en_proceso' ?'bg-blue-100 text-blue-700':
+                          'bg-gray-100 text-gray-500'}`}>
+                          {op.status==='completado'?'✅':op.status==='en_proceso'?'🔄':'⏳'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-500">
+                        {op.workerName} · {op.qty?.toLocaleString('es-CO')} pzas × {fmtM(op.valorUnitario)}
+                        {op.valorDesc && ` (${op.valorDesc})`}
+                      </p>
+                    </div>
+                    <span className="text-sm font-black text-green-700 flex-shrink-0">
+                      {fmtM((op.vrTotal||op.qty*op.valorUnitario)||0)}
+                    </span>
+                  </div>
+                  {op.metaLV > 0 && (
+                    <p className="text-[9px] text-gray-400 mt-0.5">Meta: {op.metaLV}/día Lun-Vie · {op.metaSab}/día Sáb</p>
+                  )}
+                </div>
               ))}
             </div>
-            <input value={newOp.name} onChange={e => setNewOp(f => ({ ...f, name: e.target.value }))}
-              placeholder="O escribe el nombre..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400" />
+
+            {/* Total */}
+            {(selLot.opsElrohi||[]).length > 0 && (
+              <div className="flex justify-between text-sm font-black mt-3 pt-3 border-t border-gray-100">
+                <span className="text-gray-700">Total operaciones</span>
+                <span style={{color:'#15803d'}}>
+                  {fmtM((selLot.opsElrohi||[]).reduce((a,op)=>a+(op.vrTotal||op.qty*op.valorUnitario||0),0))}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Valor por pieza ($)</label>
-              <input type="number" value={newOp.val} onChange={e => setNewOp(f => ({ ...f, val: e.target.value }))}
-                placeholder="400"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400" />
+        </div>
+      )}
+
+      {/* MODAL AGREGAR OPERACIÓN */}
+      {showAddOp && (
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:16,overflowY:'auto'}}>
+          <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:480,marginTop:16,marginBottom:16}}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-900">Asignar Operación — {selLot?.code}</h2>
+              <button onClick={()=>{setShowAddOp(false);resetForm();}} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Total de piezas</label>
-              <input type="number" value={newOp.totalQty} onChange={e => setNewOp(f => ({ ...f, totalQty: e.target.value }))}
-                placeholder={selLot.totalPieces?.toString()}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-400" />
+
+            <div className="space-y-3">
+              {/* Categoría */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Categoría</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORIAS.map(c=>(
+                    <button key={c.key} onClick={()=>{setSelCat(c.key);setSelRef('');setSelOp('');}}
+                      className="text-xs px-3 py-1.5 rounded-lg border-2 font-medium transition-all"
+                      style={{borderColor:selCat===c.key?ACCENT:'#e5e7eb',background:selCat===c.key?'#fff5f0':'#fff',color:selCat===c.key?ACCENT:'#374151'}}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Referencia */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Referencia</label>
+                <select value={selRef} onChange={e=>{setSelRef(e.target.value);setSelOp('');}}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-orange-400">
+                  <option value="">— Seleccionar referencia —</option>
+                  {refs.map(r=><option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+
+              {/* Operación */}
+              {selRef && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Operación</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {opsDeRef.map(o=>(
+                      <button key={o.operacion} onClick={()=>setSelOp(o.operacion)}
+                        className="text-xs px-3 py-1.5 rounded-lg border-2 font-medium transition-all text-left"
+                        style={{borderColor:selOp===o.operacion?'#15803d':'#e5e7eb',background:selOp===o.operacion?'#f0fdf4':'#fff',color:selOp===o.operacion?'#15803d':'#374151'}}>
+                        {o.operacion}
+                        <span className="block text-[9px] font-normal opacity-70">
+                          {fmtM(o.valorUnitario)}{o.valorDesc?` (${o.valorDesc})`:''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Cantidad */}
+              {selOp && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Cantidad de prendas</label>
+                  <input type="number" min={1} value={qty} onChange={e=>setQty(e.target.value)}
+                    placeholder="Ej: 50"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+                </div>
+              )}
+
+              {/* Total calculado */}
+              {selOp && qty > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex justify-between items-center">
+                  <span className="text-xs font-bold text-green-700">Total a pagar</span>
+                  <span className="text-lg font-black text-green-800">{fmtM(valorTotal)}</span>
+                </div>
+              )}
             </div>
-          </div>
-          <div className="mb-3 flex items-center gap-2">
-            <input type="checkbox" id="especial" checked={newOp.esEspecial}
-              onChange={e => setNewOp(f => ({ ...f, esEspecial: e.target.checked }))} />
-            <label htmlFor="especial" className="text-xs font-medium text-gray-700">Operación especial</label>
-          </div>
-          {newOp.esEspecial && (
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Descripción especial</label>
-              <input value={newOp.descripcion} onChange={e => setNewOp(f => ({ ...f, descripcion: e.target.value }))}
-                placeholder="Ej: Pegar reflectivo camisa XL"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-yellow-400" />
-            </div>
-          )}
-          <div className="flex gap-2 mt-4">
-            <button onClick={() => setShowAddOp(false)}
-              className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
-            <button onClick={addOperation} disabled={saving}
-              className="flex-1 py-2 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-              style={{ background: '#7c3aed' }}>
-              {saving ? 'Guardando...' : '+ Agregar'}
+
+            {/* Seleccionar operario */}
+            {selOp && qty > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Asignar a:</p>
+                <div className="space-y-2">
+                  {operariosElrohi.map(op=>(
+                    <button key={op.id} onClick={()=>agregarOp(op.id)} disabled={saving}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-xl transition-all disabled:opacity-50">
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-gray-800">{op.name}</p>
+                        <p className="text-[10px] text-gray-400">{op.role}</p>
+                      </div>
+                      <span className="text-xs font-bold text-blue-600">Asignar →</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button onClick={()=>{setShowAddOp(false);resetForm();}} className="w-full mt-3 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
+              Cancelar
             </button>
           </div>
-        </Modal>
-      )}
-
-      {/* Modal tomar piezas */}
-      {showTakeOp && selLot && (
-        <Modal title="Tomar piezas para trabajar" onClose={() => setShowTakeOp(null)}>
-          {(() => {
-            const op = selLot.opsElrohi?.find(o => o.id === showTakeOp);
-            const disp = (op?.totalQty || 0) - (op?.asignado || 0);
-            return (
-              <>
-                <div className="bg-purple-50 rounded-xl p-3 mb-4">
-                  <p className="text-xs font-bold text-purple-700">{op?.name}</p>
-                  <p className="text-[10px] text-purple-600">Disponibles: <strong>{disp} piezas</strong> · Valor: <strong>{fmtM(op?.val)}/pza</strong></p>
-                </div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">¿Cuántas piezas vas a tomar?</label>
-                <input type="number" min={1} max={disp} value={takeQty} onChange={e => setTakeQty(e.target.value)}
-                  placeholder={`Máximo ${disp}`} autoFocus
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:border-purple-400" />
-                {takeQty && +takeQty > 0 && (
-                  <p className="text-xs text-green-700 bg-green-50 rounded px-3 py-2 mb-3">
-                    Ganarás: <strong>{fmtM((op?.val || 0) * +takeQty)}</strong> al completar
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <button onClick={() => setShowTakeOp(null)}
-                    className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
-                  <button onClick={() => takeOperation(showTakeOp)} disabled={saving}
-                    className="flex-1 py-2 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-                    style={{ background: '#7c3aed' }}>
-                    {saving ? 'Tomando...' : '✓ Tomar piezas'}
-                  </button>
-                </div>
-              </>
-            );
-          })()}
-        </Modal>
-      )}
-
-      {/* Modal reasignar */}
-      {showReasign && selLot && (
-        <Modal title="Reasignar piezas a otro operario" onClose={() => setShowReasign(null)}>
-          {(() => {
-            const { opId, assId, maxQty } = showReasign;
-            return (
-              <>
-                <div className="bg-amber-50 rounded-xl p-3 mb-4 text-xs text-amber-700">
-                  Puedes reasignar hasta <strong>{maxQty} piezas</strong> de tu trabajo actual a otro operario.
-                </div>
-                <div className="mb-3">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">¿Cuántas piezas reasignar?</label>
-                  <input type="number" min={1} max={maxQty} value={reasignData.qty}
-                    onChange={e => setReasignData(f => ({ ...f, qty: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Asignar a:</label>
-                  <select value={reasignData.toOperarioId} onChange={e => setReasignData(f => ({ ...f, toOperarioId: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
-                    <option value="">— Elegir operario —</option>
-                    {elrohiOps.filter(u => u.id !== profile?.id).map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowReasign(null)}
-                    className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
-                  <button onClick={() => reasign(opId, assId)} disabled={saving}
-                    className="flex-1 py-2 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-                    style={{ background: '#d97706' }}>
-                    {saving ? 'Reasignando...' : '↩ Reasignar'}
-                  </button>
-                </div>
-              </>
-            );
-          })()}
-        </Modal>
+        </div>
       )}
     </div>
   );
