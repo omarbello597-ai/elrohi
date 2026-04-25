@@ -269,7 +269,7 @@ export default function CorteElrohiScreen() {
 
 // ─── NUEVO FORMATO ─────────────────────────────────────────────────────────────
 function NuevoFormato({ profile, onBack }) {
-  const [numCorte,  setNumCorte]  = useState('18');
+  const [numCorte,  setNumCorte]  = useState('');
   const [priority,  setPriority]  = useState('normal');
   const [deadline,  setDeadline]  = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -299,6 +299,12 @@ function NuevoFormato({ profile, onBack }) {
   const [firmaImg, setFirmaImg] = useState(null);
   const [nombre,   setNombre]   = useState(profile?.name||'');
   const [saving,   setSaving]   = useState(false);
+
+  useEffect(()=>{
+    import('../services/consecutivos').then(({getNextCorteNum})=>{
+      getNextCorteNum().then(n=>setNumCorte(String(n).padStart(4,'0')));
+    });
+  },[]);
 
   const nombreDoc = genDocName(numCorte);
 
