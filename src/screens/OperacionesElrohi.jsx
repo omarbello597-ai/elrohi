@@ -35,7 +35,7 @@ export default function OperacionesElrohiScreen() {
   const [qty,       setQty]       = useState('');
 
   useEffect(()=>{
-    const unsub = listenCol('operacionesElrohi', setCatalogo, orderBy('categoria','asc'));
+    const unsub = listenCol('operations', setCatalogo);
     return unsub;
   },[]);
 
@@ -47,7 +47,7 @@ export default function OperacionesElrohiScreen() {
     ['terminacion','bodega_op','corte'].includes(u.role) && u.active !== false
   );
 
-  // Lotes en operaciones ELROHI
+  // Cortes en operaciones ELROHI
   const opLots = lots.filter(l =>
     ['en_operaciones_elrohi','bodega_calidad','en_revision_calidad'].includes(l.status)
   );
@@ -55,8 +55,9 @@ export default function OperacionesElrohiScreen() {
   const selLot = lots.find(l => l.id === selLotId);
 
   // Catálogo filtrado por categoría
-  const refs = [...new Set(catalogo.filter(o=>o.categoria===selCat).map(o=>o.referencia))];
-  const opsDeRef = catalogo.filter(o=>o.categoria===selCat && o.referencia===selRef);
+  const catalogoFiltrado = catalogo.filter(o=>o.categoria);
+  const refs = [...new Set(catalogoFiltrado.filter(o=>o.categoria===selCat).map(o=>o.referencia))];
+  const opsDeRef = catalogoFiltrado.filter(o=>o.categoria===selCat && o.referencia===selRef);
   const opSelData = opsDeRef.find(o=>o.operacion===selOp);
 
   // Valor calculado
@@ -202,7 +203,7 @@ export default function OperacionesElrohiScreen() {
     setSaving(true);
     try {
       const { updateDocument: upd } = await import('../services/db');
-      await upd('operacionesElrohi', editOp.id, { valorUnitario: +editVal||0 });
+      await upd('operations', editOp.id, { valorUnitario: +editVal||0 });
       toast.success('✅ Valor actualizado');
       setEditOp(null); setEditVal('');
     } catch { toast.error('Error'); }
@@ -217,7 +218,7 @@ export default function OperacionesElrohiScreen() {
 
       {/* Main tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
-        {[['lotes','📦 Lotes en proceso'],['catalogo','⚙️ Catálogo de operaciones']].map(([k,l])=>(
+        {[['lotes','📦 Cortes en proceso'],['catalogo','⚙️ Catálogo de operaciones']].map(([k,l])=>(
           <button key={k} onClick={()=>setMainTab(k)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
             style={{background:mainTab===k?'#fff':'transparent',color:mainTab===k?'#111827':'#6b7280',
@@ -243,16 +244,16 @@ export default function OperacionesElrohiScreen() {
 
           {/* Tabla por categoría */}
           {CATEGORIAS.filter(c=>catFilter==='todos'||catFilter===c.key).map(cat=>{
-            const refs2 = [...new Set(catalogo.filter(o=>o.categoria===cat.key).map(o=>o.referencia))];
+            const refs2 = [...new Set(catalogoFiltrado.filter(o=>o.categoria===cat.key).map(o=>o.referencia))];
             if (!refs2.length) return null;
             return (
               <div key={cat.key} className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
                 <div className="px-4 py-2.5 flex items-center gap-2" style={{background:'#14405A'}}>
                   <span className="text-xs font-bold text-white uppercase tracking-wider">{cat.label}</span>
-                  <span className="text-[10px] text-blue-200">{catalogo.filter(o=>o.categoria===cat.key).length} operaciones</span>
+                  <span className="text-[10px] text-blue-200">{catalogoFiltrado.filter(o=>o.categoria===cat.key).length} operaciones</span>
                 </div>
                 {refs2.map(ref=>{
-                  const opsRef = catalogo.filter(o=>o.categoria===cat.key&&o.referencia===ref);
+                  const opsRef = catalogoFiltrado.filter(o=>o.categoria===cat.key&&o.referencia===ref);
                   return (
                     <div key={ref} className="border-b border-gray-50 last:border-0">
                       <div className="px-4 py-2 bg-gray-50">
@@ -303,8 +304,8 @@ export default function OperacionesElrohiScreen() {
           {opLots.length===0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-3xl mb-2">⚡</p>
-              <p className="font-medium text-gray-700">Sin lotes en operaciones internas</p>
-              <p className="text-xs text-gray-400 mt-1">Los lotes aparecen aquí cuando salen de Bodega Control Calidad</p>
+              <p className="font-medium text-gray-700">Sin cortes en operaciones internas</p>
+              <p className="text-xs text-gray-400 mt-1">Los cortes aparecen aquí cuando salen de Bodega Control Calidad</p>
             </div>
           )}
           {opLots.map(lot=>{
@@ -341,7 +342,7 @@ export default function OperacionesElrohiScreen() {
         </div>
       )}
 
-      {/* Detalle del lote */}
+      {/* Detalle del corte */}
       {selLotId && selLot && (
         <div>
           <button onClick={()=>setSelLotId(null)} className="text-xs text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1">← Volver</button>
