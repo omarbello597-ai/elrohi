@@ -169,7 +169,7 @@ export default function BodegasScreen() {
                       <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {lot.deadline}</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {lot.garments?.map((g,i)=>(
-                          <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{gLabel(g.gtId)}: {g.total}</span>
+                          <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{g.descripcionRef||gLabel(g.gtId)}: {g.total}</span>
                         ))}
                       </div>
                     </div>
@@ -382,7 +382,7 @@ export default function BodegasScreen() {
                     <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {lot.garments?.map((g,i)=>(
-                        <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{gLabel(g.gtId)}: {g.total}</span>
+                        <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{g.descripcionRef||gLabel(g.gtId)}: {g.total}</span>
                       ))}
                     </div>
                   </div>
