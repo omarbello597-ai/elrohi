@@ -74,7 +74,7 @@ export const NAV_CONFIG = {
   nomina:         ['/nomina'],
   despachos:      ['/bodegas','/bodega-lonas','/pedidos','/quincena'],
   corte:          ['/corte','/quincena'],
-  admin_satelite: ['/taller','/asignar-ops','/cuenta-cobro'],
+  admin_satelite: ['/taller','/asignar-ops','/cuenta-cobro','/nomina-satelite'],
   operario:       ['/mis-ops','/quincena'],
   tintoreria:     ['/recepcion-tinto'],
   terminacion:    ['/operaciones-elrohi','/quincena'],
@@ -106,6 +106,7 @@ export const NAV_ITEMS = {
   '/clientes':           { label: 'Clientes',               icon: 'Users'           },
   '/carga-masiva':       { label: 'Carga Masiva',           icon: 'Upload'          },
   '/cuenta-cobro':       { label: 'Cuenta de Cobro',        icon: 'FileText'        },
+  '/nomina-satelite':    { label: 'Nómina Taller',          icon: 'DollarSign'      },
   '/tarifas-satelite':   { label: 'Tarifas Satélite',       icon: 'DollarSign'      },
 };
 
