@@ -152,7 +152,7 @@ export default function RecepcionTintoreria() {
         recibidoPor: profile?.name,
         firmaAdminRecepcion: firmaAdmin,
       });
-      // Avanzar estado del lote
+      // Avanzar estado del corte
       const nuevoStatus = semaforo === 'rojo' ? 'listo_bodega' :
                           semaforo === 'amarillo' ? 'tintoreria' : 'listo_bodega';
       await advanceLotStatus(lot.id, nuevoStatus, profile?.id, profile?.name, {
@@ -185,13 +185,13 @@ export default function RecepcionTintoreria() {
         ))}
       </div>
 
-      {/* TINTORERÍA — ve los lotes que tiene */}
+      {/* TINTORERÍA — ve los cortes que tiene */}
       {tab==='pendientes' && isTinto && (
         <div className="space-y-3">
           {lotesEnTinto.length===0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-3xl mb-2">🎨</p>
-              <p className="font-medium text-gray-700">Sin lotes en tintorería</p>
+              <p className="font-medium text-gray-700">Sin cortes en tintorería</p>
             </div>
           )}
           {lotesEnTinto.map(lot=>(
