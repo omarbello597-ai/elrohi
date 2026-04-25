@@ -32,6 +32,7 @@ import ClientesScreen from './screens/Clientes';
 import CargaMasivaScreen from './screens/CargaMasiva';
 import CuentaCobroScreen    from './screens/CuentaCobro';
 import TarifasSateliteScreen from './screens/TarifasSatelite';
+import NominaSateliteScreen from './screens/NominaSatelite';
 
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ const ALL_ROUTES = [
   { path: '/carga-masiva', component: CargaMasivaScreen, roles: ['gerente','admin_elrohi'] },
   { path: '/cuenta-cobro',     component: CuentaCobroScreen,    roles: ['gerente','admin_elrohi','admin_satelite'] },
   { path: '/tarifas-satelite', component: TarifasSateliteScreen, roles: ['gerente','admin_elrohi'] },
+  { path: '/nomina-satelite', component: NominaSateliteScreen, roles: ['admin_satelite'] },
   
 ];
 
