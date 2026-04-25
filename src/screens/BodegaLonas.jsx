@@ -235,7 +235,7 @@ export default function BodegaLonasScreen() {
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-4xl mb-3">📦</p>
               <p className="font-medium text-gray-700">Inventario vacío</p>
-              <p className="text-sm text-gray-400 mt-1">Las prendas llegarán cuando los lotes se aprueben en calidad</p>
+              <p className="text-sm text-gray-400 mt-1">Las prendas llegarán cuando los cortes se aprueben en calidad</p>
             </div>
           )}
 
