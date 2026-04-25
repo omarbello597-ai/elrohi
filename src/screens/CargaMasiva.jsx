@@ -206,7 +206,10 @@ export default function CargaMasivaScreen() {
         await addDocument('listasPrecios', { nombre: nombreLista, descripcion, productos: preview, active: true });
         ok = preview.length;
       } else {
-        const col = tipo==='clientes'?'clients':tipo==='operarios'?'users':'operations';
+        const col = tipo==='clientes'        ? 'clients' :
+            tipo==='operarios'       ? 'users' :
+            tipo==='tarifas_satelite'? 'tarifasSatelite' :
+            tipo==='ops_elrohi'      ? 'operacionesElrohi' : 'operations';
         for (const item of preview) {
           try { await addDocument(col, item); ok++; } catch { fail++; }
         }
