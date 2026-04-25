@@ -86,7 +86,7 @@ function printRemisionTinto(lot, satName, remData) {
 
 export default function TallerScreen() {
   const { profile }             = useAuth();
-  const { lots, users, satellites, ops, satOpVals } = useData();
+  const { lots, users, satellites } = useData();
   const [tab, setTab]           = useState('activos');
   const [showRemision, setShowRemision] = useState(null);
 
@@ -113,7 +113,7 @@ export default function TallerScreen() {
       </div>
 
       <div className="grid grid-cols-3 gap-3 mb-4">
-        {[['Lotes activos',activeLots.length,'#2563eb'],['Operarios',myWorkers.length,'#7c3aed'],['Piezas en curso',totalPieces.toLocaleString('es-CO'),'#059669']].map(([l,v,c])=>(
+        {[['Cortes activos',activeLots.length,'#2563eb'],['Operarios',myWorkers.length,'#7c3aed'],['Piezas en curso',totalPieces.toLocaleString('es-CO'),'#059669']].map(([l,v,c])=>(
           <div key={l} className="bg-white rounded-xl border border-gray-100 p-3 text-center">
             <p className="text-2xl font-black" style={{color:c}}>{v}</p>
             <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-0.5">{l}</p>
@@ -136,8 +136,8 @@ export default function TallerScreen() {
           {activeLots.length===0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-4xl mb-3">🏭</p>
-              <p className="font-medium text-gray-700">Sin lotes en costura</p>
-              <p className="text-sm text-gray-400 mt-1">Espera a que el Admin ELROHI asigne un lote</p>
+              <p className="font-medium text-gray-700">Sin cortes en costura</p>
+              <p className="text-sm text-gray-400 mt-1">Espera a que el Admin ELROHI asigne un corte</p>
             </div>
           )}
           {activeLots.map(lot => {
@@ -194,7 +194,7 @@ export default function TallerScreen() {
           {listoLots.length===0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-4xl mb-3">✅</p>
-              <p className="font-medium text-gray-700">Sin lotes listos aún</p>
+              <p className="font-medium text-gray-700">Sin cortes listos aún</p>
               <p className="text-sm text-gray-400 mt-1">Cuando todas las operaciones estén al 100% aparecerán aquí</p>
             </div>
           )}
