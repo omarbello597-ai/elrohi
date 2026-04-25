@@ -95,46 +95,26 @@ export default function TallerScreen() {
   const [newOpName, setNewOpName] = useState('');
   const [newOpVal,  setNewOpVal]  = useState('');
   const [savingOp,  setSavingOp]  = useState(false);
-
-  const crearOp = async () => {
-    if (!newOpName) { toast.error('Escribe el nombre'); return; }
-    setSavingOp(true);
-    try {
-      await addDocument('operations', { name: newOpName.trim(), val: +newOpVal||0, satId: profile?.satId, active: true });
-      toast.success('✅ Operación creada');
-      setNewOpName(''); setNewOpVal(''); setShowNewOp(false);
-    } catch { toast.error('Error'); }
-    finally { setSavingOp(false); }
-  };
+  const [satOps,    setSatOps]    = useState([]);
   const myWorkers = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
   const myLots    = lots.filter(l => l.satId === profile?.satId);
-  const [showNewOp, setShowNewOp] = useState(false);
-  const [newOpName, setNewOpName] = useState('');
-  const [newOpVal,  setNewOpVal]  = useState('');
-  const [savingOp,  setSavingOp]  = useState(false);
-  const [satOps,    setSatOps]    = useState([]);
 
-  // Load satellite's own operations from operations collection filtered by satId
+  // Load operations from Firebase
   useEffect(()=>{
+    let unsub;
     import('../services/db').then(({listenCol})=>{
-      const unsub = listenCol('operations', (all)=>{
+      unsub = listenCol('operations', (all)=>{
         setSatOps(all.filter(o=>o.active!==false));
       });
-      return unsub;
     });
+    return ()=>{ if(unsub) unsub(); };
   },[]);
 
-  const crearOpSat = async () => {
+  const crearOp = async () => {
     if (!newOpName) { toast.error('Escribe el nombre de la operación'); return; }
     setSavingOp(true);
     try {
-      const { addDocument } = await import('../services/db');
-      await addDocument('operations', {
-        name:   newOpName.trim(),
-        val:    +newOpVal||0,
-        satId:  profile?.satId,
-        active: true,
-      });
+      await addDocument('operations', { name: newOpName.trim(), val: +newOpVal||0, satId: profile?.satId, active: true });
       toast.success('✅ Operación creada');
       setNewOpName(''); setNewOpVal(''); setShowNewOp(false);
     } catch(e){ toast.error('Error'); }
@@ -311,15 +291,16 @@ export default function TallerScreen() {
             </button>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-            {myLots.flatMap(l=>l.lotOps||[]).length===0 && (
+            {satOps.length===0 && (
               <div className="text-center py-8">
                 <p className="text-2xl mb-2">⚡</p>
                 <p className="text-sm text-gray-500">Sin operaciones — crea las de tu taller</p>
               </div>
             )}
-            {[...new Map(myLots.flatMap(l=>l.lotOps||[]).map(o=>[o.name,o])).values()].map((op,i)=>(
-              <div key={i} className="flex items-center px-4 py-3 border-b border-gray-50 last:border-0">
+            {satOps.map((op,i)=>(
+              <div key={op.id||i} className="flex items-center px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50">
                 <span className="flex-1 text-sm font-medium text-gray-800">{op.name}</span>
+                {op.satId && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full mr-2 font-bold">Propio</span>}
                 <span className="text-sm font-black text-green-700">{fmtM(op.val||0)}</span>
               </div>
             ))}
