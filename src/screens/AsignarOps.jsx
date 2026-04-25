@@ -55,7 +55,7 @@ export default function AsignarOpsScreen() {
               {lot.lotOps?.map((lo) => {
                 const op      = ops.find((o) => o.id === lo.opId);
                 const worker  = users.find((u) => u.id === lo.wId);
-                const valUnit = getOpVal(ops, satOpVals, lot.satId, lo.opId);
+                const valUnit = lo.val || getOpVal(ops, satOpVals, lot.satId, lo.opId);
                 const valTot  = valUnit * lo.qty;
                 const stCls   = { completado: 'bg-green-100 text-green-800', en_proceso: 'bg-blue-100 text-blue-800', pendiente: 'bg-gray-100 text-gray-600' };
                 return (
@@ -63,7 +63,7 @@ export default function AsignarOpsScreen() {
                     <span className={`${stCls[lo.status]} px-2 py-0.5 rounded-full text-[9px] font-semibold min-w-[55px] text-center`}>
                       {lo.status === 'completado' ? '✓ Listo' : lo.status === 'en_proceso' ? '⚡ Activa' : 'Pend.'}
                     </span>
-                    <span className="font-medium text-gray-800 flex-1">{op?.name || lo.opId}</span>
+                    <span className="font-medium text-gray-800 flex-1">{op?.name || lo.name || lo.opId}</span>
                     <span className="font-mono text-gray-500">{fmtM(valTot)}</span>
                     <span className="text-gray-400 min-w-[70px] text-right">{worker?.name || 'Sin asignar'}</span>
                     {lo.status === 'pendiente' && (
@@ -106,7 +106,7 @@ export default function AsignarOpsScreen() {
       {assigning && lot && (
         <Modal title="Asignar Operario" onClose={() => setAssigning(null)}>
           <p className="text-sm text-gray-600 mb-3">
-            {ops.find((o) => o.id === lot.lotOps?.find((lo) => lo.id === assigning)?.opId)?.name}
+            {lot.lotOps?.find((lo) => lo.id === assigning)?.name || ops.find((o) => o.id === lot.lotOps?.find((lo) => lo.id === assigning)?.opId)?.name}
           </p>
           <div className="space-y-2">
             {myWorkers.map((w) => (
