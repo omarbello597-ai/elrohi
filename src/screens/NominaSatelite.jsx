@@ -59,8 +59,8 @@ function printRecibo(operario, detalle, satName, periodo, firmaAdmin, firmaSat) 
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
   </head><body><div style="max-width:800px;margin:16px auto;border:1.5px solid #14405A">
     <div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:18px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>
-        <div style="font-size:9px;color:#14405A">Satélite: ${satName}</div></div>
+      <div><div style="font-size:18px;font-weight:900;color:#14405A">${satName}</div>
+        <div style="font-size:9px;color:#14405A">Taller Satélite · Recibo de pago operario</div></div>
       <div style="text-align:right">
         <div style="font-size:9px;font-weight:700;color:#6b7280">RECIBO DE PAGO OPERARIO</div>
         <div style="font-size:13px;font-weight:900;color:#2878B4">${periodo}</div>
@@ -204,7 +204,8 @@ export default function NominaSateliteScreen() {
   },[]);
 
   const sat       = profile?.satId;
-  const satName   = users.find(u=>u.id===profile?.id)?.name || 'Satélite';
+  const satInfo   = (typeof satellites !== 'undefined' ? satellites : []).find(s=>s.id===profile?.satId);
+  const satName   = satInfo?.name || profile?.name || 'Mi Taller';
 
   // Operarios del satélite
   const operarios = users.filter(u => u.role==='operario' && u.satId===sat && u.active!==false);
@@ -240,7 +241,7 @@ export default function NominaSateliteScreen() {
   const totalNomina = operarios.reduce((a,op)=>a+calcularOperario(op.id).total,0);
 
   const guardarPago = async (operario, detalle, firmaAdmin, firmaOp) => {
-    await addDocument('nominasSatelite', {
+    const docData = {
       satId: sat, satName, periodo,
       operarioId:   operario.id,
       operarioName: operario.name,
@@ -248,7 +249,8 @@ export default function NominaSateliteScreen() {
       firmaAdmin, firmaOp,
       fechaPago: nowStr(),
       status: 'pagado',
-    });
+    };
+    await addDocument('nominasSatelite', docData);
   };
 
   return (
@@ -302,6 +304,18 @@ export default function NominaSateliteScreen() {
           {operarios.map(op=>{
             const calc = calcularOperario(op.id);
             const aj   = ajustes[op.id]||{};
+            const pagado = nominas.some(n=>n.operarioId===op.id && n.periodo===periodo && n.status==='pagado');
+            if (pagado) return (
+              <div key={op.id} className="bg-white rounded-xl border border-green-200 p-4 mb-3 opacity-70">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{op.name}</p>
+                    <p className="text-[10px] text-gray-400">{periodo}</p>
+                  </div>
+                  <span className="text-[9px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">✅ Pagado</span>
+                </div>
+              </div>
+            );
             return (
               <div key={op.id} className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
                 <div className="flex items-center justify-between mb-3">
