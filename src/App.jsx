@@ -25,15 +25,8 @@ import BodegaCalidadScreen     from './screens/BodegaCalidad';
 import BodegaLonasScreen       from './screens/BodegaLonas';
 import OperacionesElrohiScreen from './screens/OperacionesElrohi';
 import RecepcionTintoreria     from './screens/RecepcionTintoreria';
-import ListasPreciosScreen from './screens/ListasPrecios';
-import TrazabilidadScreen from './screens/Trazabilidad';
-import { NAV_CONFIG } from './constants';
-import ClientesScreen from './screens/Clientes';
-import CargaMasivaScreen from './screens/CargaMasiva';
-import CuentaCobroScreen    from './screens/CuentaCobro';
-import TarifasSateliteScreen from './screens/TarifasSatelite';
-import NominaSateliteScreen from './screens/NominaSatelite';
 
+import { NAV_CONFIG } from './constants';
 
 // ─── PROTECTED ROUTE ─────────────────────────────────────────────────────────
 function ProtectedRoute({ children, allowedRoles }) {
@@ -77,27 +70,18 @@ const ALL_ROUTES = [
   { path: '/corte',              component: CorteElrohiScreen,     roles: ['gerente','admin_elrohi','corte'] },
   { path: '/taller',             component: TallerScreen,          roles: ['admin_satelite'] },
   { path: '/asignar-ops',        component: AsignarOpsScreen,      roles: ['admin_satelite'] },
-  { path: '/mis-ops',            component: MisOpsScreen,          roles: ['operario','pespunte','terminacion'] },
+  { path: '/mis-ops',            component: MisOpsScreen,          roles: ['operario','pespunte'] },
   { path: '/quincena',           component: QuincenaScreen,        roles: ['operario','pespunte','corte','bodega_op','terminacion'] },
   { path: '/tintoreria',         component: TintoriaScreen,        roles: ['gerente','admin_elrohi','tintoreria'] },
   { path: '/pespunte',           component: PespunteScreen,        roles: ['gerente','admin_elrohi','pespunte'] },
-  { path: '/bodegas',            component: BodegasScreen,         roles: ['gerente','admin_elrohi','bodega_op','terminacion'] },
+  { path: '/bodegas',            component: BodegasScreen,         roles: ['gerente','admin_elrohi','bodega_op'] },
   { path: '/bodega-calidad',     component: BodegaCalidadScreen,   roles: ['gerente','admin_elrohi','bodega_op','terminacion'] },
   { path: '/bodega-lonas',       component: BodegaLonasScreen,     roles: ['gerente','admin_elrohi','bodega_op','despachos'] },
   { path: '/operaciones-elrohi', component: OperacionesElrohiScreen, roles: ['gerente','admin_elrohi','corte','bodega_op','terminacion','pespunte'] },
   { path: '/gestion-operarios',  component: GestionOperariosScreen,roles: ['gerente','admin_elrohi'] },
-  { path: '/recepcion-tinto',    component: RecepcionTintoreria,   roles: ['gerente','admin_elrohi','tintoreria'] },
+  { path: '/recepcion-tinto',    component: RecepcionTintoreria,   roles: ['gerente','admin_elrohi'] },
   { path: '/remision',           component: RemisionScreen,        roles: ['gerente','admin_elrohi','corte','admin_satelite'] },
-  { path: '/listas-precios', component: ListasPreciosScreen, roles: ['gerente','admin_elrohi'] },
-  { path: '/trazabilidad', component: TrazabilidadScreen, roles: ['gerente','admin_elrohi'] },
-  { path: '/clientes', component: ClientesScreen, roles: ['gerente','admin_elrohi','despachos'] },
-  { path: '/carga-masiva', component: CargaMasivaScreen, roles: ['gerente','admin_elrohi'] },
-  { path: '/cuenta-cobro',     component: CuentaCobroScreen,    roles: ['gerente','admin_elrohi','admin_satelite'] },
-  { path: '/tarifas-satelite', component: TarifasSateliteScreen, roles: ['gerente','admin_elrohi'] },
-  { path: '/nomina-satelite', component: NominaSateliteScreen, roles: ['admin_satelite'] },
-  
 ];
-
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
 function AppRoutes() {
