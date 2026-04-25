@@ -167,8 +167,14 @@ export function NominaScreen() {
   const [firmaElrohi, setFirmaElrohi] = useState(null);
   const [firmaRecibe, setFirmaRecibe] = useState(null);
   const [descuento,   setDescuento]   = useState('');
+  const [selDetalle,  setSelDetalle]  = useState(null); // expanded worker/sat view
 
   const quincena = useMemo(() => getQuincenaActual(), []);
+
+  const yaPagado = (id, tipo) => payments.some(p =>
+    p.periodo === quincena.label &&
+    (tipo==='elrohi' ? p.workerId===id : p.satId===id)
+  );
 
   // OPERARIOS INTERNOS ELROHI
   const operariosElrohi = users.filter(u =>
@@ -254,6 +260,8 @@ export function NominaScreen() {
           total: selSat.total, compOps: selSat.compOps,
           workers: selSat.workerBreakdown,
           notas: notes, photoBase64: photo||null, date: todayISO(),
+          periodo: quincena.label,
+          firmaElrohi, firmaRecibe,
         });
         // Print recibo satelite
         const rows = selSat.workerBreakdown.map(w=>({concepto:w.name,valor:w.earnings}));
@@ -261,6 +269,7 @@ export function NominaScreen() {
         toast.success(`✅ Pago satélite registrado — ${rec}`);
       }
       setShowModal(false);
+      setSelDetalle(null);
     } catch(e) { console.error(e); toast.error('Error'); }
     finally { setSaving(false); }
   };
@@ -295,8 +304,8 @@ export function NominaScreen() {
       </div>
 
       {/* OPERARIOS ELROHI */}
-      {tab==='elrohi' && (
-        <div className="space-y-3">
+      {tab==='elrohi' && !selDetalle && (
+        <div className="space-y-2">
           {operariosElrohi.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-3xl mb-2">👷</p>
@@ -304,64 +313,28 @@ export function NominaScreen() {
             </div>
           )}
           {operariosElrohi.map(u => {
-            const liq = calcLiquidacion(u);
+            const liq   = calcLiquidacion(u);
+            const pagado = yaPagado(u.id,'elrohi');
             return (
-              <div key={u.id} className="bg-white rounded-xl border border-gray-100 p-4">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white flex-shrink-0"
-                      style={{background:'#1a3a6b'}}>
-                      {u.initials||u.name?.slice(0,2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900">{u.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">
-                          {ROLE_LABELS[u.role]||u.role}
-                        </span>
-                        <span className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
-                          {SAL_LABELS[u.salarioTipo]||'Por operaciones'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[9px] text-gray-400">Total quincena</p>
-                    <p className="text-xl font-black text-green-600">{fmtM(liq.total)}</p>
+              <div key={u.id}
+                onClick={()=>!pagado && setSelDetalle({tipo:'elrohi', data:u, liq})}
+                className={`bg-white rounded-xl border p-4 flex items-center gap-3 ${pagado?'opacity-60':'cursor-pointer hover:border-orange-300 transition-all'}`}
+                style={{borderColor: pagado?'#d1fae5':'#f3f4f6'}}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white flex-shrink-0"
+                  style={{background: pagado?'#15803d':'#14405A'}}>
+                  {u.initials||u.name?.slice(0,2).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-900">{u.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">{ROLE_LABELS[u.role]||u.role}</span>
+                    {pagado && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
                   </div>
                 </div>
-
-                {/* Desglose */}
-                <div className="mt-3 space-y-1.5">
-                  {liq.baseFija > 0 && (
-                    <div className="flex justify-between text-xs px-3 py-1.5 bg-blue-50 rounded-lg">
-                      <span className="text-blue-700">💰 Base fija ({quincena.tipo} quincena)</span>
-                      <span className="font-bold text-blue-800">{fmtM(liq.baseFija)}</span>
-                    </div>
-                  )}
-                  {liq.opsVal > 0 && (
-                    <div className="flex justify-between text-xs px-3 py-1.5 bg-green-50 rounded-lg">
-                      <span className="text-green-700">⚡ Operaciones completadas</span>
-                      <span className="font-bold text-green-800">{fmtM(liq.opsVal)}</span>
-                    </div>
-                  )}
-                  {liq.incentivos > 0 && (
-                    <div className="flex justify-between text-xs px-3 py-1.5 bg-amber-50 rounded-lg">
-                      <span className="text-amber-700">⭐ Incentivos</span>
-                      <span className="font-bold text-amber-800">{fmtM(liq.incentivos)}</span>
-                    </div>
-                  )}
-                  {liq.total === 0 && (
-                    <p className="text-[10px] text-gray-400 text-center py-1">Sin movimientos en este período</p>
-                  )}
+                <div className="text-right flex-shrink-0">
+                  <p className={`text-lg font-black ${pagado?'text-green-600':'text-gray-900'}`}>{fmtM(liq.total)}</p>
+                  {!pagado && <p className="text-[9px] text-orange-500 font-bold">Pendiente →</p>}
                 </div>
-
-                <button onClick={() => openPayElrohi(u)}
-                  className="mt-3 w-full py-2 text-white text-xs font-bold rounded-lg disabled:opacity-40"
-                  style={{background: liq.total > 0 ? '#15803d' : '#9ca3af'}}
-                  disabled={liq.total === 0}>
-                  💳 Registrar pago — {fmtM(liq.total)}
-                </button>
               </div>
             );
           })}
@@ -369,48 +342,106 @@ export function NominaScreen() {
       )}
 
       {/* SATÉLITES */}
-      {tab==='satelites' && (
-        <div className="space-y-3">
+      {tab==='satelites' && !selDetalle && (
+        <div className="space-y-2">
           {satSummary.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
               <p className="text-3xl mb-2">🏭</p>
-              <p className="text-sm text-gray-500">Sin satélites activos</p>
+              <p className="text-sm text-gray-500">Sin satélites registrados</p>
             </div>
           )}
-          {satSummary.map(s => (
-            <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
-                <div>
+          {satSummary.map(s=>{
+            const pagado = yaPagado(s.id,'satelite');
+            return (
+              <div key={s.id}
+                onClick={()=>!pagado && setSelDetalle({tipo:'satelite', data:s})}
+                className={`bg-white rounded-xl border p-4 flex items-center gap-3 ${pagado?'opacity-60':'cursor-pointer hover:border-orange-300 transition-all'}`}
+                style={{borderColor:pagado?'#d1fae5':'#f3f4f6'}}>
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-lg flex-shrink-0">🏭</div>
+                <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900">{s.name}</p>
-                  <p className="text-[10px] text-gray-400">{s.city} · {s.compOps} operaciones</p>
+                  <p className="text-[10px] text-gray-400">{s.compOps} ops · {s.workerBreakdown?.length} operarios</p>
+                  {pagado && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] text-gray-400">Total a pagar</p>
-                  <p className="text-xl font-black text-green-600">{fmtM(s.total)}</p>
+                  <p className={`text-lg font-black ${pagado?'text-green-600':'text-gray-900'}`}>{fmtM(s.total)}</p>
+                  {!pagado && <p className="text-[9px] text-orange-500 font-bold">Pendiente →</p>}
                 </div>
               </div>
-              {s.workerBreakdown.length > 0 && (
-                <div className="space-y-1 mb-3">
-                  {s.workerBreakdown.map(w => (
-                    <div key={w.id} className="flex justify-between text-xs px-3 py-1.5 bg-gray-50 rounded-lg">
+            );
+          })}
+        </div>
+      )}
+
+      {tab==='satelites' && selDetalle?.tipo==='satelite' && (()=>{
+        const s = selDetalle.data;
+        const satLots = lots.filter(l=>l.satId===s.id);
+        return (
+          <div>
+            <button onClick={()=>setSelDetalle(null)} className="text-xs text-gray-500 mb-4 flex items-center gap-1">← Volver</button>
+            <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-xl">🏭</div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{s.name}</p>
+                  <p className="text-[10px] text-gray-400">{quincena.label}</p>
+                </div>
+              </div>
+
+              {/* Cortes procesados */}
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cortes procesados</p>
+              <div className="space-y-2 mb-4">
+                {satLots.length===0 && <p className="text-xs text-gray-400 italic">Sin cortes asignados</p>}
+                {satLots.map(lot=>{
+                  const opsComp = (lot.lotOps||[]).filter(o=>o.status==='completado');
+                  const totalLot = opsComp.reduce((a,o)=>a+(o.val||0)*(o.qty||0),0);
+                  return (
+                    <div key={lot.id} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
+                        <span className="text-xs font-bold text-green-700">{fmtM(totalLot)}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400">{opsComp.length} ops completadas · {lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {lot.garments?.map((g,i)=>(
+                          <span key={i} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                            {g.descripcionRef||g.gtId}: {g.total}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desglose por operario */}
+              {s.workerBreakdown?.length>0 && (
+                <div className="mb-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operarios del satélite</p>
+                  {s.workerBreakdown.map((w,i)=>(
+                    <div key={i} className="flex justify-between text-xs py-1.5 border-b border-gray-50 last:border-0">
                       <span className="text-gray-700">{w.name}</span>
-                      <span className="font-bold text-green-600">{fmtM(w.earnings)}</span>
+                      <span className="font-bold text-gray-900">{fmtM(w.earnings)}</span>
                     </div>
                   ))}
                 </div>
               )}
-              <button onClick={() => openPaySat(s)}
-                className="w-full py-2 text-white text-xs font-bold rounded-lg"
-                style={{background: s.total > 0 ? '#15803d' : '#9ca3af'}}
-                disabled={s.total === 0}>
+
+              <div className="flex justify-between text-sm font-black border-t border-gray-100 pt-3 mb-4">
+                <span className="text-gray-700">TOTAL A PAGAR</span>
+                <span style={{color:'#e85d26'}}>{fmtM(s.total)}</span>
+              </div>
+
+              <button onClick={()=>openPaySat(s)} disabled={s.total===0}
+                className="w-full py-2.5 text-white text-sm font-bold rounded-xl disabled:opacity-40"
+                style={{background:'#15803d'}}>
                 💳 Registrar pago — {fmtM(s.total)}
               </button>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        );
+      })()}
 
-      {/* HISTORIAL */}
       {tab==='historial' && (
         <div className="space-y-3">
           {payments.length === 0 && (
