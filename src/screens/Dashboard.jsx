@@ -41,7 +41,7 @@ export default function Dashboard() {
     <div>
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <StatCard label="Lotes en producción" value={lotsEnProd.length}
+        <StatCard label="Cortes en producción" value={lotsEnProd.length}
           sub={`${lotsEnProd.reduce((a,l)=>a+(l.totalPieces||0),0).toLocaleString('es-CO')} piezas`}
           onClick={() => navigate('/lotes')} />
         <StatCard label="Satélites activos" value={satellites.filter(s=>s.active).length}
@@ -157,14 +157,14 @@ export default function Dashboard() {
                 );
               })}
               {ESTADOS_PRODUCCION.every(k => !byStatus[k]) && (
-                <p className="text-xs text-gray-400 text-center py-3">Sin lotes en producción</p>
+                <p className="text-xs text-gray-400 text-center py-3">Sin cortes en producción</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lotes en producción */}
+      {/* Cortes en producción */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
           Lotes en Producción ({lotsEnProd.length})
@@ -172,7 +172,7 @@ export default function Dashboard() {
         {lotsEnProd.length === 0 && (
           <div className="text-center py-8">
             <p className="text-3xl mb-2">✅</p>
-            <p className="text-sm text-gray-500">Sin lotes activos en producción</p>
+            <p className="text-sm text-gray-500">Sin cortes activos en producción</p>
           </div>
         )}
         {lotsEnProd.length > 0 && (
