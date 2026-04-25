@@ -492,6 +492,15 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
         nombreTinto, firmaTinto, fechaTinto: nowStr(),
         status: 'completado',
       };
+      // Consecutivo remision del satelite
+      const { getDoc, doc, setDoc, increment } = await import('firebase/firestore');
+      const { db } = await import('../../firebase');
+      const consRef = doc(db, 'consecutivos', `remision_${profile?.satId}`);
+      const consSnap = await getDoc(consRef);
+      const numRem = (consSnap.exists() ? consSnap.data().current : 0) + 1;
+      await setDoc(consRef, { current: numRem }, { merge: true });
+      remData.numeroRemision = numRem;
+      remData.codigoRemision = `REM-${String(numRem).padStart(4,'0')}`;
       await addDocument('remisionesTinto', remData);
       await advanceLotStatus(lot.id, 'tintoreria', profile?.id, profile?.name, { remisionTinto: remData });
       printRemisionTinto(lot, satName, remData);
