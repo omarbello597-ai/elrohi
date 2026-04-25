@@ -209,7 +209,7 @@ export default function BodegaCalidadScreen() {
                 <div className="flex flex-wrap gap-1 mt-1">
                   {lot.garments?.map((g,i) => (
                     <span key={i} className="text-[9px] bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
-                      {gLabel(g.gtId)}: {g.total}
+                      {g.descripcionRef||gLabel(g.gtId)}: {g.total}
                     </span>
                   ))}
                 </div>
