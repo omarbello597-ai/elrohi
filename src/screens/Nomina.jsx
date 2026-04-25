@@ -312,15 +312,22 @@ export function NominaScreen() {
         printRecibo({ ...data, nombre: selWorker.name, resumen: detalleFinal, opsDetalle: liq.opsDetalle||[] });
         toast.success(`✅ Pago registrado — ${rec}`);
       } else if (selSat) {
-        await addDocument('payments', {
+        const payData = {
           recId: rec, tipo: 'satelite',
           satId: selSat.id, satName: selSat.name,
           total: selSat.total, compOps: selSat.compOps,
-          workers: selSat.workerBreakdown,
           opsDetalle: selSat.detalle||[],
           notas: notes, photoBase64: photo||null, date: todayISO(),
           periodo: quincena.label,
           firmaElrohi, firmaRecibe,
+        };
+        await addDocument('payments', payData);
+        // Enviar pago al modulo "Mis Pagos" del satelite
+        await addDocument('pagosSatelite', {
+          ...payData,
+          status: 'pagado',
+          pagadoPor: profile?.name || 'ELROHI',
+          fechaPago: todayISO(),
         });
         // Print recibo satelite
         const rows = selSat.workerBreakdown.map(w=>({concepto:w.name,valor:w.earnings}));
