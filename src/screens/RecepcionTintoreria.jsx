@@ -142,8 +142,26 @@ export default function RecepcionTintoreria() {
         semaforo,
         observaciones: obsAdmin,
         recibidoPor:  profile?.name,
+        fechaRecepcion: new Date().toLocaleString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
         conteoRecibido: remision.conteoEntrega,
         novedades:    remision.novedades,
+        // Detalle completo del lote
+        garments:     lot.garments || [],
+        totalPieces:  lot.totalPieces || 0,
+        deadline:     lot.deadline || '',
+        satId:        lot.satId || '',
+        satName:      remision.satName || '',
+        lotOps:       lot.lotOps || [],
+        // Detalle remisión tintorería
+        remisionData: {
+          conteo:       remision.conteo || [],
+          hayFaltantes: remision.hayFaltantes || false,
+          esCompleto:   remision.esCompleto || false,
+          nota:         remision.nota || '',
+          nombreSat:    remision.nombreSat || '',
+          nombreTinto:  remision.nombreTinto || '',
+          fechaTinto:   remision.fechaTinto || '',
+        },
       });
       // Actualizar remisión
       await updateDocument('remisionesTinto', remision.id, {
@@ -279,14 +297,81 @@ export default function RecepcionTintoreria() {
           )}
           {recepciones.map(r=>(
             <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-4">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{r.semaforo==='verde'?'🟢':r.semaforo==='amarillo'?'🟡':'🔴'}</span>
-                <div>
-                  <p className="text-xs font-bold text-gray-800">{r.lotCode}</p>
-                  <p className="text-[10px] text-gray-400">{r.recibidoPor} · {r.conteoRecibido ? Object.values(r.conteoRecibido).reduce((a,b)=>a+(+b||0),0)+' piezas' : ''}</p>
-                  {r.novedades?.length>0 && <p className="text-[9px] text-red-500 mt-0.5">⚠ {r.novedades.length} novedades</p>}
+              {/* Header */}
+              <div className="flex items-start gap-3 mb-3">
+                <span className="text-2xl flex-shrink-0">{r.semaforo==='verde'?'🟢':r.semaforo==='amarillo'?'🟡':'🔴'}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-mono text-xs font-bold text-blue-700">{r.lotCode}</span>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${r.semaforo==='verde'?'bg-green-100 text-green-700':r.semaforo==='amarillo'?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700'}`}>
+                      {r.semaforo==='verde'?'✓ Completo':r.semaforo==='amarillo'?'⚠ Parcial':'🔴 Novedad'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400">Recibido por: <strong>{r.recibidoPor}</strong> · {r.fechaRecepcion||''}</p>
+                  {r.satName && <p className="text-[10px] text-gray-400">Satélite: <strong>{r.satName}</strong></p>}
                 </div>
               </div>
+
+              {/* Prendas del lote */}
+              {r.garments?.length>0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Prendas del corte</p>
+                  <div className="flex flex-wrap gap-1">
+                    {r.garments.map((g,i)=>(
+                      <span key={i} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                        {g.descripcionRef||gLabel(g.gtId)}: <strong>{g.total}</strong>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Conteo recibido */}
+              {r.remisionData?.conteo?.length>0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Conteo de entrega tintorería</p>
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    {r.remisionData.conteo.map((g,i)=>{
+                      const faltante = g.original - g.enviado;
+                      return (
+                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 last:border-0 text-xs">
+                          <span className="flex-1 text-gray-700">{g.descripcionRef||gLabel(g.gtId)}</span>
+                          <span className="text-gray-400">Original: {g.original}</span>
+                          <span className="text-gray-400">Enviado: {g.enviado}</span>
+                          <span className={`font-bold ${faltante>0?'text-red-600':'text-green-600'}`}>
+                            {faltante>0?`-${faltante}`:'✓'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Novedades */}
+              {r.novedades?.length>0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1.5">⚠ Novedades ({r.novedades.length})</p>
+                  <div className="space-y-1">
+                    {r.novedades.map((n,i)=>(
+                      <div key={i} className="bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-xs">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-bold text-red-700">{n.tipo?.replace(/_/g,' ')}</span>
+                          <span className="text-red-600">{n.cantidad} pzas</span>
+                        </div>
+                        {n.descripcion && <p className="text-red-500 text-[10px]">{n.descripcion}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Observaciones admin */}
+              {r.observaciones && (
+                <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-700">
+                  <span className="font-bold">Obs Admin:</span> {r.observaciones}
+                </div>
+              )}
             </div>
           ))}
         </div>
