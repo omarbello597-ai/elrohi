@@ -210,7 +210,7 @@ export default function TallerScreen() {
                   <div className="flex flex-wrap gap-1 mt-1">
                     {lot.garments?.map((g,i)=>(
                       <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                        {gLabel(g.gtId)}: {g.total}
+                        {g.descripcionRef||gLabel(g.gtId)}: {g.total}
                       </span>
                     ))}
                   </div>

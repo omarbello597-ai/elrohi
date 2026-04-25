@@ -179,7 +179,7 @@ export default function CorteElrohiScreen() {
                       <div className="flex flex-wrap gap-1.5 mb-1">
                         {lot.garments?.map((g,i)=>(
                           <span key={i} className="text-[10px] bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full text-gray-700">
-                            {gLabel(g.gtId)}: <strong>{g.total?.toLocaleString('es-CO')}</strong>
+                            {g.descripcionRef||gLabel(g.gtId)}: <strong>{g.total?.toLocaleString('es-CO')}</strong>
                           </span>
                         ))}
                       </div>
@@ -240,7 +240,7 @@ export default function CorteElrohiScreen() {
                       <tbody>
                         {lot.garments?.map((g,i)=>(
                           <tr key={i}>
-                            <td className="px-2 py-1.5 font-medium text-gray-700 border border-gray-200 whitespace-nowrap">{gLabel(g.gtId)}</td>
+                            <td className="px-2 py-1.5 font-medium text-gray-700 border border-gray-200" style={{maxWidth:200,fontSize:10}}>{g.descripcionRef||gLabel(g.gtId)}</td>
                             {SIZES.map(s=>(
                               <td key={s} className="px-2 py-1.5 text-center border border-gray-200"
                                 style={{color:(g.sizes?.[s]||0)>0?'#1a3a6b':'#d1d5db',fontWeight:(g.sizes?.[s]||0)>0?600:400}}>
