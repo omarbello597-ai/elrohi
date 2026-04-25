@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useData }     from '../contexts/DataContext';
 import { addDocument } from '../services/db';
 import { fmtM, getOpVal, workerQuincena } from '../utils';
@@ -75,45 +75,79 @@ function calcIncentivosEnPeriodo(user, inicio, fin) {
   }, 0);
 }
 
-// Generar recibo PDF
+// ─── FIRMA CANVAS ──────────────────────────────────────────────────────────────
+function FirmaCanvas({ onSave, label }) {
+  const ref = useRef(null); const drawing = useRef(false); const [has, setHas] = useState(false);
+  const gp  = (e,c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; };
+  const start=(e)=>{e.preventDefault();drawing.current=true;const c=ref.current;const ctx=c.getContext('2d');const p=gp(e,c);ctx.beginPath();ctx.moveTo(p.x,p.y);};
+  const draw=(e)=>{e.preventDefault();if(!drawing.current)return;const c=ref.current;const ctx=c.getContext('2d');ctx.strokeStyle='#14405A';ctx.lineWidth=2.5;ctx.lineCap='round';const p=gp(e,c);ctx.lineTo(p.x,p.y);ctx.stroke();setHas(true);};
+  const stop=()=>{drawing.current=false;};
+  const clear=()=>{ref.current.getContext('2d').clearRect(0,0,ref.current.width,ref.current.height);setHas(false);onSave(null);};
+  const save=()=>{onSave(ref.current.toDataURL('image/png'));toast.success('Firma guardada');};
+  return (
+    <div style={{marginBottom:8}}>
+      <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:4}}>{label}</p>
+      <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
+        <canvas ref={ref} width={900} height={100} style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
+          onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
+          onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
+      </div>
+      <div style={{display:'flex',gap:6,marginTop:4}}>
+        <button onClick={clear} style={{fontSize:10,padding:'2px 9px',background:'#fee2e2',color:'#dc2626',border:'none',borderRadius:4,cursor:'pointer'}}>Borrar</button>
+        {has && <button onClick={save} style={{fontSize:10,padding:'2px 9px',background:'#dcfce7',color:'#15803d',border:'none',borderRadius:4,cursor:'pointer',fontWeight:600}}>✓ Guardar</button>}
+      </div>
+    </div>
+  );
+}
+
+// ─── RECIBO PDF ─────────────────────────────────────────────────────────────────
 function printRecibo(data) {
+  const firmaBox = (label,img,nombre) => `
+    <div style="text-align:center;padding:8px 16px">
+      ${img?`<img src="${img}" style="height:65px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">`
+           :`<div style="height:65px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>`}
+      <div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">${label}</div>
+      ${nombre?`<div style="font-size:10px;color:#374151;margin-top:2px">${nombre}</div>`:''}
+    </div>`;
   const rows = data.detalle.map(d => `
     <tr>
-      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0">${d.concepto}</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;color:#10b981">${fmtM(d.valor)}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;font-size:12px">${d.concepto}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:12px;color:${d.valor<0?'#dc2626':'#15803d'}">${fmtM(d.valor)}</td>
     </tr>`).join('');
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
   <title>Recibo ${data.recId}</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif}
-  .page{max-width:600px;margin:40px auto;padding:40px;border:1px solid #e5e7eb;border-radius:12px}
-  .header{display:flex;justify-content:space-between;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #e85d26}
-  .logo{font-size:24px;font-weight:900}.logo span{color:#e85d26}
-  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}
-  .firma{text-align:center}.firma-line{border-top:1px solid #374151;margin:40px auto 6px}
-  @media print{body{print-color-adjust:exact}}</style></head><body>
-  <div class="page">
-    <div class="header">
-      <div class="logo">🧵 <span>EL</span>ROHI</div>
-      <div style="text-align:right;font-size:12px;color:#6b7280">Recibo de pago<br><strong style="font-size:16px;color:#111">${data.recId}</strong></div>
-    </div>
-    <div style="margin-bottom:20px;background:#f9fafb;border-radius:8px;padding:12px 16px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
-        <div><span style="font-size:10px;color:#6b7280;display:block">Empleado</span><strong>${data.nombre}</strong></div>
-        <div><span style="font-size:10px;color:#6b7280;display:block">Período</span><strong>${data.periodo}</strong></div>
-        <div><span style="font-size:10px;color:#6b7280;display:block">Rol</span><strong>${data.rol}</strong></div>
-        <div><span style="font-size:10px;color:#6b7280;display:block">Fecha</span><strong>${today()}</strong></div>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
+  </head><body><div style="max-width:650px;margin:20px auto;border:1.5px solid #14405A">
+    <div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:20px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>
+        <div style="font-size:9px;color:#14405A">NIT. 901.080.234-7</div></div>
+      <div style="text-align:right">
+        <div style="font-size:9px;color:#6b7280">RECIBO DE PAGO</div>
+        <div style="font-size:14px;font-weight:900;color:#2878B4">${data.recId}</div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
-      <thead><tr style="background:#f9f9f7"><th style="padding:8px 10px;text-align:left;font-size:10px;color:#6b7280">Concepto</th><th style="padding:8px 10px;text-align:right;font-size:10px;color:#6b7280">Valor</th></tr></thead>
+    <div style="padding:10px 16px;border-bottom:1px solid #e5e7eb;display:flex;gap:24px;flex-wrap:wrap">
+      <div><span style="font-size:9px;color:#6b7280">EMPLEADO/SATÉLITE</span><div style="font-size:14px;font-weight:700;color:#14405A">${data.nombre}</div></div>
+      <div><span style="font-size:9px;color:#6b7280">PERÍODO</span><div style="font-size:12px;font-weight:600">${data.periodo}</div></div>
+      <div><span style="font-size:9px;color:#6b7280">ROL</span><div style="font-size:12px">${data.rol}</div></div>
+      <div><span style="font-size:9px;color:#6b7280">FECHA</span><div style="font-size:12px">${today()}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#14405A;color:#fff">
+        <th style="padding:7px 10px;font-size:10px;text-align:left">Concepto</th>
+        <th style="padding:7px 10px;font-size:10px;text-align:right">Valor</th>
+      </tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr style="background:#f0fdf4"><td style="padding:12px 10px;font-weight:900;font-size:15px">TOTAL</td><td style="padding:12px 10px;text-align:right;font-weight:900;font-size:18px;color:#10b981">${fmtM(data.total)}</td></tr></tfoot>
+      <tfoot><tr style="background:#F7F7F7">
+        <td style="padding:10px;font-weight:900;font-size:14px;color:#14405A">TOTAL A PAGAR</td>
+        <td style="padding:10px;text-align:right;font-weight:900;font-size:18px;color:#e85d26">${fmtM(data.total)}</td>
+      </tr></tfoot>
     </table>
-    ${data.notas?`<div style="background:#f9f9f7;border-radius:8px;padding:12px;font-size:12px;margin-bottom:16px">${data.notas}</div>`:''}
-    ${data.foto?`<img src="${data.foto}" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:16px"/>`:''}
-    <div class="firmas">
-      <div class="firma"><div class="firma-line"></div><div style="font-size:11px">Firma ELROHI — Nómina</div></div>
-      <div class="firma"><div class="firma-line"></div><div style="font-size:11px">Recibido — ${data.nombre}</div></div>
+    ${data.notas?`<div style="padding:8px 16px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280"><strong>Obs:</strong> ${data.notas}</div>`:''}
+    ${data.foto?`<div style="padding:8px 16px"><img src="${data.foto}" style="max-height:150px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb"/></div>`:''}
+    <div style="border-top:1px solid #14405A;display:grid;grid-template-columns:1fr 1fr">
+      ${firmaBox('Pagado por — ELROHI Nómina', data.firmaElrohi, 'Departamento de Nómina')}
+      <div style="border-left:1px solid #14405A">${firmaBox('Recibido conforme', data.firmaRecibe, data.nombre)}</div>
     </div>
   </div><script>window.onload=()=>window.print();</script></body></html>`;
   const win=window.open('','_blank'); win.document.write(html); win.document.close();
@@ -130,6 +164,9 @@ export function NominaScreen() {
   const [photoPreview,setPhotoPreview]= useState(null);
   const [notes,       setNotes]       = useState('');
   const [saving,      setSaving]      = useState(false);
+  const [firmaElrohi, setFirmaElrohi] = useState(null);
+  const [firmaRecibe, setFirmaRecibe] = useState(null);
+  const [descuento,   setDescuento]   = useState('');
 
   const quincena = useMemo(() => getQuincenaActual(), []);
 
@@ -177,27 +214,35 @@ export function NominaScreen() {
   const openPayElrohi = (u) => {
     setSelWorker(u); setSelSat(null);
     setPhoto(null); setPhotoPreview(null); setNotes('');
+    setFirmaElrohi(null); setFirmaRecibe(null); setDescuento('');
     setShowModal(true);
   };
 
   const openPaySat = (sat) => {
     setSelSat(sat); setSelWorker(null);
     setPhoto(null); setPhotoPreview(null); setNotes('');
+    setFirmaElrohi(null); setFirmaRecibe(null); setDescuento('');
     setShowModal(true);
   };
 
   const confirmarPago = async () => {
+    if (!firmaElrohi) { toast.error('Falta firma ELROHI'); return; }
+    if (!firmaRecibe)  { toast.error('Falta firma de quien recibe'); return; }
     setSaving(true);
     try {
       const rec = recId();
       if (selWorker) {
         const liq = calcLiquidacion(selWorker);
+        const desc = +descuento||0;
+        const totalFinal = liq.total - desc;
+        const detalleFinal = [...liq.detalle, ...(desc>0?[{concepto:'Descuentos',valor:-desc}]:[])];
         const data = {
           recId: rec, tipo: 'elrohi',
           workerId: selWorker.id, workerName: selWorker.name,
           rol: selWorker.role, periodo: quincena.label,
-          detalle: liq.detalle, total: liq.total,
+          detalle: detalleFinal, total: totalFinal,
           notas: notes, foto: photo||null, fecha: todayISO(),
+          firmaElrohi, firmaRecibe,
         };
         await addDocument('payments', data);
         printRecibo({ ...data, nombre: selWorker.name });
@@ -391,10 +436,10 @@ export function NominaScreen() {
                 </div>
                 <button onClick={() => {
                   if (p.tipo==='elrohi') {
-                    printRecibo({ recId:p.recId, nombre:p.workerName, periodo:p.periodo, rol:p.rol, detalle:p.detalle||[], total:p.total, notas:p.notas, foto:p.foto });
+                    printRecibo({ recId:p.recId, nombre:p.workerName, periodo:p.periodo, rol:p.rol, detalle:p.detalle||[], total:p.total, notas:p.notas, foto:p.foto, firmaElrohi:p.firmaElrohi||null, firmaRecibe:p.firmaRecibe||null });
                   } else {
                     const rows=(p.workers||[]).map(w=>({concepto:w.name,valor:w.earnings}));
-                    printRecibo({ recId:p.recId, nombre:p.satName, periodo:p.date, rol:'Satélite', detalle:rows, total:p.total, notas:p.notas, foto:p.photoBase64 });
+                    printRecibo({ recId:p.recId, nombre:p.satName, periodo:p.date, rol:'Satélite', detalle:rows, total:p.total, notas:p.notas, foto:p.photoBase64, firmaElrohi:p.firmaElrohi||null, firmaRecibe:p.firmaRecibe||null });
                   }
                 }}
                   className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex-shrink-0">
@@ -445,6 +490,31 @@ export function NominaScreen() {
                 <p className="text-[10px] text-green-600 mt-0.5">{selSat.compOps} operaciones · {selSat.workerBreakdown.length} operarios</p>
               </div>
             )}
+
+            {/* Descuento */}
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Descuentos (opcional)</label>
+              <input type="number" min={0} value={descuento} onChange={e=>setDescuento(e.target.value)}
+                placeholder="0"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none" />
+            </div>
+
+            {/* Firmas */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-blue-800">Firma ELROHI — Nómina (Paga)</p>
+                {firmaElrohi && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
+              </div>
+              <FirmaCanvas label="Firma del responsable de nómina:" onSave={setFirmaElrohi} />
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-bold text-green-800">Firma de quien recibe el pago</p>
+                {firmaRecibe && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
+              </div>
+              <FirmaCanvas label="Firma del operario/satélite:" onSave={setFirmaRecibe} />
+            </div>
 
             {/* Foto comprobante */}
             <div className="mb-3">
