@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { addDocument, updateDocument } from '../services/db';
@@ -93,6 +93,45 @@ export default function TallerScreen() {
   const sat       = satellites.find(s => s.id === profile?.satId);
   const myWorkers = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
   const myLots    = lots.filter(l => l.satId === profile?.satId);
+  const [showNewOp, setShowNewOp] = useState(false);
+  const [newOpName, setNewOpName] = useState('');
+  const [newOpVal,  setNewOpVal]  = useState('');
+  const [savingOp,  setSavingOp]  = useState(false);
+  const [satOps,    setSatOps]    = useState([]);
+
+  // Load satellite's own operations from operations collection filtered by satId
+  useEffect(()=>{
+    import('../services/db').then(({listenCol})=>{
+      const unsub = listenCol('operations', (all)=>{
+        setSatOps(all.filter(o=>o.active!==false));
+      });
+      return unsub;
+    });
+  },[]);
+
+  const crearOpSat = async () => {
+    if (!newOpName) { toast.error('Escribe el nombre de la operación'); return; }
+    setSavingOp(true);
+    try {
+      const { addDocument } = await import('../services/db');
+      await addDocument('operations', {
+        name:   newOpName.trim(),
+        val:    +newOpVal||0,
+        satId:  profile?.satId,
+        active: true,
+      });
+      toast.success('✅ Operación creada');
+      setNewOpName(''); setNewOpVal(''); setShowNewOp(false);
+    } catch(e){ toast.error('Error'); }
+    finally { setSavingOp(false); }
+  };
+
+  const eliminarOp = async (opId) => {
+    if (!window.confirm('¿Eliminar esta operación?')) return;
+    const { updateDocument } = await import('../services/db');
+    await updateDocument('operations', opId, { active: false });
+    toast.success('Operación eliminada');
+  };
   const activeLots = myLots.filter(l => l.status === 'costura');
   const listoLots  = myLots.filter(l => l.status === 'listo_remision_tintoreria');
   const totalPieces = activeLots.reduce((a,l) => a+(l.totalPieces||0), 0);
@@ -122,7 +161,7 @@ export default function TallerScreen() {
       </div>
 
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
-        {[['activos',`En Costura (${activeLots.length})`],['listos',`Listos p/Tintorería (${listoLots.length})`],['operarios','Operarios']].map(([k,l])=>(
+        {[['activos',`En Costura (${activeLots.length})`],['listos',`Listos p/Tintorería (${listoLots.length})`],['operarios','Operarios'],['mis-ops','⚡ Mis Operaciones']].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
             style={{background:tab===k?'#fff':'transparent',color:tab===k?'#111827':'#6b7280',fontWeight:tab===k?700:400,boxShadow:tab===k?'0 1px 3px rgba(0,0,0,0.08)':'none'}}>
@@ -156,6 +195,13 @@ export default function TallerScreen() {
                       {tiempoSat && <span className="text-[9px] text-gray-400">⏱ {tiempoSat} en taller</span>}
                     </div>
                     <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {lot.deadline}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {lot.garments?.map((g,i)=>(
+                      <span key={i} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                        {g.descripcionRef||gLabel(g.gtId)}: <strong>{g.total}</strong>
+                      </span>
+                    ))}
+                  </div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-lg font-black" style={{color:prog===100?'#15803d':'#7c3aed'}}>{prog}%</p>
@@ -165,6 +211,11 @@ export default function TallerScreen() {
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
                   <div className="h-full rounded-full transition-all" style={{width:`${prog}%`,background:prog===100?'#10b981':'#7c3aed'}} />
                 </div>
+                {ops.length === 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+                    ⚠ Sin operaciones asignadas — ve a <strong>Asignar Ops</strong> para asignar las operaciones a los operarios
+                  </div>
+                )}
                 {ops.length > 0 && (
                   <div className="space-y-1">
                     {ops.map((op,i)=>{
@@ -207,6 +258,13 @@ export default function TallerScreen() {
                     <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✓ Ops completadas</span>
                   </div>
                   <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {lot.deadline}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {lot.garments?.map((g,i)=>(
+                      <span key={i} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                        {g.descripcionRef||gLabel(g.gtId)}: <strong>{g.total}</strong>
+                      </span>
+                    ))}
+                  </div>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {lot.garments?.map((g,i)=>(
                       <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
