@@ -380,6 +380,7 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
                   id: `lo_${lot.id}_${o.id}`,
                   opId: o.id,
                   name: o.name,
+                  val: o.val || 0,
                   qty: lot.totalPieces || 0,
                   status: 'pendiente',
                   wId: null,
