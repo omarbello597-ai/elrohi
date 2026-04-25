@@ -43,27 +43,31 @@ function getQuincenaActual() {
 // Calcular operaciones completadas en un rango de fechas
 function calcOpsEnPeriodo(userId, lots, ops, satOpVals, satId, inicio, fin) {
   let total = 0;
+  let detalle = [];
   lots.forEach(lot => {
-    const lotOps = lot.lotOps || [];
-    lotOps.forEach(lo => {
-      if (lo.wId !== userId) return;
-      if (lo.status !== 'completado') return;
+    // Operaciones costura satélite
+    (lot.lotOps||[]).forEach(lo => {
+      if (lo.wId !== userId || lo.status !== 'completado') return;
       const doneAt = lo.doneAt ? new Date(lo.doneAt) : null;
       if (!doneAt || doneAt < inicio || doneAt > fin) return;
-      const val = getOpVal(ops, satOpVals, satId || lot.satId, lo.opId);
-      total += val * lo.qty;
+      const val = lo.val || getOpVal(ops, satOpVals, satId||lot.satId, lo.opId) || 0;
+      const subtotal = val * (lo.qty||0);
+      total += subtotal;
+      detalle.push({ lotCode: lot.code, referencia: lot.descripcion||lot.code, operacion: lo.name||lo.opId, valUnit: val, qty: lo.qty||0, subtotal });
     });
-    // Operaciones internas ELROHI
-    const opsElrohi = lot.opsElrohi || [];
-    opsElrohi.forEach(op => {
-      if (op.wId !== userId) return;
-      if (op.status !== 'completado') return;
+    // Operaciones internas ELROHI (control calidad, terminación)
+    (lot.opsElrohi||[]).forEach(op => {
+      if (op.wId !== userId || op.status !== 'completado') return;
       const doneAt = op.doneAt ? new Date(op.doneAt) : null;
       if (!doneAt || doneAt < inicio || doneAt > fin) return;
-      total += (op.val || 0);
+      const val = op.vrTotal && op.qty ? Math.round(op.vrTotal/op.qty) : (op.valorUnitario||op.val||0);
+      const qty  = op.qty || 1;
+      const subtotal = op.vrTotal || (val*qty);
+      total += subtotal;
+      detalle.push({ lotCode: lot.code, referencia: op.referencia||lot.code, operacion: op.operacion||op.name||'Operación', valUnit: val, qty, subtotal });
     });
   });
-  return total;
+  return { total, detalle };
 }
 
 // Calcular incentivos en el periodo
@@ -109,7 +113,19 @@ function printRecibo(data) {
       <div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">${label}</div>
       ${nombre?`<div style="font-size:10px;color:#374151;margin-top:2px">${nombre}</div>`:''}
     </div>`;
-  const rows = data.detalle.map(d => `
+
+  // Detalle de operaciones
+  const opsRows = (data.opsDetalle||[]).map(o=>`
+    <tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:5px 8px;font-size:10px;color:#14405A;font-weight:600">${o.lotCode||''}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#374151">${o.referencia||''}</td>
+      <td style="padding:5px 8px;font-size:10px;color:#374151">${o.operacion||''}</td>
+      <td style="padding:5px 8px;font-size:10px;text-align:center">${(o.qty||0).toLocaleString('es-CO')}</td>
+      <td style="padding:5px 8px;font-size:10px;text-align:right">${fmtM(o.valUnit||0)}</td>
+      <td style="padding:5px 8px;font-size:10px;text-align:right;font-weight:700;color:#15803d">${fmtM(o.subtotal||0)}</td>
+    </tr>`).join('');
+
+  const rows = (data.resumen||data.detalle||[]).map(d => `
     <tr>
       <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;font-size:12px">${d.concepto}</td>
       <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:12px;color:${d.valor<0?'#dc2626':'#15803d'}">${fmtM(d.valor)}</td>
@@ -132,13 +148,27 @@ function printRecibo(data) {
       <div><span style="font-size:9px;color:#6b7280">ROL</span><div style="font-size:12px">${data.rol}</div></div>
       <div><span style="font-size:9px;color:#6b7280">FECHA</span><div style="font-size:12px">${today()}</div></div>
     </div>
+    ${opsRows?`
+    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">DETALLE DE OPERACIONES</div>
     <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#14405A;color:#fff">
-        <th style="padding:7px 10px;font-size:10px;text-align:left">Concepto</th>
-        <th style="padding:7px 10px;font-size:10px;text-align:right">Valor</th>
+      <thead><tr style="background:#F7F7F7">
+        <th style="padding:5px 8px;font-size:9px;text-align:left;color:#14405A">Corte</th>
+        <th style="padding:5px 8px;font-size:9px;text-align:left;color:#14405A">Referencia</th>
+        <th style="padding:5px 8px;font-size:9px;text-align:left;color:#14405A">Operación</th>
+        <th style="padding:5px 8px;font-size:9px;text-align:center;color:#14405A">Und</th>
+        <th style="padding:5px 8px;font-size:9px;text-align:right;color:#14405A">Vr/und</th>
+        <th style="padding:5px 8px;font-size:9px;text-align:right;color:#14405A">Total</th>
+      </tr></thead>
+      <tbody>${opsRows}</tbody>
+    </table>`:''}
+    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">RESUMEN</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#F7F7F7">
+        <th style="padding:7px 10px;font-size:10px;text-align:left;color:#14405A">Concepto</th>
+        <th style="padding:7px 10px;font-size:10px;text-align:right;color:#14405A">Valor</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr style="background:#F7F7F7">
+      <tfoot><tr style="background:#F7F7F7;border-top:2px solid #14405A">
         <td style="padding:10px;font-weight:900;font-size:14px;color:#14405A">TOTAL A PAGAR</td>
         <td style="padding:10px;text-align:right;font-weight:900;font-size:18px;color:#e85d26">${fmtM(data.total)}</td>
       </tr></tfoot>
@@ -183,34 +213,58 @@ export function NominaScreen() {
   );
 
   const calcLiquidacion = (u) => {
-    const opsVal      = calcOpsEnPeriodo(u.id, lots, ops, satOpVals, null, quincena.inicio, quincena.fin);
+    const { total: opsVal, detalle: opsDetalle } = calcOpsEnPeriodo(u.id, lots, ops, satOpVals, null, quincena.inicio, quincena.fin);
     const incentivos  = calcIncentivosEnPeriodo(u, quincena.inicio, quincena.fin);
     const baseFija    = u.salarioTipo === 'solo_fijo' || u.salarioTipo === 'fijo_mas_ops'
       ? Math.round((u.salarioFijo || 0) / 2) : 0;
     const total       = baseFija + opsVal + incentivos;
-    const detalle     = [];
-    if (baseFija > 0)   detalle.push({ concepto: `Base fija (${quincena.tipo} quincena)`, valor: baseFija });
-    if (opsVal > 0)     detalle.push({ concepto: 'Operaciones completadas', valor: opsVal });
-    if (incentivos > 0) detalle.push({ concepto: 'Incentivos', valor: incentivos });
-    if (detalle.length === 0) detalle.push({ concepto: 'Sin operaciones en este período', valor: 0 });
-    return { baseFija, opsVal, incentivos, total, detalle };
+    const resumen     = [];
+    if (baseFija > 0)   resumen.push({ concepto: `Base fija (${quincena.tipo} quincena)`, valor: baseFija });
+    if (opsVal > 0)     resumen.push({ concepto: 'Operaciones completadas', valor: opsVal });
+    if (incentivos > 0) resumen.push({ concepto: 'Incentivos', valor: incentivos });
+    if (resumen.length === 0) resumen.push({ concepto: 'Sin operaciones en este período', valor: 0 });
+    return { baseFija, opsVal, incentivos, total, resumen, opsDetalle };
   };
 
-  // SATÉLITES
+  // SATÉLITES — cálculo por tarifas de satélite por tipo de prenda
+  const [tarifasSat, setTarifasSat] = useState([]);
+  useEffect(()=>{
+    let unsub;
+    import('../services/db').then(({listenCol})=>{
+      unsub = listenCol('tarifasSatelite', setTarifasSat);
+    });
+    return ()=>{ if(unsub) unsub(); };
+  },[]);
+
+  const calcSatDetalle = (satId) => {
+    const satLots = lots.filter(l=>l.satId===satId);
+    let filas = [];
+    satLots.forEach(lot=>{
+      (lot.garments||[]).forEach(g=>{
+        const qty = g.total||0;
+        if (!qty) return;
+        const desc = g.descripcionRef||gLabel(g.gtId);
+        // Buscar tarifa que coincida con la descripcion del producto
+        const tarifa = tarifasSat.find(t=>
+          t.descripcion && desc.toUpperCase().includes(t.descripcion.replace(/_/g,' ').split(' ')[0])
+        ) || tarifasSat[0]; // fallback a primera tarifa
+        if (!tarifa) return;
+        if (tarifa.confeccion>0) filas.push({ lotCode:lot.code, descripcion:desc, operacion:'Confección', valUnit:tarifa.confeccion, qty, subtotal:tarifa.confeccion*qty });
+        if (tarifa.terminacion>0) filas.push({ lotCode:lot.code, descripcion:desc, operacion:'Terminación', valUnit:tarifa.terminacion, qty, subtotal:tarifa.terminacion*qty });
+        if (tarifa.remate>0) filas.push({ lotCode:lot.code, descripcion:desc, operacion:'Remate', valUnit:tarifa.remate, qty, subtotal:tarifa.remate*qty });
+      });
+    });
+    return filas;
+  };
+
   const satSummary = satellites.filter(s=>s.active).map(s => {
-    const satLots    = lots.filter(l=>l.satId===s.id);
-    const satWorkers = users.filter(u=>u.satId===s.id&&u.role==='operario');
-    const compLotOps = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado'));
-    const total      = compLotOps.reduce((acc,lo) => acc + (lo.val||getOpVal(ops,satOpVals,s.id,lo.opId)||0)*(lo.qty||0), 0);
-    const compOps    = compLotOps.length;
-    const workerBreakdown = satWorkers.map(w=>({
-      ...w,
-      earnings: satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.wId===w.id&&lo.status==='completado'))
-        .reduce((a,lo)=>a+(lo.val||0)*(lo.qty||0),0)
-    }));
+    const satLots  = lots.filter(l=>l.satId===s.id);
+    const detalle  = calcSatDetalle(s.id);
+    const total    = detalle.reduce((a,f)=>a+f.subtotal,0);
+    const compOps  = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado')).length;
     const lastPayment = payments.filter(p=>p.satId===s.id)
       .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0];
-    return { ...s, total, compOps, workerBreakdown, lastPayment };
+    return { ...s, total, compOps, detalle, lastPayment };
   }).sort((a,b)=>b.total-a.total);
 
   const handlePhoto = async (e) => {
@@ -250,12 +304,12 @@ export function NominaScreen() {
           recId: rec, tipo: 'elrohi',
           workerId: selWorker.id, workerName: selWorker.name,
           rol: selWorker.role, periodo: quincena.label,
-          detalle: detalleFinal, total: totalFinal,
+          detalle: detalleFinal, opsDetalle: liq.opsDetalle||[], total: totalFinal,
           notas: notes, foto: photo||null, fecha: todayISO(),
           firmaElrohi, firmaRecibe,
         };
         await addDocument('payments', data);
-        printRecibo({ ...data, nombre: selWorker.name });
+        printRecibo({ ...data, nombre: selWorker.name, resumen: detalleFinal, opsDetalle: liq.opsDetalle||[] });
         toast.success(`✅ Pago registrado — ${rec}`);
       } else if (selSat) {
         await addDocument('payments', {
@@ -263,13 +317,14 @@ export function NominaScreen() {
           satId: selSat.id, satName: selSat.name,
           total: selSat.total, compOps: selSat.compOps,
           workers: selSat.workerBreakdown,
+          opsDetalle: selSat.detalle||[],
           notas: notes, photoBase64: photo||null, date: todayISO(),
           periodo: quincena.label,
           firmaElrohi, firmaRecibe,
         });
         // Print recibo satelite
         const rows = selSat.workerBreakdown.map(w=>({concepto:w.name,valor:w.earnings}));
-        printRecibo({ recId:rec, nombre:selSat.name, periodo:quincena.label, rol:'Satélite', detalle:rows, total:selSat.total, notas:notes, foto:photo });
+        printRecibo({ recId:rec, nombre:selSat.name, periodo:quincena.label, rol:'Satélite', resumen:rows, opsDetalle:selSat.detalle||[], total:selSat.total, notas:notes, foto:photo, firmaElrohi, firmaRecibe });
         toast.success(`✅ Pago satélite registrado — ${rec}`);
       }
       setShowModal(false);
@@ -392,40 +447,36 @@ export function NominaScreen() {
                 </div>
               </div>
 
-              {/* Cortes procesados */}
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Cortes procesados</p>
-              <div className="space-y-2 mb-4">
-                {satLots.length===0 && <p className="text-xs text-gray-400 italic">Sin cortes asignados</p>}
-                {satLots.map(lot=>{
-                  const opsComp = (lot.lotOps||[]).filter(o=>o.status==='completado');
-                  const totalLot = opsComp.reduce((a,o)=>a+(o.val||0)*(o.qty||0),0);
-                  return (
-                    <div key={lot.id} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
-                        <span className="text-xs font-bold text-green-700">{fmtM(totalLot)}</span>
-                      </div>
-                      <p className="text-[10px] text-gray-400">{opsComp.length} ops completadas · {lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {lot.garments?.map((g,i)=>(
-                          <span key={i} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded-full">
-                            {g.descripcionRef||g.gtId}: {g.total}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
 
-              {/* Desglose por operario */}
+
+              {/* Desglose por operario con detalle */}
               {s.workerBreakdown?.length>0 && (
                 <div className="mb-4">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operarios del satélite</p>
                   {s.workerBreakdown.map((w,i)=>(
-                    <div key={i} className="flex justify-between text-xs py-1.5 border-b border-gray-50 last:border-0">
-                      <span className="text-gray-700">{w.name}</span>
-                      <span className="font-bold text-gray-900">{fmtM(w.earnings)}</span>
+                    <div key={i} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-gray-800">{w.name}</span>
+                        <span className="text-sm font-black text-green-700">{fmtM(w.earnings)}</span>
+                      </div>
+                      {(w.ops||[]).length>0 ? (
+                        <div className="space-y-1">
+                          {w.ops.map((o,j)=>(
+                            <div key={j} className="bg-white rounded-lg px-3 py-1.5 border border-gray-100">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex-1">
+                                  <p className="text-[10px] font-bold text-blue-700">{o.lotCode}</p>
+                                  <p className="text-[10px] text-gray-700">{o.referencia}</p>
+                                  <p className="text-[10px] text-gray-500"><strong>{o.operacion}</strong> · {(o.qty||0).toLocaleString('es-CO')} und × {fmtM(o.valUnit)}</p>
+                                </div>
+                                <span className="text-xs font-black text-gray-900 flex-shrink-0">{fmtM(o.subtotal)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-gray-400 italic">Sin operaciones en este período</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -476,10 +527,10 @@ export function NominaScreen() {
                 </div>
                 <button onClick={() => {
                   if (p.tipo==='elrohi') {
-                    printRecibo({ recId:p.recId, nombre:p.workerName, periodo:p.periodo, rol:p.rol, detalle:p.detalle||[], total:p.total, notas:p.notas, foto:p.foto, firmaElrohi:p.firmaElrohi||null, firmaRecibe:p.firmaRecibe||null });
+                    printRecibo({ recId:p.recId, nombre:p.workerName, periodo:p.periodo, rol:p.rol, resumen:p.detalle||[], opsDetalle:p.opsDetalle||[], total:p.total, notas:p.notas, foto:p.foto, firmaElrohi:p.firmaElrohi||null, firmaRecibe:p.firmaRecibe||null });
                   } else {
                     const rows=(p.workers||[]).map(w=>({concepto:w.name,valor:w.earnings}));
-                    printRecibo({ recId:p.recId, nombre:p.satName, periodo:p.date, rol:'Satélite', detalle:rows, total:p.total, notas:p.notas, foto:p.photoBase64, firmaElrohi:p.firmaElrohi||null, firmaRecibe:p.firmaRecibe||null });
+                    printRecibo({ recId:p.recId, nombre:p.satName, periodo:p.periodo||p.date, rol:'Satélite', resumen:rows, opsDetalle:p.opsDetalle||[], total:p.total, notas:p.notas, foto:p.photoBase64, firmaElrohi:p.firmaElrohi||null, firmaRecibe:p.firmaRecibe||null });
                   }
                 }}
                   className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 flex-shrink-0">
@@ -509,7 +560,18 @@ export function NominaScreen() {
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                   <p className="text-xs text-green-700 mb-1">Período: {quincena.label}</p>
                   <div className="space-y-1 mb-2">
-                    {liq.detalle.map((d,i)=>(
+                    {(liq.opsDetalle||[]).length>0 && (
+                      <div className="mb-2">
+                        <p className="text-[10px] font-bold text-green-800 mb-1">Operaciones:</p>
+                        {liq.opsDetalle.map((o,i)=>(
+                          <div key={i} className="flex justify-between text-[10px] text-green-700 py-0.5 border-b border-green-100 last:border-0">
+                            <span className="flex-1">{o.lotCode} · {o.referencia} · <strong>{o.operacion}</strong> × {(o.qty||0).toLocaleString('es-CO')} und @ {fmtM(o.valUnit)}</span>
+                            <span className="font-bold ml-2 flex-shrink-0">{fmtM(o.subtotal)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  {liq.resumen.map((d,i)=>(
                       <div key={i} className="flex justify-between text-xs text-green-700">
                         <span>{d.concepto}</span>
                         <span className="font-bold">{fmtM(d.valor)}</span>
