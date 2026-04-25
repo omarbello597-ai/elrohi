@@ -19,7 +19,7 @@ export default function BodegaCalidadScreen() {
   const enRevision = lots.filter(l => l.status === 'en_revision_calidad');
 
   // Todos los usuarios ELROHI — sin filtro de rol para incluir todos
-  const operariosElrohi = users.filter(u => u.active !== false && u.role !== 'admin_elrohi' && u.role !== 'gerente');
+  const operariosElrohi = users.filter(u => u.active !== false);
 
   const asignarOperario = async (lot, opId, operarioId) => {
     if (!operarioId) return;
@@ -85,7 +85,7 @@ export default function BodegaCalidadScreen() {
         {enOps.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-gray-100">
             <p className="text-3xl mb-2">⚡</p>
-            <p className="font-medium text-gray-700 text-sm">Sin lotes en operaciones</p>
+            <p className="font-medium text-gray-700 text-sm">Sin cortes en operaciones</p>
           </div>
         )}
         {enOps.map(lot => {
@@ -194,7 +194,7 @@ export default function BodegaCalidadScreen() {
         {enRevision.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-gray-100">
             <p className="text-3xl mb-2">🔍</p>
-            <p className="font-medium text-gray-700 text-sm">Sin lotes en revisión</p>
+            <p className="font-medium text-gray-700 text-sm">Sin cortes en revisión</p>
           </div>
         )}
         {enRevision.map(lot => (
