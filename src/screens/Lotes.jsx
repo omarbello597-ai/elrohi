@@ -370,16 +370,25 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
           <div className="flex gap-2 mt-3">
             <Btn variant="secondary" onClick={()=>setShowAssign(false)} className="flex-1">Cancelar</Btn>
             <Btn onClick={async()=>{
-              // Build lotOps from global operations
-              const lotOps = ops.filter(o=>o.active!==false).map(o=>({
-                id: `lo_${lot.id}_${o.id}`,
-                opId: o.id,
-                name: o.name,
-                qty: lot.totalPieces || 0,
-                status: 'pendiente',
-                wId: null,
-              }));
-              advance('costura',{satId:selSat, lotOps});
+              // Fetch operations directly from Firestore to avoid empty ops array
+              try {
+                const { collection, getDocs } = await import('firebase/firestore');
+                const { db } = await import('../firebase');
+                const snap = await getDocs(collection(db, 'operations'));
+                const fetchedOps = snap.docs.map(d=>({id:d.id,...d.data()})).filter(o=>o.active!==false&&o.name);
+                const lotOps = fetchedOps.map(o=>({
+                  id: `lo_${lot.id}_${o.id}`,
+                  opId: o.id,
+                  name: o.name,
+                  qty: lot.totalPieces || 0,
+                  status: 'pendiente',
+                  wId: null,
+                }));
+                advance('costura',{satId:selSat, lotOps});
+              } catch(e) {
+                console.error('Error fetching ops:', e);
+                advance('costura',{satId:selSat, lotOps:[]});
+              }
             }} disabled={!selSat||saving} className="flex-1">Asignar</Btn>
           </div>
         </Modal>
