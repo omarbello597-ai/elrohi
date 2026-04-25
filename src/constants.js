@@ -84,7 +84,7 @@ export const NAV_CONFIG = {
 export const NAV_ITEMS = {
   '/dashboard':          { label: 'Panel General',          icon: 'LayoutDashboard' },
   '/pedidos':            { label: 'Pedidos',                icon: 'ShoppingBag'     },
-  '/lotes':              { label: 'Producción',             icon: 'Package'         },
+  '/lotes':              { label: 'Cortes',                 icon: 'Scissors'        },
   '/satelites':          { label: 'Satélites',              icon: 'Factory'         },
   '/bodegas':            { label: 'Bodegas',                icon: 'Warehouse'       },
   '/operaciones-elrohi': { label: 'Operaciones',            icon: 'Layers'          },
