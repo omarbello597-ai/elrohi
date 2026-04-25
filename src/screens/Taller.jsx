@@ -91,6 +91,21 @@ export default function TallerScreen() {
   const [showRemision, setShowRemision] = useState(null);
 
   const sat       = satellites.find(s => s.id === profile?.satId);
+  const [showNewOp, setShowNewOp] = useState(false);
+  const [newOpName, setNewOpName] = useState('');
+  const [newOpVal,  setNewOpVal]  = useState('');
+  const [savingOp,  setSavingOp]  = useState(false);
+
+  const crearOp = async () => {
+    if (!newOpName) { toast.error('Escribe el nombre'); return; }
+    setSavingOp(true);
+    try {
+      await addDocument('operations', { name: newOpName.trim(), val: +newOpVal||0, satId: profile?.satId, active: true });
+      toast.success('✅ Operación creada');
+      setNewOpName(''); setNewOpVal(''); setShowNewOp(false);
+    } catch { toast.error('Error'); }
+    finally { setSavingOp(false); }
+  };
   const myWorkers = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
   const myLots    = lots.filter(l => l.satId === profile?.satId);
   const [showNewOp, setShowNewOp] = useState(false);
@@ -285,6 +300,65 @@ export default function TallerScreen() {
       )}
 
       {tab==='operarios' && <OperariosTab satId={profile?.satId} workers={myWorkers} />}
+
+      {tab==='mis-ops' && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Operaciones del Satélite</p>
+            <button onClick={()=>setShowNewOp(true)}
+              className="text-xs font-bold px-3 py-1.5 rounded-lg text-white" style={{background:ACCENT}}>
+              + Nueva Operación
+            </button>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
+            {myLots.flatMap(l=>l.lotOps||[]).length===0 && (
+              <div className="text-center py-8">
+                <p className="text-2xl mb-2">⚡</p>
+                <p className="text-sm text-gray-500">Sin operaciones — crea las de tu taller</p>
+              </div>
+            )}
+            {[...new Map(myLots.flatMap(l=>l.lotOps||[]).map(o=>[o.name,o])).values()].map((op,i)=>(
+              <div key={i} className="flex items-center px-4 py-3 border-b border-gray-50 last:border-0">
+                <span className="flex-1 text-sm font-medium text-gray-800">{op.name}</span>
+                <span className="text-sm font-black text-green-700">{fmtM(op.val||0)}</span>
+              </div>
+            ))}
+          </div>
+
+          {showNewOp && (
+            <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+              <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:400}}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-gray-900">Nueva Operación</h2>
+                  <button onClick={()=>setShowNewOp(false)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Nombre *</label>
+                    <input value={newOpName} onChange={e=>setNewOpName(e.target.value)}
+                      placeholder="Ej: Plana, Fileteado, Pegar cremallera..."
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Valor por pieza ($)</label>
+                    <input type="number" min={0} value={newOpVal} onChange={e=>setNewOpVal(e.target.value)}
+                      placeholder="Ej: 6000"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-400" />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={()=>setShowNewOp(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+                  <button onClick={crearOp} disabled={savingOp}
+                    className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
+                    style={{background:ACCENT}}>
+                    {savingOp?'Creando...':'✅ Crear'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {showRemision && (
         <RemisionTintoreriaModal
