@@ -24,7 +24,7 @@ export default function AsignarOpsScreen() {
     } catch { toast.error('Error al asignar'); }
   };
 
-  if (myLots.length === 0) return <EmptyState emoji="🔧" title="Sin lotes activos" sub="Cuando el Admin ELROHI te asigne un lote aparecerá aquí" />;
+  if (myLots.length === 0) return <EmptyState emoji="🔧" title="Sin cortes activos" sub="Cuando el Admin ELROHI te asigne un corte aparecerá aquí" />;
 
   return (
     <div>
@@ -48,7 +48,7 @@ export default function AsignarOpsScreen() {
           {/* Operations list */}
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Operaciones del lote</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Operaciones del corte</p>
               <span className="text-xs font-bold text-gray-700">{lotProgress(lot)}% completado</span>
             </div>
             <div className="space-y-1.5">
