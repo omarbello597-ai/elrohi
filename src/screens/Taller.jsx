@@ -494,7 +494,7 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
       };
       // Consecutivo remision del satelite
       const { getDoc, doc, setDoc, increment } = await import('firebase/firestore');
-      const { db } = await import('../../firebase');
+      const { db } = await import('../firebase');
       const consRef = doc(db, 'consecutivos', `remision_${profile?.satId}`);
       const consSnap = await getDoc(consRef);
       const numRem = (consSnap.exists() ? consSnap.data().current : 0) + 1;
