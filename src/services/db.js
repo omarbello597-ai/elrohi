@@ -45,7 +45,7 @@ export const createUserProfile = (uid, data) =>
   setDoc(doc(db, 'users', uid), { ...data, createdAt: serverTimestamp() });
 
 // ─── CLIENTS ──────────────────────────────────────────────────────────────────
-export const listenClients = (cb) => listenCol('clients', cb, orderBy('name'));
+export const listenClients = (cb) => listenCol('clients', cb);
 
 export const saveClient = (data) =>
   data.id ? updateDocument('clients', data.id, data) : addDocument('clients', data);
