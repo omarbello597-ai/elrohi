@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 import { addDocument, updateDocument, listenCol } from '../services/db';
 import { fmtM } from '../utils';
 import { ACCENT } from '../constants';
@@ -124,6 +125,7 @@ const emptyItem = () => ({ descripcion:'', talla:'', qty:1, precioUnitario:0, pr
 
 export default function PedidosScreen() {
   const { profile } = useAuth();
+  const { lots, inventario } = useData();
   const [despachos,  setDespachos]  = useState([]);
   const [facturas,   setFacturas]   = useState([]);
   const [clientes,   setClientes]   = useState([]);
