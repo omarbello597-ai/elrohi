@@ -82,6 +82,7 @@ export default function RecepcionTintoreria() {
 
   // Lotes en tintorería
   const lotesEnTinto = lots.filter(l => l.status === 'tintoreria');
+  const remisionesEnviadas = remisiones.filter(r => r.tintoreriaId === profile?.id || isTinto);
   // Remisiones pendientes de recepción por admin
   const remisionesPendientes = remisiones.filter(r => r.status === 'enviada');
 
@@ -192,7 +193,7 @@ export default function RecepcionTintoreria() {
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
         {[
           ['pendientes', isTinto ? `📦 Lotes (${lotesEnTinto.length})` : `📦 Por recibir (${remisionesPendientes.length})`],
-          ['historial',  '📋 Historial'],
+          ['historial',  isTinto ? `📋 Mis Remisiones (${remisiones.length})` : '📋 Historial'],
         ].map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
@@ -287,7 +288,30 @@ export default function RecepcionTintoreria() {
       )}
 
       {/* HISTORIAL */}
-      {tab==='historial' && (
+      {tab==='historial' && isTinto && (
+        <div className="space-y-3">
+          {remisiones.length===0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">📋</p>
+              <p className="font-medium text-gray-700">Sin remisiones enviadas</p>
+            </div>
+          )}
+          {remisiones.map(r=>(
+            <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="font-mono text-xs font-bold text-blue-700">{r.codigoRemision||r.lotCode}</span>
+                <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${r.status==='completado'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}`}>
+                  {r.status==='completado'?'✅ Recibida por ELROHI':'⏳ En tintorería'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">Satélite: {r.satName}</p>
+              <p className="text-xs text-gray-400">Piezas: {r.conteo?.reduce((a,g)=>a+(+g.enviado||0),0)||0}</p>
+              {r.hayFaltantes && <p className="text-xs text-amber-600 mt-1">⚠ Envío parcial</p>}
+            </div>
+          ))}
+        </div>
+      )}
+      {tab==='historial' && !isTinto && (
         <div className="space-y-3">
           {recepciones.length===0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">

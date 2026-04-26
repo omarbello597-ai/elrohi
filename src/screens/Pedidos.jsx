@@ -32,9 +32,18 @@ const tallaEnRango = (talla, rango) => {
 
 // Obtener precio de un producto para una talla específica
 const getPrecioParaTalla = (producto, talla) => {
-  if (!producto?.precios) return 0;
+  if (!producto?.precios || !talla) return 0;
+  // Try exact match first (case insensitive)
+  const exact = producto.precios.find(p => 
+    p.talla?.replace(/\s/g,'').toUpperCase() === talla.replace(/\s/g,'').toUpperCase()
+  );
+  if (exact) return +exact.precio || 0;
+  // Try range match
   const rango = producto.precios.find(p => tallaEnRango(talla, p.talla));
-  return rango?.precio || 0;
+  if (rango) return +rango.precio || 0;
+  // If only one price entry, use it
+  if (producto.precios.length === 1) return +producto.precios[0].precio || 0;
+  return 0;
 };
 
 // Obtener tallas disponibles de un producto
@@ -180,7 +189,7 @@ export default function PedidosScreen() {
         const prod = productos[key==='productoIdx' ? +val : next[i].productoIdx];
         const talla = key==='talla' ? val : next[i].talla;
         if (prod && talla) {
-          next[i].precioUnitario = getPrecioParaTalla(prod, talla);
+          next[i].precioUnitario = +getPrecioParaTalla(prod, talla) || 0;
           next[i].descripcion    = prod.descripcion;
         }
         if (key==='productoIdx') {
@@ -196,33 +205,37 @@ export default function PedidosScreen() {
 
   const totalPedido = items.reduce((a,i)=>a+(i.qty||0)*i.precioUnitario,0);
 
-  // Verificar disponibilidad en bodega e inventario en proceso
-  const checkDisponibilidad = () => {
-    if (!inventario || !lots) return [];
-    return items.filter(item=>item.descripcion).map(item=>{
-      // Buscar en inventario bodega lonas
-      const enBodega = (inventario||[]).filter(inv=>
-        inv.descripcion?.toLowerCase().includes(item.descripcion?.toLowerCase().split(' ')[0]) &&
-        inv.talla === item.talla
-      ).reduce((a,inv)=>a+(inv.qty||0),0);
-      // Buscar en cortes en proceso
-      const enProceso = lots.filter(l=>
-        !['despachado','nuevo'].includes(l.status)
-      ).flatMap(l=>l.garments||[]).filter(g=>
-        (g.descripcionRef||'').toLowerCase().includes(item.descripcion?.toLowerCase().split(' ')[0])
-      ).reduce((a,g)=>a+(g.total||0),0);
+  // Verificar disponibilidad - usa inventario y cortes en proceso
+  const disponibilidad = useMemo(()=>{
+    return items.filter(item=>item.descripcion && item.qty>0).map(item=>{
+      const desc = (item.descripcion||'').toLowerCase();
+      const talla = (item.talla||'').toUpperCase();
+      
+      // Buscar en inventario por descripcion y talla (match flexible)
+      const keyword = desc.split(' ').slice(0,2).join(' '); // primeras 2 palabras
+      const enBodega = (inventario||[]).filter(inv=>{
+        const invDesc = (inv.descripcion||inv.nombre||'').toLowerCase();
+        const invTalla = (inv.talla||'').toUpperCase();
+        return invDesc.includes(keyword) && (!talla || invTalla === talla || !invTalla);
+      }).reduce((a,inv)=>a+(+inv.qty||+inv.cantidad||0),0);
+      
+      // Buscar en cortes activos
+      const enProceso = (lots||[]).filter(l=>
+        !['despachado','nuevo','en_corte'].includes(l.status)
+      ).flatMap(l=>l.garments||[]).filter(g=>{
+        const gDesc = (g.descripcionRef||'').toLowerCase();
+        return gDesc.includes(keyword);
+      }).reduce((a,g)=>a+(g.total||0),0);
+      
       return {
         descripcion: item.descripcion,
-        talla: item.talla,
-        qty: item.qty,
-        enBodega,
-        enProceso,
+        talla, qty: +item.qty,
+        enBodega, enProceso,
         disponible: enBodega >= item.qty,
         parcial: enBodega < item.qty && (enBodega + enProceso) >= item.qty,
       };
     });
-  };
-  const disponibilidad = checkDisponibilidad();
+  }, [items, inventario, lots]);
 
   const crearPedido = async () => {
     if (!selClienteId)              { toast.error('Selecciona un cliente'); return; }

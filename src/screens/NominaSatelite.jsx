@@ -17,7 +17,7 @@ function FirmaCanvas({ onSave, label }) {
   const gp  = (e,c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; };
   const start=(e)=>{e.preventDefault();drawing.current=true;const c=ref.current;const ctx=c.getContext('2d');const p=gp(e,c);ctx.beginPath();ctx.moveTo(p.x,p.y);};
   const draw=(e)=>{e.preventDefault();if(!drawing.current)return;const c=ref.current;const ctx=c.getContext('2d');ctx.strokeStyle='#14405A';ctx.lineWidth=2.5;ctx.lineCap='round';const p=gp(e,c);ctx.lineTo(p.x,p.y);ctx.stroke();setHas(true);};
-  const stop=()=>{drawing.current=false;};
+  const stop=()=>{drawing.current=false; if(has){onSave(ref.current.toDataURL('image/png'));}};
   const clear=()=>{ref.current.getContext('2d').clearRect(0,0,ref.current.width,ref.current.height);setHas(false);onSave(null);};
   const save=()=>{onSave(ref.current.toDataURL('image/png'));toast.success('Firma guardada');};
   return (
@@ -304,7 +304,7 @@ export default function NominaSateliteScreen() {
           {operarios.map(op=>{
             const calc = calcularOperario(op.id);
             const aj   = ajustes[op.id]||{};
-            const pagado = nominas.some(n=>n.operarioId===op.id && n.periodo===periodo && n.status==='pagado');
+            const pagado = nominas.some(n=>n.operarioId===op.id && n.status==='pagado');
             if (pagado) return (
               <div key={op.id} className="bg-white rounded-xl border border-green-200 p-4 mb-3 opacity-70">
                 <div className="flex items-center justify-between">
