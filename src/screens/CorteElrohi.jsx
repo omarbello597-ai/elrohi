@@ -10,24 +10,38 @@ import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import logo from '../assets/LogoELROHI.jpeg';
 
-const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','34','36','38','40','42','44'];
+const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','2XL','3XL','4XL','28','30','32','34','36','38','40','42','44'];
 const TODAS_TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44','46','48','50'];
 
 // Expand talla ranges from lista de precios into individual tallas
+// Normaliza talla para comparación (XXL = 2XL)
+const normTalla = (t) => {
+  const s = (t||'').replace(/\s/g,'').toUpperCase();
+  if (s==='XXL') return '2XL';
+  if (s==='XXXL') return '3XL';
+  return s;
+};
+
 const getTallasDeProducto = (prod) => {
-  if (!prod?.precios) return [];
+  if (!prod?.precios) return new Set();
   const result = new Set();
+  const TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44','46','48','50'];
   prod.precios.forEach(p => {
     const r = (p.talla||'').replace(/\s/g,'').toUpperCase();
     if (r.includes('-')) {
-      const [a,b] = r.split('-');
-      const ia = TODAS_TALLAS_ORD.findIndex(t=>t===a);
-      const ib = TODAS_TALLAS_ORD.findIndex(t=>t===b);
+      const parts = r.split('-');
+      const a = normTalla(parts[0]);
+      const b = normTalla(parts[parts.length-1]);
+      const ia = TALLAS_ORD.findIndex(t=>normTalla(t)===a);
+      const ib = TALLAS_ORD.findIndex(t=>normTalla(t)===b);
       if (ia>=0 && ib>=0) {
-        for(let k=ia;k<=ib;k++) result.add(TODAS_TALLAS_ORD[k]);
+        for(let k=ia;k<=ib;k++) result.add(normTalla(TALLAS_ORD[k]));
+      } else {
+        // fallback: add both endpoints
+        result.add(a); result.add(b);
       }
     } else {
-      result.add(r);
+      result.add(normTalla(r));
     }
   });
   return result;
@@ -466,7 +480,8 @@ function NuevoFormato({ profile, onBack }) {
                     const key = s.split('/')[0];
                     const prod = productosDisp.find(p=>p.descripcion===item.descripcionRef);
                     const tallasDisp = prod ? getTallasDeProducto(prod) : null;
-                    const habilitada = !item.descripcionRef || !tallasDisp || tallasDisp.size===0 || tallasDisp.has(key);
+                    const normKey = key==='XXL'?'2XL':key==='XXXL'?'3XL':key;
+                    const habilitada = !item.descripcionRef || !tallasDisp || tallasDisp.size===0 || tallasDisp.has(normKey) || tallasDisp.has(key);
                     return (
                       <td key={s} className="border border-blue-100 p-0"
                         style={{background: habilitada ? 'transparent' : '#f0f0f0'}}>
