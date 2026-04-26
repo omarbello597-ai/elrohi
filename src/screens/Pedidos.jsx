@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { addDocument, updateDocument, listenCol } from '../services/db';
 import { fmtM } from '../utils';
