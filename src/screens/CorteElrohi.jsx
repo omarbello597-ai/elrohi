@@ -11,6 +11,27 @@ import toast from 'react-hot-toast';
 import logo from '../assets/LogoELROHI.jpeg';
 
 const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','34','36','38','40','42','44'];
+const TODAS_TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44','46','48','50'];
+
+// Expand talla ranges from lista de precios into individual tallas
+const getTallasDeProducto = (prod) => {
+  if (!prod?.precios) return [];
+  const result = new Set();
+  prod.precios.forEach(p => {
+    const r = (p.talla||'').replace(/\s/g,'').toUpperCase();
+    if (r.includes('-')) {
+      const [a,b] = r.split('-');
+      const ia = TODAS_TALLAS_ORD.findIndex(t=>t===a);
+      const ib = TODAS_TALLAS_ORD.findIndex(t=>t===b);
+      if (ia>=0 && ib>=0) {
+        for(let k=ia;k<=ib;k++) result.add(TODAS_TALLAS_ORD[k]);
+      }
+    } else {
+      result.add(r);
+    }
+  });
+  return result;
+};
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 const genDocName = (num) => {
