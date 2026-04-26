@@ -464,12 +464,17 @@ function NuevoFormato({ profile, onBack }) {
                   </td>
                   {SIZES_REF.map(s => {
                     const key = s.split('/')[0];
+                    const prod = productosDisp.find(p=>p.descripcion===item.descripcionRef);
+                    const tallasDisp = prod ? getTallasDeProducto(prod) : null;
+                    const habilitada = !item.descripcionRef || !tallasDisp || tallasDisp.size===0 || tallasDisp.has(key);
                     return (
-                      <td key={s} className="border border-blue-100 p-0">
+                      <td key={s} className="border border-blue-100 p-0"
+                        style={{background: habilitada ? 'transparent' : '#f0f0f0'}}>
                         <input type="number" min={0} value={item.sizes[key]||''}
                           onChange={e=>updItem(i,'sizes',{...item.sizes,[key]:+e.target.value||0})}
-                          className="w-full text-center border-none outline-none bg-transparent font-semibold"
-                          style={{fontSize:'10px',color:'#1a3a6b',padding:'4px 1px'}} />
+                          disabled={!habilitada}
+                          className="w-full text-center border-none outline-none bg-transparent font-semibold disabled:cursor-not-allowed"
+                          style={{fontSize:'10px',color:habilitada?'#1a3a6b':'#ccc',padding:'4px 1px'}} />
                       </td>
                     );
                   })}
