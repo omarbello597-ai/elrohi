@@ -10,8 +10,8 @@ import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import logo from '../assets/LogoELROHI.jpeg';
 
-const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','2XL','3XL','4XL','28','30','32','34','36','38','40','42','44'];
-const TODAS_TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44','46','48','50'];
+const SIZES_REF = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL','6XL','6','8','10','12','14','16','18','20','22','24','26','28','30','32','34','36','38','40','42','44','46','48','50'];
+const TODAS_TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','5XL','6XL','6','8','10','12','14','16','18','20','22','24','26','28','30','32','34','36','38','40','42','44','46','48','50'];
 
 // Expand talla ranges from lista de precios into individual tallas
 // Normaliza talla para comparación (XXL = 2XL)
@@ -25,7 +25,7 @@ const normTalla = (t) => {
 const getTallasDeProducto = (prod) => {
   if (!prod?.precios) return new Set();
   const result = new Set();
-  const TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','6','8','10','12','14','16','28','30','32','34','36','38','40','42','44','46','48','50'];
+  const TALLAS_ORD = ['XS','S','M','L','XL','XXL','2XL','3XL','4XL','5XL','6XL','6','8','10','12','14','16','18','20','22','24','26','28','30','32','34','36','38','40','42','44','46','48','50'];
   prod.precios.forEach(p => {
     const r = (p.talla||'').replace(/\s/g,'').toUpperCase();
     if (r.includes('-')) {
@@ -102,10 +102,10 @@ function FirmaCanvas({ onSave, label }) {
 function printFormato(fc, logoBase64='') {
   const lot = fc.lot || {};
   const garmentRows = (lot.garments||[]).map((g,i)=>{
-    const sizes = SIZES_REF.map(s=>{const key=s.split('/')[0]; const val=g.sizes?.[key]||''; return `<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${val||''}</td>`;}).join('');
+    const sizes = SIZES_REF.map(s=>{const val=g.sizes?.[s]||''; return `<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${val||''}</td>`;}).join('');
     return `<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;font-weight:500;color:#1a3a6b">${g.descripcionRef||gLabel(g.gtId)}</td>${sizes}<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#dce6f5">${g.total?.toLocaleString('es-CO')||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#fff0e0;color:#e85d26">${fc.cortesRef?.[i]||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic;background:#fdfbff">${fc.comentariosRef?.[i]||''}</td></tr>`;
   }).join('');
-  const emptyRef = Array(Math.max(0,5-(lot.garments||[]).length)).fill(0).map(()=>`<tr><td style="border:1px solid #1a3a6b;height:22px"></td>${SIZES_REF.map(()=>'<td style="border:1px solid #1a3a6b"></td>').join('')}<td style="border:1px solid #1a3a6b;background:#dce6f5"></td><td style="border:1px solid #1a3a6b;background:#fff0e0"></td><td style="border:1px solid #1a3a6b;background:#fdfbff"></td></tr>`).join('');
+  const emptyRef = Array(Math.max(0,5-(lot.garments||[]).length)).fill(0).map(()=>`<tr><td style="border:1px solid #1a3a6b;height:22px"></td>${SIZES_REF.map(s=>'<td style="border:1px solid #1a3a6b"></td>').join('')}<td style="border:1px solid #1a3a6b;background:#dce6f5"></td><td style="border:1px solid #1a3a6b;background:#fff0e0"></td><td style="border:1px solid #1a3a6b;background:#fdfbff"></td></tr>`).join('');
   const espRows = (fc.especificaciones||[]).map(e=>`<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;height:22px">${e.tipoTela||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${e.metrosUsados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;color:#dc2626">${e.metrosDesechados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;font-style:italic">${e.comentario||''}</td></tr>`).join('');
   const firmaBox = (label,img,nombre,fecha) => `<div style="text-align:center;padding:6px 14px">${img?`<img src="${img}" style="height:44px;display:block;margin:0 auto 3px;border-bottom:1px solid #1a3a6b;width:80%">`:`<div style="height:44px;border-bottom:1px solid #1a3a6b;margin:0 16px"></div>`}<div style="font-size:9px;font-weight:700;color:#1a3a6b">${label}</div>${nombre?`<div style="font-size:9px;color:#374151">${nombre}</div>`:''}${fecha?`<div style="font-size:8px;color:#6b7280">${fecha}</div>`:''}</div>`;
 
@@ -122,7 +122,7 @@ function printFormato(fc, logoBase64='') {
       <div style="padding:6px 14px;display:flex;align-items:center;gap:8px;border-left:1px solid #1a3a6b"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Lote:</span><span style="font-size:11px;font-weight:700;color:#e85d26;font-family:monospace">${fc.lotCode||''}</span></div>
     </div>
     <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">REFERENCIAS — PRENDAS</div>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#deeaf5;font-size:9px;font-weight:700;color:#14405A;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:${s.includes('/')?'32':'28'}px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#c5daf0;font-size:9px;font-weight:700;color:#14405A;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="width:100px;border:1px solid #1a3a6b;padding:3px 6px;background:#deeaf5;font-size:9px;font-weight:700;color:#14405A;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:28px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#c5daf0;font-size:9px;font-weight:700;color:#14405A;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
     <div style="background:#2878B4;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">ESPECIFICACIONES DE TELA</div>
     <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="border:1px solid #1a3a6b;padding:3px 8px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:left;width:200px">Tipo de tela</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:center;width:160px">Metros usados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#dc2626;text-align:center;width:160px">Metros desechados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:8px;font-weight:700;color:#92400e;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${espRows}</tbody></table>
     <div style="border-top:1px solid #1a3a6b;padding:7px 12px;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="flex:1;border-bottom:1px solid #1a3a6b;min-height:18px;display:inline-block;font-size:11px;padding:0 4px">${fc.nota||''}</span></div>
@@ -447,7 +447,7 @@ function NuevoFormato({ profile, onBack }) {
               <tr style={{background:'#e8eef7'}}>
                 <th className="border border-blue-200 px-2 py-1.5 text-left text-[9px] text-blue-800 font-bold" style={{width:'115px'}}>Referencia</th>
                 {SIZES_REF.map(s=>(
-                  <th key={s} className="border border-blue-200 px-0 py-1.5 text-[8px] text-blue-700 font-bold text-center" style={{width: s.includes('/')?'30px':'26px'}}>{s}</th>
+                  <th key={s} className="border border-blue-200 px-0 py-1.5 text-[8px] text-blue-700 font-bold text-center" style={{width:'26px'}}>{s}</th>
                 ))}
                 <th className="border border-blue-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{background:'#dce6f5',color:'#1a3a6b',width:'44px'}}>TOTAL</th>
                 <th className="border border-blue-200 px-1 py-1.5 text-[9px] font-bold text-center" style={{background:'#fff0e0',color:ACCENT,width:'46px'}}>#CORTE</th>
@@ -518,8 +518,7 @@ function NuevoFormato({ profile, onBack }) {
               <tr style={{background:'#f0f4f8'}}>
                 <td className="border border-blue-100 px-2 py-1.5 font-bold text-blue-800" style={{fontSize:'10px'}}>TOTAL GENERAL</td>
                 {SIZES_REF.map(s=>{
-                  const key=s.split('/')[0];
-                  const sum=items.reduce((a,it)=>a+(it.sizes[key]||0),0);
+                  const sum=items.reduce((a,it)=>a+(+it.sizes[s]||0),0);
                   return <td key={s} className="border border-blue-100 px-1 py-1.5 text-center font-bold" style={{color:sum>0?'#1a3a6b':'#d1d5db',fontSize:'10px'}}>{sum>0?sum:'—'}</td>;
                 })}
                 <td className="border border-blue-100 px-1 py-1.5 text-center font-black text-blue-900" style={{background:'#dce6f5',fontSize:'11px'}}>{totalPiezas.toLocaleString('es-CO')}</td>
