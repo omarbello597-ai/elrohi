@@ -1,3 +1,4 @@
+import { LOGO_ELROHI } from '../assets/logoBase64';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useData }     from '../contexts/DataContext';
 import { addDocument } from '../services/db';
