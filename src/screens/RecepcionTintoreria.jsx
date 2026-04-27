@@ -228,7 +228,7 @@ export default function RecepcionTintoreria() {
                         {g.descripcionRef||gLabel(g.gtId)}: {g.total}
                       </span>
                      ))
-                   )}
+                  }
                   </div>
                 </div>
                 <button onClick={()=>openRemision(lot)}
