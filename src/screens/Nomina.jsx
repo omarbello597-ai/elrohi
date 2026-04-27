@@ -136,7 +136,7 @@ function printRecibo(data) {
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
   </head><body><div style="max-width:650px;margin:20px auto;border:1.5px solid #14405A">
     <div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:20px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><img src="https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg" style="height:52px;width:auto;object-fit:contain" /><div><div style="font-size:20px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>
         <div style="font-size:9px;color:#14405A">NIT. 901.080.234-7</div></div>
       <div style="text-align:right">
         <div style="font-size:9px;color:#6b7280">RECIBO DE PAGO</div>
