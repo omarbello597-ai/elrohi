@@ -495,7 +495,7 @@ export function NominaScreen() {
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-lg flex-shrink-0">🏭</div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900">{s.name}</p>
-                  <p className="text-[10px] text-gray-400">{s.compOps} ops · {s.workerBreakdown?.length} operarios</p>
+                  <p className="text-xs text-gray-400">{s.compOps} ops · {(s.detalle||[]).length} items</p>
                   {pagado && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
                 </div>
                 <div className="text-right">
@@ -526,7 +526,7 @@ export function NominaScreen() {
 
 
               {/* Desglose por operario con detalle */}
-              {s.workerBreakdown?.length>0 && (
+              {(s.workerBreakdown||[]).length>0 && (
                 <div className="mb-4">
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operarios del satélite</p>
                   {s.workerBreakdown.map((w,i)=>(
