@@ -357,7 +357,12 @@ function NuevoFormato({ profile, onBack }) {
     if (!nombre)      { toast.error('Escribe tu nombre'); return; }
     setSaving(true);
     try {
-      const code    = genLotCode();
+      // Obtener consecutivo SOLO al guardar
+      const { getNextCorteNum } = await import('../services/consecutivos');
+      const numConsec = await getNextCorteNum();
+      const numCorteGuardado = String(numConsec).padStart(4,'0');
+      setNumCorte(numCorteGuardado);
+      const code = `ELROHI-${new Date().getFullYear()}-${numCorteGuardado}`;
       const nowISO  = new Date().toISOString();
       const lotData = {
         code, descripcion: descripcion||code, clientId: null,
@@ -369,8 +374,9 @@ function NuevoFormato({ profile, onBack }) {
         timeline: [{ status:'nuevo', entró: nowISO, salió:null, duracionMs:null, duracion:null, cambiadoPor: nombre, cambiadoPorId: profile?.id }],
       };
       const lotId = await addDocument('lots', lotData);
+      const docName = `ELROHI_Corte${numCorteGuardado}_Fecha_${String(new Date().getDate()).padStart(2,'0')}${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][new Date().getMonth()]}${new Date().getFullYear()}`;
       await addDocument('formatosCorte', {
-        nombreDoc, numCorte: String(numCorte).padStart(4,'0'),
+        nombreDoc: docName, numCorte: numCorteGuardado,
         lotId, lotCode: code, status: 'enviado', date: today(),
         lot: {...lotData, id: lotId},
         cortesRef:      items.map(i=>i.corte),
