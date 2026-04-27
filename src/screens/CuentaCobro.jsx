@@ -228,6 +228,7 @@ export default function CuentaCobroScreen() {
         status: 'pendiente_revision',
       });
       toast.success(`✅ Cuenta de cobro N° ${numero} enviada a Admin ELROHI`);
+      setTab('pendiente');
       setItems([]); setDescuentos([]); setAdicionales([]);
       setFirmaSat(null); setPeriodo('');
       setTab('historial');
@@ -270,7 +271,8 @@ export default function CuentaCobroScreen() {
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
         {[
           isSat ? ['nueva','📋 Nueva Cuenta'] : null,
-          ['historial', isSat ? `📁 Mis Cuentas` : `📁 Cuentas (${cuentas.filter(c=>c.status==='pendiente_revision').length} pendientes)`],
+          isSat ? ['pendiente',`⏳ Pendiente pago (${cuentas.filter(c=>c.satId===profile?.satId&&c.status==='pendiente_revision').length})`] : null,
+          ['historial', isSat ? `📁 Historial` : `📁 Cuentas (${cuentas.filter(c=>c.status==='pendiente_revision').length} pendientes)`],
         ].filter(Boolean).map(([k,l])=>(
           <button key={k} onClick={()=>setTab(k)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
@@ -432,6 +434,41 @@ export default function CuentaCobroScreen() {
             style={{background:ACCENT}}>
             {saving?'Enviando...':'📋 Enviar cuenta de cobro a Admin ELROHI'}
           </button>
+        </div>
+      )}
+
+      {/* PENDIENTE DE PAGO (Satélite) */}
+      {tab==='pendiente' && isSat && (
+        <div className="space-y-3">
+          {cuentas.filter(c=>c.satId===profile?.satId&&c.status==='pendiente_revision').length===0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+              <p className="text-3xl mb-2">✅</p>
+              <p className="text-sm text-gray-500">Sin cuentas pendientes de pago</p>
+            </div>
+          )}
+          {cuentas.filter(c=>c.satId===profile?.satId&&c.status==='pendiente_revision').map(cc=>(
+            <div key={cc.id} className="bg-white rounded-xl border border-amber-200 p-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs font-bold text-blue-700">CC-{cc.numero}</span>
+                    <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">⏳ Pendiente pago</span>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900">{cc.periodo}</p>
+                  <p className="text-[10px] text-gray-400">{cc.fecha}</p>
+                </div>
+                <p className="text-xl font-black text-green-700 flex-shrink-0">{fmtM(cc.total)}</p>
+              </div>
+              <div className="space-y-1">
+                {(cc.items||[]).map((item,i)=>(
+                  <div key={i} className="flex justify-between text-xs text-gray-600 py-0.5 border-b border-gray-50 last:border-0">
+                    <span className="truncate flex-1 mr-2">{item.lotCode} — {item.descripcion}</span>
+                    <span className="font-bold flex-shrink-0">{fmtM(item.subtotal)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
