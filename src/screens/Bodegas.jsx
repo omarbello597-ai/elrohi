@@ -70,11 +70,12 @@ export default function BodegasScreen() {
   const inventarioLonas = {};
   lots.filter(l => l.status === 'bodega_lonas').forEach(lot => {
     (lot.garments||[]).forEach(g => {
-      if (!inventarioLonas[g.gtId]) inventarioLonas[g.gtId] = { gtId:g.gtId, descripcionRef:g.descripcionRef||'', sizes:{}, total:0 };
+      const key = g.descripcionRef || g.gtId;
+      if (!inventarioLonas[key]) inventarioLonas[key] = { gtId:g.gtId, descripcionRef:key, sizes:{}, total:0 };
       Object.entries(g.sizes||{}).forEach(([sz,qty]) => {
-        inventarioLonas[g.gtId].sizes[sz] = (inventarioLonas[g.gtId].sizes[sz]||0) + (+qty||0);
+        if (+qty > 0) inventarioLonas[key].sizes[sz] = (inventarioLonas[key].sizes[sz]||0) + (+qty||0);
       });
-      inventarioLonas[g.gtId].total += g.total||0;
+      inventarioLonas[key].total += g.total||0;
     });
   });
 
@@ -312,31 +313,20 @@ export default function BodegasScreen() {
         {Object.values(inventarioLonas).map(g => (
           <div key={g.gtId} className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-bold text-gray-900">{g.descripcionRef||g.nombre||gLabel(g.gtId)}</p>
+              <p className="text-sm font-bold text-gray-900">{g.descripcionRef||gLabel(g.gtId)}</p>
               <div className="text-right">
                 <p className="text-xl font-black text-blue-700">{g.total.toLocaleString('es-CO')}</p>
                 <p className="text-[10px] text-gray-400">piezas disponibles</p>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-xs">
-                <thead>
-                  <tr className="bg-gray-50">
-                    {SIZES.map(s=><th key={s} className="px-3 py-1.5 text-center text-gray-500 font-medium border border-gray-100 w-16">{s}</th>)}
-                    <th className="px-3 py-1.5 text-center text-gray-700 font-bold border border-gray-100">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    {SIZES.map(s=>{
-                      const qty = g.sizes[s]||0;
-                      return <td key={s} className="px-3 py-2 text-center border border-gray-100 font-semibold"
-                        style={{color:qty>0?'#1a3a6b':'#d1d5db'}}>{qty>0?qty:'—'}</td>;
-                    })}
-                    <td className="px-3 py-2 text-center font-black text-gray-900 border border-gray-100 bg-gray-50">{g.total}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {Object.entries(g.sizes||{}).filter(([,v])=>+v>0).map(([talla,qty])=>(
+                <div key={talla} className="bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 text-center min-w-[48px]">
+                  <p className="text-[9px] text-blue-500 font-bold">{talla}</p>
+                  <p className="text-xs font-black text-blue-800">{(+qty).toLocaleString('es-CO')}</p>
+                </div>
+              ))}
+            </div>
             </div>
           </div>
         ))}
