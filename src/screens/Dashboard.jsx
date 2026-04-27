@@ -73,7 +73,7 @@ export default function Dashboard() {
             {inventario.filter(i=>(i.total||0)>0).map(item => (
               <div key={item.gtId} className="px-3 py-2 bg-gray-50 rounded-xl">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-gray-800">{gLabel(item.gtId)}</span>
+                  <span className="text-xs font-bold text-gray-800">{item.descripcionRef||gLabel(item.gtId)}</span>
                   <span className="text-sm font-black text-gray-700">{(item.total||0).toLocaleString('es-CO')}</span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -188,7 +188,7 @@ export default function Dashboard() {
               <tbody>
                 {lotsEnProd.slice(0,8).map(l => {
                   const prog   = lotProgress(l);
-                  const gNames = [...new Set((l.garments||[]).map(g=>gLabel(g.gtId)))].slice(0,2).join(', ');
+                  const gNames = [...new Set((l.garments||[]).map(g=>g.descripcionRef||gLabel(g.gtId)))].slice(0,2).join(', ');
                   const st     = LOT_STATUS[l.status];
                   const vencido = new Date(l.deadline) < new Date();
                   return (
