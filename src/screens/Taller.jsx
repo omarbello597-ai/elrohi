@@ -464,7 +464,7 @@ function OperariosTab({ satId, workers }) {
 
 // ─── MODAL REMISIÓN A TINTORERÍA ──────────────────────────────────────────────
 function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
-  const [conteo,      setConteo]      = useState((lot.garments||[]).map(g=>({gtId:g.gtId,original:g.total,enviado:g.total,novedad:''})));
+  const [conteo,      setConteo]      = useState((lot.garments||[]).map(g=>({gtId:g.gtId,descripcionRef:g.descripcionRef||'',original:g.total,enviado:g.total,novedad:''})));
   const [nota,        setNota]        = useState('');
   const [nombreSat,   setNombreSat]   = useState(profile?.name||'');
   const [firmaSat,    setFirmaSat]    = useState(null);
@@ -493,8 +493,12 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
         status: 'completado',
       };
       // Consecutivo remision del satelite
-      const { getNextRemisionNum } = await import('../services/consecutivos');
-      const numRem = await getNextRemisionNum(profile?.satId);
+      const { doc, getDoc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      const consRef = doc(db, 'consecutivos', `remision_${profile?.satId||'sat'}`);
+      const consSnap = await getDoc(consRef);
+      const numRem = (consSnap.exists() ? (consSnap.data().current||0) : 0) + 1;
+      await setDoc(consRef, { current: numRem }, { merge: true });
       remData.numeroRemision = numRem;
       remData.codigoRemision = `REM-${String(numRem).padStart(4,'0')}`;
       await addDocument('remisionesTinto', remData);
@@ -532,7 +536,7 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
             return (
               <div key={i} className="bg-white border border-gray-200 rounded-xl p-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-sm font-bold text-gray-800 flex-1">{gLabel(g.gtId)}</span>
+                  <span className="text-sm font-bold text-gray-800 flex-1">{g.descripcionRef||gLabel(g.gtId)}</span>
                   <span className="text-xs text-gray-500">Original: <strong>{g.original}</strong></span>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-gray-600">Enviar:</span>
