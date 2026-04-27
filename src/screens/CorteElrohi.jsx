@@ -268,7 +268,7 @@ export default function CorteElrohiScreen() {
                       <thead>
                         <tr className="bg-gray-50">
                           <th className="px-2 py-1 text-left text-gray-500 font-medium border border-gray-200">Prenda</th>
-                          {SIZES.map(s=><th key={s} className="px-2 py-1 text-center text-gray-500 font-medium border border-gray-200 w-10">{s}</th>)}
+                          {SIZES.filter(s=>(lot.garments||[]).some(g=>(+g.sizes?.[s]||0)>0)).map(s=><th key={s} className="px-2 py-1 text-center text-gray-500 font-medium border border-gray-200 w-10">{s}</th>)}
                           <th className="px-2 py-1 text-center text-gray-700 font-bold border border-gray-200">Total</th>
                         </tr>
                       </thead>
