@@ -40,31 +40,31 @@ function printRemisionTinto(lot, satName, remData) {
   const conteoRows = remData.conteo.map(g => {
     const faltante = g.original - g.enviado;
     return `<tr>
-      <td style="border:1px solid #1a3a6b;padding:4px 8px;font-size:11px;font-weight:500;color:#1a3a6b">${gLabel(g.gtId)}</td>
-      <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:#1a3a6b;background:#dce6f5">${g.original}</td>
+      <td style="border:1px solid #14405A;padding:4px 8px;font-size:11px;font-weight:500;color:#14405A">${g.descripcionRef||gLabel(g.gtId)}</td>
+      <td style="border:1px solid #14405A;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:#14405A;background:#dce6f5">${g.original}</td>
       <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4">${g.enviado}</td>
       <td style="border:1px solid #1a3a6b;padding:4px 8px;text-align:center;font-size:11px;font-weight:700;${faltante>0?'color:#dc2626;background:#fef2f2':'color:#15803d;background:#f0fdf4'}">${faltante>0?`-${faltante}`:'✓'}</td>
       <td style="border:1px solid #1a3a6b;padding:4px 8px;font-size:10px;color:#374151;font-style:italic">${g.novedad||''}</td>
     </tr>`;
   }).join('');
-  const firmaBox = (label,img,nombre,fecha) => `<div style="padding:10px 16px;text-align:center">${img?`<img src="${img}" style="height:70px;display:block;margin:0 auto 5px;border-bottom:1.5px solid #1a3a6b;width:85%;object-fit:contain">`:`<div style="height:70px;border-bottom:1.5px solid #1a3a6b;margin:0 20px"></div>`}<div style="font-size:10px;font-weight:700;color:#1a3a6b;letter-spacing:0.08em;margin-top:5px">${label}</div>${nombre?`<div style="font-size:11px;color:#374151;margin-top:2px;font-weight:500">${nombre}</div>`:''}${fecha?`<div style="font-size:9px;color:#6b7280;margin-top:1px">${fecha}</div>`:''}</div>`;
+  const firmaBox = (label,img,nombre,fecha) => `<div style="padding:10px 16px;text-align:center">${img?`<img src="${img}" style="height:70px;display:block;margin:0 auto 5px;border-bottom:1.5px solid #14405A;width:85%;object-fit:contain">`:`<div style="height:70px;border-bottom:1.5px solid #1a3a6b;margin:0 20px"></div>`}<div style="font-size:10px;font-weight:700;color:#14405A;letter-spacing:0.08em;margin-top:5px">${label}</div>${nombre?`<div style="font-size:11px;color:#374151;margin-top:2px;font-weight:500">${nombre}</div>`:''}${fecha?`<div style="font-size:9px;color:#6b7280;margin-top:1px">${fecha}</div>`:''}</div>`;
   const hayFaltantes = remData.conteo.some(g => g.enviado < g.original);
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Remisión Tintorería</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style></head><body>
-  <div style="max-width:900px;margin:12px auto;border:1.5px solid #1a3a6b">
+  <div style="max-width:900px;margin:12px auto;border:1.5px solid #14405A">
     <div style="border-bottom:2px solid #1a3a6b;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
       <div style="width:76px;height:58px;border:1.5px dashed #9ca3af;border-radius:4px;display:flex;align-items:center;justify-content:center"><span style="font-size:8px;color:#9ca3af;text-align:center">Logo<br>cliente</span></div>
       <div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:#1a3a6b">Dotaciones <span style="color:#e85d26">EL ROHI</span></div><div style="font-size:9px;color:#1a3a6b;margin-top:2px">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div></div>
       <div style="border:2px solid #4338ca;padding:5px 12px;text-align:center;border-radius:4px"><div style="font-size:9px;font-weight:700;color:#4338ca;letter-spacing:0.1em">REMISIÓN</div><div style="font-size:11px;font-weight:900;color:#4338ca">TINTORERÍA</div></div>
     </div>
-    <div style="display:flex;border-bottom:1px solid #1a3a6b;flex-wrap:wrap">
-      <div style="border-right:1px solid #1a3a6b;padding:5px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;color:#1a3a6b">FECHA</span><span style="font-size:12px;font-weight:700;color:#1a3a6b;font-family:monospace">${todayFmt()}</span></div>
-      <div style="flex:1;padding:5px 14px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Satélite:</span><span style="font-size:14px;font-weight:700;color:#1a3a6b">${satName}</span></div>
-      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Corte N°:</span><span style="font-size:13px;font-weight:900;color:#e85d26;font-family:monospace">${lot.code}</span></div>
-      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Recibe:</span><span style="font-size:12px;font-weight:700;color:#4338ca">${remData.nombreTinto||'___'}</span></div>
+    <div style="display:flex;border-bottom:1px solid #14405A;flex-wrap:wrap">
+      <div style="border-right:1px solid #14405A;padding:5px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:9px;font-weight:700;color:#14405A">FECHA</span><span style="font-size:12px;font-weight:700;color:#14405A;font-family:monospace">${todayFmt()}</span></div>
+      <div style="flex:1;padding:5px 14px;display:flex;align-items:center;gap:8px"><span style="font-size:10px;font-weight:700;color:#14405A">Satélite:</span><span style="font-size:14px;font-weight:700;color:#14405A">${satName}</span></div>
+      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#14405A">Corte N°:</span><span style="font-size:13px;font-weight:900;color:#2878B4;font-family:monospace">${lot.code}</span></div>
+      <div style="padding:5px 14px;border-left:1px solid #1a3a6b;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#14405A">Recibe:</span><span style="font-size:12px;font-weight:700;color:#2878B4">${remData.nombreTinto||'___'}</span></div>
     </div>
-    <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">CONTEO DE PRENDAS</div>
+    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">CONTEO DE PRENDAS</div>
     <table style="width:100%;border-collapse:collapse"><thead><tr style="background:#e8eef7">
-      <th style="border:1px solid #1a3a6b;padding:5px 10px;font-size:10px;font-weight:700;color:#1a3a6b;text-align:left">Referencia</th>
+      <th style="border:1px solid #14405A;padding:5px 10px;font-size:10px;font-weight:700;color:#14405A;text-align:left">Referencia</th>
       <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#1a3a6b;text-align:center;background:#dce6f5">Originales</th>
       <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#15803d;text-align:center;background:#f0fdf4">Enviadas</th>
       <th style="border:1px solid #1a3a6b;padding:5px 8px;font-size:10px;font-weight:700;color:#374151;text-align:center">Diferencia</th>
@@ -74,10 +74,10 @@ function printRemisionTinto(lot, satName, remData) {
       <span style="font-size:10px;font-weight:700;color:${hayFaltantes?'#92400e':'#15803d'}">${hayFaltantes?'⚠ ENVÍO PARCIAL — Hay prendas faltantes':'✓ ENVÍO COMPLETO'}</span>
     </div>
     ${remData.nota?`<div style="border-top:1px solid #1a3a6b;padding:7px 14px;display:flex;gap:8px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="font-size:11px">${remData.nota}</span></div>`:''}
-    <div style="background:#1a3a6b;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">FIRMAS</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;border-top:0.5px solid #1a3a6b">
+    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:4px 10px">FIRMAS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-top:0.5px solid #14405A">
       ${firmaBox('Entregado por — Admin Satélite',remData.firmaSat,remData.nombreSat,remData.fechaSat)}
-      <div style="border-left:1px solid #1a3a6b">${firmaBox('Recibido por — Tintorería',remData.firmaTinto,remData.nombreTinto,remData.fechaTinto)}</div>
+      <div style="border-left:1px solid #14405A">${firmaBox('Recibido por — Tintorería',remData.firmaTinto,remData.nombreTinto,remData.fechaTinto)}</div>
     </div>
   </div>
   <script>window.onload=()=>window.print();</script></body></html>`;
