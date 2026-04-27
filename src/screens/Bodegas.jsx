@@ -338,7 +338,6 @@ export default function BodegasScreen() {
               </div>
             </div>
             <SizesBadges sizes={g.sizes} />
-            </div>
           </div>
         ))}
       </div>
