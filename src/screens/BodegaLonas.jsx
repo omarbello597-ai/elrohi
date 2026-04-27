@@ -217,7 +217,7 @@ export default function BodegaLonasScreen() {
         ].map(([l,v,c])=>(
           <div key={l} className="bg-white rounded-xl border border-gray-100 p-3 text-center">
             <p className="text-lg font-black" style={{color:c}}>{v}</p>
-            <p className="text-[9px] text-gray-400 uppercase tracking-wide mt-0.5">{l}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mt-0.5">{l}</p>
           </div>
         ))}
       </div>
@@ -254,7 +254,7 @@ export default function BodegaLonasScreen() {
               <div className="px-4 py-3 border-b border-gray-100" style={{background:'#1a3a6b'}}>
                 <div className="grid grid-cols-4 gap-4">
                   {['Referencia','Disponible','En Alistamiento','Total'].map(h=>(
-                    <p key={h} className="text-[10px] font-bold text-white uppercase tracking-wider">{h}</p>
+                    <p key={h} className="text-xs font-bold text-white uppercase tracking-wider">{h}</p>
                   ))}
                 </div>
               </div>
@@ -265,23 +265,23 @@ export default function BodegaLonasScreen() {
                       <p className="text-sm font-bold text-gray-900">{item.descripcionRef||item.nombre||gLabel(item.gtId)}</p>
                       {item.sizes && Object.keys(item.sizes).length>0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {Object.entries(item.sizes).filter(([,v])=>+v>0).map(([talla,qty])=>(
-                            <span key={talla} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full font-bold">
+                          {Object.entries(item.sizes).filter(function(e){ return Number(e[1]) > 0; }).map(function(e){ var talla=e[0]; var qty=e[1]; return (
+                            <span key={talla} className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full font-bold">
                               {talla}: {(+qty).toLocaleString('es-CO')}
                             </span>
-                          ))}
+                          ); })}
                         </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-black text-green-700">{(item.disponible||0).toLocaleString('es-CO')}</span>
-                      <span className="text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">pzas</span>
+                      <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">pzas</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {(item.enAlistamiento||0) > 0 ? (
                         <>
                           <span className="text-lg font-black text-blue-700">{(item.enAlistamiento||0).toLocaleString('es-CO')}</span>
-                          <span className="text-[9px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">reservadas</span>
+                          <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">reservadas</span>
                         </>
                       ) : (
                         <span className="text-sm text-gray-300 font-medium">—</span>
@@ -331,10 +331,10 @@ export default function BodegaLonasScreen() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-mono text-xs font-bold text-blue-700">OD-{p.numero}</span>
-                      <span className={`${st.cls} text-[9px] px-2 py-0.5 rounded-full font-bold`}>{st.label}</span>
+                      <span className={`${st.cls} text-xs px-2 py-0.5 rounded-full font-bold`}>{st.label}</span>
                     </div>
                     <p className="text-sm font-bold text-gray-900">{p.clienteNombre}</p>
-                    <p className="text-[10px] text-gray-400">{p.clienteDireccion} · {p.clienteCiudad}</p>
+                    <p className="text-xs text-gray-400">{p.clienteDireccion} · {p.clienteCiudad}</p>
                     {/* Detalle completo para alistar */}
                     <div className="mt-2 space-y-1">
                       {p.items?.map((item,i)=>{
@@ -351,21 +351,21 @@ export default function BodegaLonasScreen() {
                             <div className="flex-1">
                               <p className="text-xs font-bold text-gray-800">{item.descripcionRef||item.descripcion||gLabel(item.gtId)}</p>
                               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                {item.talla && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">Talla: {item.talla}</span>}
-                                {item.tipo   && <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">{item.tipo}</span>}
-                                {comprometidas>0 && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">⚠ {comprometidas} comprometidas</span>}
+                                {item.talla && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">Talla: {item.talla}</span>}
+                                {item.tipo   && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">{item.tipo}</span>}
+                                {comprometidas>0 && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">⚠ {comprometidas} comprometidas</span>}
                               </div>
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-black text-gray-900">{(+item.qty||0).toLocaleString('es-CO')} <span className="text-xs font-normal text-gray-400">und</span></p>
-                              {item.precioUnitario>0 && <p className="text-[10px] text-green-700 font-bold">{fmtM(item.precioUnitario)} c/u</p>}
+                              {item.precioUnitario>0 && <p className="text-xs text-green-700 font-bold">{fmtM(item.precioUnitario)} c/u</p>}
                             </div>
                           </div>
                         </div>
                         );
                       })}
                     </div>
-                    {p.tomadoPor && <p className="text-[10px] text-blue-500 mt-2 font-medium">📦 Alistando: {p.tomadoPor}</p>}
+                    {p.tomadoPor && <p className="text-xs text-blue-500 mt-2 font-medium">📦 Alistando: {p.tomadoPor}</p>}
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
                     {isBodega && p.status==='pendiente' && (
@@ -431,11 +431,11 @@ export default function BodegaLonasScreen() {
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-mono text-xs font-bold" style={{color:'#e85d26'}}>Factura N° {f.numero}</span>
-                      <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Emitida</span>
-                      {f.listaNombre && <span className="text-[9px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{f.listaNombre}</span>}
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Emitida</span>
+                      {f.listaNombre && <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{f.listaNombre}</span>}
                     </div>
                     <p className="text-sm font-bold text-gray-900">{f.clienteNombre}</p>
-                    <p className="text-[10px] text-gray-400">{f.fecha} · {f.facturadoPor}</p>
+                    <p className="text-xs text-gray-400">{f.fecha} · {f.facturadoPor}</p>
                     <p className="text-sm font-black text-green-600 mt-1">{fmtM(subtotal+iva)}</p>
                   </div>
                   <button onClick={()=>printFactura(f)}
@@ -459,13 +459,13 @@ export default function BodegaLonasScreen() {
             </div>
             <div className="bg-gray-50 rounded-xl p-3 mb-4">
               <p className="text-xs font-bold text-gray-800 mb-2">{showFact.clienteNombre}</p>
-              <p className="text-[10px] text-gray-400 mb-2">{showFact.clienteDireccion} · {showFact.clienteCiudad}</p>
+              <p className="text-xs text-gray-400 mb-2">{showFact.clienteDireccion} · {showFact.clienteCiudad}</p>
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {showFact.items?.map((item,i)=>(
                   <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-gray-100">
                     <div className="flex-1">
                       <p className="text-xs font-bold text-gray-800">{item.descripcionRef||item.descripcion||gLabel(item.gtId)}</p>
-                      {item.talla && <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">Talla: {item.talla}</span>}
+                      {item.talla && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">Talla: {item.talla}</span>}
                     </div>
                     <span className="text-sm font-black text-gray-900 flex-shrink-0">{item.qty} und</span>
                   </div>
@@ -491,7 +491,7 @@ export default function BodegaLonasScreen() {
               const iva=factForm.aplicaIva?Math.round(sub*0.19):0;
               return (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
-                  <p className="text-[10px] font-bold text-blue-800 mb-2">Vista previa:</p>
+                  <p className="text-xs font-bold text-blue-800 mb-2">Vista previa:</p>
                   {items.map((item,i)=>(
                     <div key={i} className="flex justify-between text-xs text-blue-700 mb-1">
                       <span>{item.descripcionRef||item.nombre||gLabel(item.gtId)} × {item.qty}</span>
