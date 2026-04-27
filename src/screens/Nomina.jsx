@@ -56,16 +56,16 @@ function calcOpsEnPeriodo(userId, lots, ops, satOpVals, satId, inicio, fin) {
       total += subtotal;
       detalle.push({ lotCode: lot.code, referencia: lot.descripcion||lot.code, operacion: lo.name||lo.opId, valUnit: val, qty: lo.qty||0, subtotal });
     });
-    // Operaciones internas ELROHI (control calidad, terminación)
+    // Operaciones internas ELROHI (control calidad, terminación, remate)
     (lot.opsElrohi||[]).forEach(op => {
       if (op.wId !== userId || op.status !== 'completado') return;
-      const doneAt = op.doneAt ? new Date(op.doneAt) : null;
-      if (!doneAt || doneAt < inicio || doneAt > fin) return;
-      const val = op.vrTotal && op.qty ? Math.round(op.vrTotal/op.qty) : (op.valorUnitario||op.val||0);
+      // Sin filtro de fecha para asegurar que todas aparezcan en la quincena activa
+      const val = op.valorUnitario || (op.vrTotal && op.qty ? Math.round(op.vrTotal/op.qty) : 0) || op.val || 0;
       const qty  = op.qty || 1;
-      const subtotal = op.vrTotal || (val*qty);
+      const subtotal = op.vrTotal || (val*qty) || 0;
+      if (!subtotal) return;
       total += subtotal;
-      detalle.push({ lotCode: lot.code, referencia: op.referencia||lot.code, operacion: op.operacion||op.name||'Operación', valUnit: val, qty, subtotal });
+      detalle.push({ lotCode: lot.code, referencia: op.referencia||'', operacion: op.operacion||op.name||'Operación', valUnit: val, qty, subtotal });
     });
   });
   return { total, detalle };
@@ -409,7 +409,75 @@ export function NominaScreen() {
       )}
 
       {/* SATÉLITES */}
-      {tab==='satelites' && !selDetalle && (
+      {/* DETALLE OPERARIO ELROHI */}
+      {tab==='elrohi' && selDetalle?.tipo==='elrohi' && (()=>{
+        const {data:u, liq} = selDetalle;
+        return (
+          <div>
+            <button onClick={()=>setSelDetalle(null)} className="text-xs text-gray-500 mb-4 flex items-center gap-1">← Volver</button>
+            <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-black text-white" style={{background:'#14405A'}}>
+                  {u.initials||u.name?.slice(0,2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{u.name}</p>
+                  <p className="text-[10px] text-gray-400">{ROLE_LABELS[u.role]||u.role} · {quincena.label}</p>
+                </div>
+              </div>
+
+              {/* Operaciones realizadas */}
+              {(liq.opsDetalle||[]).length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operaciones realizadas</p>
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-4 gap-1 px-3 py-1.5 bg-gray-100 text-[9px] font-bold text-gray-500 uppercase">
+                      <span className="col-span-1">Corte / Referencia</span>
+                      <span className="col-span-1">Operación</span>
+                      <span className="text-center">Und</span>
+                      <span className="text-right">Total</span>
+                    </div>
+                    {liq.opsDetalle.map((o,i)=>(
+                      <div key={i} className="grid grid-cols-4 gap-1 px-3 py-2 border-b border-gray-100 last:border-0 items-center">
+                        <div className="col-span-1">
+                          <p className="text-[10px] font-mono font-bold text-blue-700">{o.lotCode}</p>
+                          <p className="text-[9px] text-gray-500 leading-tight">{o.referencia||''}</p>
+                        </div>
+                        <div className="col-span-1">
+                          <p className="text-[10px] font-bold text-gray-800">{o.operacion}</p>
+                          <p className="text-[9px] text-gray-400">{fmtM(o.valUnit)}/und</p>
+                        </div>
+                        <span className="text-[10px] text-center text-gray-600">{(o.qty||0).toLocaleString('es-CO')}</span>
+                        <span className="text-[10px] font-black text-gray-900 text-right">{fmtM(o.subtotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resumen */}
+              <div className="space-y-1.5 mb-4">
+                {liq.baseFija>0 && <div className="flex justify-between text-xs px-3 py-2 bg-blue-50 rounded-lg"><span className="text-blue-700">💰 Base fija</span><span className="font-bold text-blue-800">{fmtM(liq.baseFija)}</span></div>}
+                {liq.opsVal>0  && <div className="flex justify-between text-xs px-3 py-2 bg-green-50 rounded-lg"><span className="text-green-700">⚡ Operaciones</span><span className="font-bold text-green-800">{fmtM(liq.opsVal)}</span></div>}
+                {liq.total===0 && <p className="text-xs text-gray-400 italic text-center py-2">Sin movimientos en este período</p>}
+              </div>
+
+              <div className="flex justify-between text-sm font-black border-t border-gray-100 pt-3 mb-4">
+                <span className="text-gray-700">TOTAL A PAGAR</span>
+                <span style={{color:'#e85d26'}}>{fmtM(liq.total)}</span>
+              </div>
+
+              <button onClick={()=>openPayElrohi(u)}
+                className="w-full py-2.5 text-white text-sm font-bold rounded-xl"
+                style={{background: liq.total>0?'#15803d':'#6b7280'}}>
+                💳 Registrar pago — {fmtM(liq.total)}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+            {tab==='satelites' && !selDetalle && (
         <div className="space-y-2">
           {satSummary.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
