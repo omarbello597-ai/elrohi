@@ -300,7 +300,7 @@ export function NominaScreen() {
         const liq = calcLiquidacion(selWorker);
         const desc = +descuento||0;
         const totalFinal = liq.total - desc;
-        const detalleFinal = [...liq.detalle, ...(desc>0?[{concepto:'Descuentos',valor:-desc}]:[])];
+        const detalleFinal = [...(liq.resumen||liq.detalle||[]), ...(desc>0?[{concepto:'Descuentos',valor:-desc}]:[])];
         const data = {
           recId: rec, tipo: 'elrohi',
           workerId: selWorker.id, workerName: selWorker.name,
