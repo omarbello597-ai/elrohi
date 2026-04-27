@@ -83,13 +83,15 @@ export const sumarLoteAInventario = async (lot) => {
       batch.update(ref, {
         disponible: increment(g.total || 0),
         total: increment(g.total || 0),
+        ...(g.descripcionRef ? { nombre: g.descripcionRef, descripcionRef: g.descripcionRef } : {}),
         updatedAt: new Date().toISOString(),
       });
     } else {
       const gt = GARMENT_TYPES.find(x => x.id === g.gtId);
       batch.set(ref, {
         gtId: g.gtId,
-        nombre: gt?.name || g.gtId,
+        nombre: g.descripcionRef || gt?.name || g.gtId,
+        descripcionRef: g.descripcionRef || gt?.name || g.gtId,
         disponible: g.total || 0,
         enAlistamiento: 0,
         total: g.total || 0,
