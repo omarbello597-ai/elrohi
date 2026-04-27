@@ -494,7 +494,7 @@ function NuevoFormato({ profile, onBack }) {
                   </td>
                   <td className="border border-blue-100 p-0" style={{background:'#fff8f0'}}>
                     <input type="text" value={item.corte||''} onChange={e=>updItem(i,'corte',e.target.value)}
-                      placeholder="590"
+                      placeholder="#"
                       className="w-full text-center border-none outline-none bg-transparent font-bold"
                       style={{fontSize:'10px',color:ACCENT,padding:'4px 2px'}} />
                   </td>
