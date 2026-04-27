@@ -183,12 +183,12 @@ export default function BodegasScreen() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
-                        <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">⏳ Pendiente asignación</span>
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">⏳ Pendiente asignación</span>
                       </div>
                       <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {lot.deadline}</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {lot.garments?.map((g,i)=>(
-                          <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{g.descripcionRef||gLabel(g.gtId)}: {g.total}</span>
+                          <span key={i} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{g.descripcionRef||gLabel(g.gtId)}: {g.total}</span>
                         ))}
                       </div>
                     </div>
@@ -220,10 +220,10 @@ export default function BodegasScreen() {
                   <span className="text-2xl font-black" style={{color:b.color}}>{lotes.length}</span>
                 </div>
                 <p className="text-sm font-bold text-gray-900 mb-1">{b.label}</p>
-                <p className="text-[10px] text-gray-400 mb-3">{b.desc}</p>
+                <p className="text-xs text-gray-400 mb-3">{b.desc}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500">{totalPzas.toLocaleString('es-CO')} piezas</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{background:b.color}}>
+                  <span className="text-xs text-gray-500">{totalPzas.toLocaleString('es-CO')} piezas</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{background:b.color}}>
                     Ver bodega →
                   </span>
                 </div>
@@ -251,7 +251,7 @@ export default function BodegasScreen() {
                     className="p-3 rounded-xl border-2 text-left transition-all"
                     style={{borderColor:bodegaDest===opt.val?opt.color:'#e5e7eb',background:bodegaDest===opt.val?`${opt.color}10`:'#fff'}}>
                     <p className="text-sm font-bold mb-1" style={{color:opt.color}}>{opt.label}</p>
-                    <p className="text-[10px] text-gray-500">{opt.desc}</p>
+                    <p className="text-xs text-gray-500">{opt.desc}</p>
                   </button>
                 ))}
               </div>
@@ -265,7 +265,7 @@ export default function BodegasScreen() {
                         <div className="flex items-center gap-2 mb-1.5">
                           <span className="text-xs font-bold text-gray-700 flex-1">{op.name}</span>
                           <button onClick={() => toggleOp(op.opId)}
-                            className="text-[10px] text-red-500 hover:text-red-700">✕ Quitar</button>
+                            className="text-xs text-red-500 hover:text-red-700">✕ Quitar</button>
                         </div>
                         <select value={op.operarioId} onChange={e=>setOperario(op.opId, e.target.value)}
                           className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none">
@@ -279,11 +279,11 @@ export default function BodegasScreen() {
                   </div>
                   {/* Agregar operaciones */}
                   <div className="mt-2">
-                    <p className="text-[10px] text-gray-400 mb-1">Agregar operación:</p>
+                    <p className="text-xs text-gray-400 mb-1">Agregar operación:</p>
                     <div className="flex flex-wrap gap-1">
                       {OPS_INTERNAS.filter(op => !opsConOp.find(o=>o.opId===op.id)).map(op=>(
                         <button key={op.id} onClick={()=>toggleOp(op.id)}
-                          className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-lg hover:bg-purple-100">
+                          className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-lg hover:bg-purple-100">
                           + {op.name}
                         </button>
                       ))}
@@ -334,7 +334,7 @@ export default function BodegasScreen() {
               <p className="text-sm font-bold text-gray-900">{g.descripcionRef||gLabel(g.gtId)}</p>
               <div className="text-right">
                 <p className="text-xl font-black text-blue-700">{g.total.toLocaleString('es-CO')}</p>
-                <p className="text-[10px] text-gray-400">piezas disponibles</p>
+                <p className="text-xs text-gray-400">piezas disponibles</p>
               </div>
             </div>
             <SizesBadges sizes={g.sizes} />
@@ -378,19 +378,19 @@ export default function BodegasScreen() {
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
-                      <span className={`${st.cls} text-[9px] px-2 py-0.5 rounded-full font-bold`}>{st.label}</span>
+                      <span className={`${st.cls} text-xs px-2 py-0.5 rounded-full font-bold`}>{st.label}</span>
                     </div>
                     <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {lot.garments?.map((g,i)=>(
-                        <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{g.descripcionRef||gLabel(g.gtId)}: {g.total}</span>
+                        <span key={i} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{g.descripcionRef||gLabel(g.gtId)}: {g.total}</span>
                       ))}
                     </div>
                   </div>
                   {ops.length > 0 && (
                     <div className="text-right flex-shrink-0">
                       <p className="text-lg font-black" style={{color:prog===100?'#15803d':'#7c3aed'}}>{prog}%</p>
-                      <p className="text-[9px] text-gray-400">{done}/{ops.length} ops</p>
+                      <p className="text-xs text-gray-400">{done}/{ops.length} ops</p>
                     </div>
                   )}
                 </div>
@@ -408,15 +408,15 @@ export default function BodegasScreen() {
                             <div className="flex items-center gap-2 mb-2">
                               <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':'bg-orange-400'}`} />
                               <span className="flex-1 text-xs font-bold text-gray-800">{op.name}</span>
-                              <span className="text-[10px] text-gray-400">{op.qty?.toLocaleString('es-CO')} pzas</span>
-                              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'}`}>
+                              <span className="text-xs text-gray-400">{op.qty?.toLocaleString('es-CO')} pzas</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':'bg-orange-100 text-orange-700'}`}>
                                 {op.status==='completado'?'✓ Listo':'Pendiente'}
                               </span>
                             </div>
                             {/* Selector de operario — visible siempre para admin si no está completado */}
                             {op.status !== 'completado' && (
                               <div className="bg-white rounded-lg border border-orange-200 p-2 mt-1">
-                                <p className="text-[10px] font-bold text-orange-700 mb-1.5">
+                                <p className="text-xs font-bold text-orange-700 mb-1.5">
                                   👤 {op.wId ? `Asignado: ${worker?.name||'Cargando...'}` : '⚠ Sin operario — asigna uno:'}
                                 </p>
                                 <select
