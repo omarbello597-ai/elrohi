@@ -130,7 +130,7 @@ export default function LotesScreen() {
                   <PriorityBadge priority={l.priority} />
                 </div>
                 <p className="text-[10px] text-gray-500">
-                  {[...new Set(l.garments?.map(g => gLabel(g.gtId)))].join(', ')}
+                  {[...new Set(l.garments?.map(g => (g.descripcionRef||gLabel(g.gtId)).split('/')[0].trim()))].join(', ')}
                   {' · '}{l.totalPieces?.toLocaleString('es-CO')} piezas
                   {sat ? ' · ' + sat.name : ''}
                 </p>
@@ -267,7 +267,7 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
             <tbody>
               {lot.garments?.map((g,i) => (
                 <tr key={i} className="border-b border-gray-50">
-                  <td className="px-2 py-1.5 font-medium">{gLabel(g.gtId)}</td>
+                  <td className="px-2 py-1.5 font-medium" style={{fontSize:10}}>{g.descripcionRef||gLabel(g.gtId)}</td>
                   <td className="px-2 py-1.5 text-gray-500">
                     {Object.entries(g.sizes||{}).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ')}
                   </td>
