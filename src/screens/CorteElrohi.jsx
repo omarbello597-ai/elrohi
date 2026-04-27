@@ -609,7 +609,7 @@ function NuevoFormato({ profile, onBack }) {
       <button onClick={enviar} disabled={saving}
         className="w-full py-3 text-white rounded-xl text-sm font-bold disabled:opacity-50"
         style={{background:'#1a3a6b'}}>
-        {saving ? 'Creando lote y guardando formato...' : '📤 Crear Lote y Enviar Formato al Admin'}
+        {saving ? 'Creando Corte y guardando formato...' : '📤 Crear Corte y Enviar para Alistamiento'}
       </button>
     </div>
   );
