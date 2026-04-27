@@ -186,6 +186,7 @@ function printRecibo(data) {
 
 // ─── NOMINA SCREEN ────────────────────────────────────────────────────────────
 export function NominaScreen() {
+  const { profile } = useAuth();
   const { lots, satellites, ops, satOpVals, users, payments } = useData();
   const [tab,         setTab]         = useState('elrohi');
   const [showModal,   setShowModal]   = useState(false);
