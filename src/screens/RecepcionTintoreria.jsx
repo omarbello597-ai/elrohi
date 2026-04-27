@@ -227,7 +227,8 @@ export default function RecepcionTintoreria() {
                       <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
                         {g.descripcionRef||gLabel(g.gtId)}: {g.total}
                       </span>
-                    ))}
+                    );
+              })}
                   </div>
                 </div>
                 <button onClick={()=>openRemision(lot)}
@@ -432,7 +433,8 @@ export default function RecepcionTintoreria() {
                     onChange={e=>setConteoEntrega(prev=>({...prev,[g.gtId]:+e.target.value}))}
                     className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:border-orange-400" />
                 </div>
-              ))}
+                );
+              })}
               <div className="flex justify-between text-xs font-bold px-3 py-2 bg-blue-50 rounded-xl">
                 <span className="text-blue-700">Total a entregar</span>
                 <span className="text-blue-800">{totalEntregado} piezas</span>
