@@ -57,7 +57,7 @@ export const GARMENT_TYPES = [
   { id: 'gt5', name: 'Chaqueta Hombre', g: 'H', short: 'Cha.H' },
 ];
 
-export const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+export const SIZES = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL','6XL','6','8','10','12','14','16','18','20','22','24','26','28','30','32','34','36','38','40','42','44','46','48','50'];
 
 export const OPS_ELROHI_DEFAULT = [
   { id: 'oe1', name: 'Planchar',        val: 500, active: true },
