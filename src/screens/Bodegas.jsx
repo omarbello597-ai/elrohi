@@ -44,6 +44,24 @@ const statusLabel = (s) => ({
   en_revision_calidad:   { label:'En Revisión Calidad',    cls:'bg-pink-100 text-pink-700'    },
 }[s] || { label: s, cls: 'bg-gray-100 text-gray-600' });
 
+
+function SizesBadges({ sizes }) {
+  const entries = Object.entries(sizes || {}).filter(function(e){ return Number(e[1]) > 0; });
+  if (!entries.length) return null;
+  return (
+    <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:4}}>
+      {entries.map(function(e){
+        return (
+          <div key={e[0]} style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:8,padding:'2px 8px',textAlign:'center',minWidth:48}}>
+            <p style={{fontSize:9,color:'#3b82f6',fontWeight:700,margin:0}}>{e[0]}</p>
+            <p style={{fontSize:12,color:'#1e40af',fontWeight:900,margin:0}}>{Number(e[1]).toLocaleString('es-CO')}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function BodegasScreen() {
   const { profile }     = useAuth();
   const { lots, users } = useData();
@@ -319,14 +337,7 @@ export default function BodegasScreen() {
                 <p className="text-[10px] text-gray-400">piezas disponibles</p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {Object.entries(g.sizes||{}).filter(([k,v])=>+v>0).map(([talla,qty])=>(
-                <div key={talla} className="bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 text-center min-w-12">
-                  <p className="text-[9px] text-blue-500 font-bold">{talla}</p>
-                  <p className="text-xs font-black text-blue-800">{(+qty).toLocaleString('es-CO')}</p>
-                </div>
-              ))}
-            </div>
+            <SizesBadges sizes={g.sizes} />
             </div>
           </div>
         ))}
