@@ -638,9 +638,9 @@ export function NominaScreen() {
                   <div className="space-y-1 mb-2">
                     {(liq.opsDetalle||[]).length>0 && (
                       <div className="mb-2">
-                        <p className="text-[10px] font-bold text-green-800 mb-1">Operaciones:</p>
+                        <p className="text-xs font-bold text-green-800 mb-1">Operaciones:</p>
                         {liq.opsDetalle.map((o,i)=>(
-                          <div key={i} className="flex justify-between text-[10px] text-green-700 py-0.5 border-b border-green-100 last:border-0">
+                          <div key={i} className="flex justify-between text-xs text-green-700 py-0.5 border-b border-green-100 last:border-0">
                             <span className="flex-1">{o.lotCode} · {o.referencia} · <strong>{o.operacion}</strong> × {(o.qty||0).toLocaleString('es-CO')} und @ {fmtM(o.valUnit)}</span>
                             <span className="font-bold ml-2 flex-shrink-0">{fmtM(o.subtotal)}</span>
                           </div>
@@ -665,7 +665,7 @@ export function NominaScreen() {
             {selSat && (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                 <p className="text-2xl font-black text-green-600">{fmtM(selSat.total)}</p>
-                <p className="text-[10px] text-green-600 mt-0.5">{selSat.compOps} operaciones · {selSat.workerBreakdown.length} operarios</p>
+                <p className="text-xs text-green-600 mt-0.5">{selSat.compOps} operaciones completadas</p>
               </div>
             )}
 
