@@ -227,8 +227,8 @@ export default function RecepcionTintoreria() {
                       <span key={i} className="text-[9px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
                         {g.descripcionRef||gLabel(g.gtId)}: {g.total}
                       </span>
-                    );
-              })}
+                     ))
+                   )}
                   </div>
                 </div>
                 <button onClick={()=>openRemision(lot)}
