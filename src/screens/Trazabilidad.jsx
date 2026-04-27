@@ -205,7 +205,7 @@ export default function TrazabilidadScreen() {
                     {lot.totalPieces?.toLocaleString('es-CO')} pzas
                   </span>
                   <span className="text-[10px] text-gray-400">
-                    {lot.garments?.map(g=>gLabel(g.gtId)).join(', ')}
+                    {lot.garments?.map(g=>(g.descripcionRef||gLabel(g.gtId)).split('/')[0].trim()).join(', ')}
                   </span>
                   {totalTiempo > 0 && (
                     <span className="text-[10px] text-gray-500 ml-auto">
@@ -260,7 +260,7 @@ export default function TrazabilidadScreen() {
                     <div className="flex flex-wrap gap-2">
                       {lot.garments?.map((g,i) => (
                         <div key={i} className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
-                          <span className="font-bold text-gray-800">{gLabel(g.gtId)}</span>
+                          <span className="font-bold text-gray-800">{g.descripcionRef||gLabel(g.gtId)}</span>
                           <span className="text-gray-500 ml-1">{g.total?.toLocaleString('es-CO')} pzas</span>
                         </div>
                       ))}
