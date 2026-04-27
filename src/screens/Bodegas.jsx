@@ -70,7 +70,7 @@ export default function BodegasScreen() {
   const inventarioLonas = {};
   lots.filter(l => l.status === 'bodega_lonas').forEach(lot => {
     (lot.garments||[]).forEach(g => {
-      if (!inventarioLonas[g.gtId]) inventarioLonas[g.gtId] = { gtId:g.gtId, sizes:{}, total:0 };
+      if (!inventarioLonas[g.gtId]) inventarioLonas[g.gtId] = { gtId:g.gtId, descripcionRef:g.descripcionRef||'', sizes:{}, total:0 };
       Object.entries(g.sizes||{}).forEach(([sz,qty]) => {
         inventarioLonas[g.gtId].sizes[sz] = (inventarioLonas[g.gtId].sizes[sz]||0) + (+qty||0);
       });
@@ -312,7 +312,7 @@ export default function BodegasScreen() {
         {Object.values(inventarioLonas).map(g => (
           <div key={g.gtId} className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-bold text-gray-900">{gLabel(g.gtId)}</p>
+              <p className="text-sm font-bold text-gray-900">{g.descripcionRef||g.nombre||gLabel(g.gtId)}</p>
               <div className="text-right">
                 <p className="text-xl font-black text-blue-700">{g.total.toLocaleString('es-CO')}</p>
                 <p className="text-[10px] text-gray-400">piezas disponibles</p>
