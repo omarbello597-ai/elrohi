@@ -30,12 +30,14 @@ export const migrarLotesAInventario = async (lots) => {
   const lotesBodega = lots.filter(l => l.status === 'bodega_lonas' && !l.migradoInventario);
   if (lotesBodega.length === 0) return;
 
-  // Acumular por gtId
+  // Acumular por gtId preservando descripcionRef
   const acumulado = {};
+  const descripcionRefs = {};
   lotesBodega.forEach(lot => {
     (lot.garments || []).forEach(g => {
       if (!acumulado[g.gtId]) acumulado[g.gtId] = 0;
       acumulado[g.gtId] += g.total || 0;
+      if (g.descripcionRef) descripcionRefs[g.gtId] = g.descripcionRef;
     });
   });
 
@@ -52,9 +54,11 @@ export const migrarLotesAInventario = async (lots) => {
       });
     } else {
       const g = GARMENT_TYPES.find(x => x.id === gtId);
+      const descRef = descripcionRefs[gtId];
       batch.set(ref, {
         gtId,
-        nombre: g?.name || gtId,
+        nombre: descRef || g?.name || gtId,
+        descripcionRef: descRef || g?.name || gtId,
         disponible: qty,
         enAlistamiento: 0,
         total: qty,
