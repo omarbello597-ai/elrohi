@@ -1,6 +1,7 @@
 import { LOGO_ELROHI } from '../assets/logoBase64';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useData }     from '../contexts/DataContext';
+import { useAuth }     from '../contexts/AuthContext';
 import { addDocument } from '../services/db';
 import { fmtM, getOpVal, workerQuincena } from '../utils';
 import { Modal } from '../components/ui';
