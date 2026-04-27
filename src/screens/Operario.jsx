@@ -97,9 +97,9 @@ export function MisOpsScreen() {
       {mine.length > 0 && (
         <div className="space-y-3 mb-5">
           {mine.map((lo) => {
-            const valUnit = (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
+            const valUnit = (+lo.valorUnitario) || (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
             const valTot  = valUnit * (lo.qty||0);
-            const nombre  = lo.name || lo.op?.name || lo.opId || 'Operación';
+            const nombre  = lo.operacion || lo.name || lo.op?.name || lo.opId || 'Operación';
             return (
               <div key={lo.id} className="bg-white rounded-xl border border-gray-100 p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
@@ -142,7 +142,7 @@ export function MisOpsScreen() {
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Operaciones Disponibles</p>
           <div className="space-y-1.5">
             {avail.slice(0, 8).map((lo) => {
-              const valUnit = (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
+              const valUnit = (+lo.valorUnitario) || (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
               return (
                 <div key={lo.id} className="bg-white rounded-xl border border-gray-100 p-3 flex items-center justify-between">
                   <div>
@@ -253,12 +253,12 @@ export function QuincenaScreen() {
                   </thead>
                   <tbody>
                     {completedOps.map((lo, i) => {
-                      const valUnit = (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
+                      const valUnit = (+lo.valorUnitario) || (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
                       const valTot  = valUnit * (lo.qty||0);
                       return (
                         <tr key={i} className="border-t border-gray-50 hover:bg-gray-50">
-                          <td className="px-3 py-2 font-mono text-[10px] text-blue-600">{lo.lotCode}</td>
-                          <td className="px-3 py-2 font-medium text-gray-800">{lo.name || lo.op?.name || 'Operación'}</td>
+                          <td className="px-3 py-2 font-mono text-[10px] text-blue-600">{lo.lotCode}<br/><span style={{color:'#6b7280',fontFamily:'sans-serif'}}>{lo.referencia||''}</span></td>
+                          <td className="px-3 py-2 font-medium text-gray-800">{lo.operacion || lo.name || lo.op?.name || 'Operación'}</td>
                           <td className="px-3 py-2 text-gray-600">{(lo.qty||0).toLocaleString('es-CO')}</td>
                           <td className="px-3 py-2 font-mono text-gray-500">{fmtM(valUnit)}</td>
                           <td className="px-3 py-2 font-bold font-mono text-green-600">{fmtM(valTot)}</td>
