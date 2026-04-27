@@ -84,9 +84,13 @@ export const sumarLoteAInventario = async (lot) => {
     const ref = doc(db, 'inventario', g.gtId);
     const snap = await getDoc(ref);
     if (snap.exists()) {
+      const prevSizes = snap.data().sizes || {};
+      const mergedSizes = {...prevSizes};
+      Object.entries(g.sizes||{}).forEach(([t,v])=>{ mergedSizes[t] = (mergedSizes[t]||0) + (+v||0); });
       batch.update(ref, {
         disponible: increment(g.total || 0),
         total: increment(g.total || 0),
+        sizes: mergedSizes,
         ...(g.descripcionRef ? { nombre: g.descripcionRef, descripcionRef: g.descripcionRef } : {}),
         updatedAt: new Date().toISOString(),
       });
@@ -96,6 +100,7 @@ export const sumarLoteAInventario = async (lot) => {
         gtId: g.gtId,
         nombre: g.descripcionRef || gt?.name || g.gtId,
         descripcionRef: g.descripcionRef || gt?.name || g.gtId,
+        sizes: g.sizes || {},
         disponible: g.total || 0,
         enAlistamiento: 0,
         total: g.total || 0,
