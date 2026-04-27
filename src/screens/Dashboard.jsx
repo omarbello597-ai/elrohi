@@ -188,7 +188,10 @@ export default function Dashboard() {
               <tbody>
                 {lotsEnProd.slice(0,8).map(l => {
                   const prog   = lotProgress(l);
-                  const gNames = [...new Set((l.garments||[]).map(g=>g.descripcionRef||gLabel(g.gtId)))].slice(0,2).join(', ');
+                  const gNames = (l.garments||[]).slice(0,2).map(g=>{
+                    const desc = (g.descripcionRef||gLabel(g.gtId)).split('/')[0].trim();
+                    return `${desc}: ${g.total?.toLocaleString('es-CO')} pzas`;
+                  }).join(' · ');
                   const st     = LOT_STATUS[l.status];
                   const vencido = new Date(l.deadline) < new Date();
                   return (
