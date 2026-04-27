@@ -183,16 +183,25 @@ export function QuincenaScreen() {
   },[]);
 
   // Operaciones completadas del operario
-  const completedOps = lots.flatMap((l) =>
-    (l.lotOps || [])
+  const completedOps = lots.flatMap((l) => [
+    // Operaciones satélite (lotOps)
+    ...(l.lotOps || [])
       .filter((lo) => lo.wId === profile.id && lo.status === 'completado')
       .map((lo) => ({
         ...lo,
         lotCode: l.code,
         satId:   l.satId,
         op:      ops.find((o) => o.id === lo.opId),
-      }))
-  );
+      })),
+    // Operaciones internas ELROHI (opsElrohi)
+    ...(l.opsElrohi || [])
+      .filter((op) => op.wId === profile.id && op.status === 'completado')
+      .map((op) => ({
+        ...op,
+        lotCode: l.code,
+        satId:   null,
+      })),
+  ]);
 
   // Usar lo.val directamente (ya incluye el valor real)
   const total = completedOps.reduce((acc, lo) => {
