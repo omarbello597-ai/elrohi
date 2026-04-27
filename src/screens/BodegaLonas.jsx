@@ -261,7 +261,18 @@ export default function BodegaLonasScreen() {
               {inventario.filter(i=>i.total>0||i.disponible>0).map(item => (
                 <div key={item.gtId} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
                   <div className="grid grid-cols-4 gap-4 items-center">
-                    <p className="text-sm font-bold text-gray-900">{item.descripcionRef||item.nombre||gLabel(item.gtId)}</p>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{item.descripcionRef||item.nombre||gLabel(item.gtId)}</p>
+                      {item.sizes && Object.keys(item.sizes).length>0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Object.entries(item.sizes).filter(([,v])=>+v>0).map(([talla,qty])=>(
+                            <span key={talla} className="text-[9px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded-full font-bold">
+                              {talla}: {(+qty).toLocaleString('es-CO')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-black text-green-700">{(item.disponible||0).toLocaleString('es-CO')}</span>
                       <span className="text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">pzas</span>
