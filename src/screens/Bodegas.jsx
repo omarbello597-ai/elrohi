@@ -320,7 +320,7 @@ export default function BodegasScreen() {
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5 mt-1">
-              {Object.entries(g.sizes||{}).filter(([,v])=>+v>0).map(([talla,qty])=>(
+              {Object.entries(g.sizes||{}).filter(([k,v])=>+v>0).map(([talla,qty])=>(
                 <div key={talla} className="bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 text-center min-w-[48px]">
                   <p className="text-[9px] text-blue-500 font-bold">{talla}</p>
                   <p className="text-xs font-black text-blue-800">{(+qty).toLocaleString('es-CO')}</p>
