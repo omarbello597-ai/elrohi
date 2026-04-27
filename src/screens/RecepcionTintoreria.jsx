@@ -412,12 +412,22 @@ export default function RecepcionTintoreria() {
 
             {/* Conteo de entrega */}
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Conteo de prendas a entregar</p>
-            <div className="space-y-2 mb-4">
-              {showRemision.garments?.map(g=>(
-                <div key={g.gtId} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="text-xs font-bold text-gray-700 flex-1">{gLabel(g.gtId)}</span>
-                  <span className="text-[10px] text-gray-400">Recibido: {g.total}</span>
-                  <input type="number" min={0} max={g.total}
+            {/* Cabecera */}
+            <div className="grid grid-cols-4 gap-1 px-3 py-1.5 bg-gray-100 rounded-lg mb-1">
+              <span className="text-[9px] font-bold text-gray-500 col-span-1">Prenda</span>
+              <span className="text-[9px] font-bold text-blue-600 text-center">Original ELROHI</span>
+              <span className="text-[9px] font-bold text-amber-600 text-center">Enviado satélite</span>
+              <span className="text-[9px] font-bold text-green-600 text-center">Entrega tintorería</span>
+            </div>
+            <div className="space-y-1.5 mb-4">
+              {showRemision.garments?.map(g=>{
+                const enviado = showRemision.conteo?.find?.(c=>c.gtId===g.gtId)?.enviado ?? g.total;
+                return (
+                <div key={g.gtId} className="grid grid-cols-4 gap-1 items-center bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
+                  <span className="text-xs font-bold text-gray-700 col-span-1 leading-tight">{g.descripcionRef||gLabel(g.gtId)}</span>
+                  <span className="text-sm font-black text-blue-700 text-center">{(g.total||0).toLocaleString('es-CO')}</span>
+                  <span className="text-sm font-black text-amber-700 text-center">{(enviado||0).toLocaleString('es-CO')}</span>
+                  <input type="number" min={0}
                     value={conteoEntrega[g.gtId]||0}
                     onChange={e=>setConteoEntrega(prev=>({...prev,[g.gtId]:+e.target.value}))}
                     className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:border-orange-400" />
