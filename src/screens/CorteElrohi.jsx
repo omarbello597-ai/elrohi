@@ -85,7 +85,7 @@ function FirmaCanvas({ onSave, label }) {
     <div style={{marginBottom:10}}>
       <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:5}}>{label}</p>
       <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
-        <canvas ref={canvasRef} width={1000} height={200}
+        <canvas ref={canvasRef} width={340} height={70}
           style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
           onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
           onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
@@ -273,10 +273,10 @@ export default function CorteElrohiScreen() {
                         </tr>
                       </thead>
                       <tbody>
-                        {lot.garments?.map((g,i)=>(
+                        {(()=>{ const activeSizes = SIZES.filter(s=>(lot.garments||[]).some(g=>(g.sizes?.[s]||0)>0)); return lot.garments?.map((g,i)=>(
                           <tr key={i}>
                             <td className="px-2 py-1.5 font-medium text-gray-700 border border-gray-200" style={{maxWidth:200,fontSize:10}}>{g.descripcionRef||gLabel(g.gtId)}</td>
-                            {SIZES.map(s=>(
+                            {activeSizes.map(s=>(
                               <td key={s} className="px-2 py-1.5 text-center border border-gray-200"
                                 style={{color:(g.sizes?.[s]||0)>0?'#1a3a6b':'#d1d5db',fontWeight:(g.sizes?.[s]||0)>0?600:400}}>
                                 {g.sizes?.[s]||'—'}
@@ -284,7 +284,7 @@ export default function CorteElrohiScreen() {
                             ))}
                             <td className="px-2 py-1.5 text-center font-bold text-gray-800 border border-gray-200 bg-gray-50">{g.total?.toLocaleString('es-CO')}</td>
                           </tr>
-                        ))}
+                        ))})()}
                       </tbody>
                     </table>
                   </div>
