@@ -2,7 +2,7 @@ import { LOGO_ELROHI } from '../assets/logoBase64';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useData }     from '../contexts/DataContext';
 import { useAuth }     from '../contexts/AuthContext';
-import { addDocument } from '../services/db';
+import { addDocument, updateDocument } from '../services/db';
 import { fmtM, getOpVal, workerQuincena } from '../utils';
 import { Modal } from '../components/ui';
 import { ACCENT } from '../constants';
@@ -261,7 +261,7 @@ export function NominaScreen() {
   };
 
   const satSummary = satellites.filter(s=>s.active).map(s => {
-    const satLots  = lots.filter(l=>l.satId===s.id);
+    const satLots  = lots.filter(l=>l.satId===s.id && !l.pagadoSatelite);
     const detalle  = calcSatDetalle(s.id);
     const total    = detalle.reduce((a,f)=>a+f.subtotal,0);
     const compOps  = satLots.flatMap(l=>(l.lotOps||[]).filter(lo=>lo.status==='completado')).length;
@@ -326,14 +326,23 @@ export function NominaScreen() {
         };
         await addDocument('payments', payData);
         // Enviar pago al modulo "Mis Pagos" del satelite
-        await addDocument('pagosSatelite', {
+        const pagoId = await addDocument('pagosSatelite', {
           ...payData,
           status: 'pagado',
           pagadoPor: profile?.name || 'ELROHI',
           fechaPago: todayISO(),
         });
+        // Marcar lotes del satélite como pagados para evitar doble pago
+        const lotesDelSat = lots.filter(l => l.satId === selSat.id && !l.pagadoSatelite);
+        for (const lot of lotesDelSat) {
+          await updateDocument('lots', lot.id, {
+            pagadoSatelite: true,
+            pagoSateliteId: pagoId,
+            pagoSateliteFecha: todayISO(),
+          });
+        }
         // Print recibo satelite
-        const rows = selSat.workerBreakdown.map(w=>({concepto:w.name,valor:w.earnings}));
+        const rows = (selSat.detalle||[]).map(d=>({concepto:d.desc||d.descripcion||d.concepto||'Operación',valor:d.subtotal||d.valor||0}));
         printRecibo({ recId:rec, nombre:selSat.name, periodo:quincena.label, rol:'Satélite', resumen:rows, opsDetalle:selSat.detalle||[], total:selSat.total, notas:notes, foto:photo, firmaElrohi, firmaRecibe });
         toast.success(`✅ Pago satélite registrado — ${rec}`);
       }
