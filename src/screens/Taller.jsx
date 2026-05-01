@@ -541,7 +541,7 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-gray-600">Enviar:</span>
                     <input type="number" min={0} max={g.original} value={g.enviado}
-                      onChange={e=>updConteo(i,'enviado',e.target.value)}
+                      onChange={e=>{ const val=e.target.value; setConteo(c=>c.map((item,ii)=>ii===i?{...item,enviado:val}:item)); }}
                       className="w-16 text-center border border-gray-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none"
                       style={{color:faltante>0?'#dc2626':'#15803d'}} />
                   </div>
@@ -550,7 +550,7 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
                   </span>
                 </div>
                 {faltante>0 && (
-                  <input type="text" value={g.novedad} onChange={e=>updConteo(i,'novedad',e.target.value)}
+                  <input type="text" value={g.novedad} onChange={e=>{ const val=e.target.value; setConteo(c=>c.map((item,ii)=>ii===i?{...item,novedad:val}:item)); }}
                     placeholder="Novedad: ¿por qué faltan?"
                     className="w-full border border-amber-200 rounded-lg px-3 py-1.5 text-xs bg-amber-50 focus:outline-none" />
                 )}
