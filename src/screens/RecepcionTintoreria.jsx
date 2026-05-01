@@ -88,7 +88,7 @@ export default function RecepcionTintoreria() {
 
   const openRemision = (lot) => {
     const conteo = {};
-    lot.garments?.forEach(g => { conteo[g.gtId] = g.total; });
+    lot.garments?.forEach(g => { conteo[g.descripcionRef||g.gtId] = g.total; });
     setConteoEntrega(conteo);
     setNovedades([]);
     setFirmaTinto(null);
@@ -429,8 +429,8 @@ export default function RecepcionTintoreria() {
                   <span className="text-sm font-black text-blue-700 text-center">{(g.total||0).toLocaleString('es-CO')}</span>
                   <span className="text-sm font-black text-amber-700 text-center">{(enviado||0).toLocaleString('es-CO')}</span>
                   <input type="number" min={0}
-                    value={conteoEntrega[g.gtId]||0}
-                    onChange={e=>setConteoEntrega(prev=>({...prev,[g.gtId]:+e.target.value}))}
+                    value={conteoEntrega[g.descripcionRef||g.gtId]||0}
+                    onChange={e=>setConteoEntrega(prev=>({...prev,[g.descripcionRef||g.gtId]:+e.target.value}))}
                     className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:border-orange-400" />
                 </div>
                 );
