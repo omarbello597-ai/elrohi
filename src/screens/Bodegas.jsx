@@ -64,7 +64,7 @@ function SizesBadges({ sizes }) {
 
 export default function BodegasScreen() {
   const { profile }     = useAuth();
-  const { lots, users } = useData();
+  const { lots, users, inventario } = useData();
   const [vista, setVista]       = useState('inicio'); // 'inicio' | 'bodega_lonas' | 'bodega_calidad'
   const [selLot, setSelLot]     = useState(null);
   const [tab, setTab]           = useState('bodega');
@@ -328,18 +328,22 @@ export default function BodegasScreen() {
           </div>
         )}
 
-        {Object.values(inventarioLonas).map(g => (
+        {Object.values(inventarioLonas).map(g => {
+            const invItem = inventario.find(i => i.descripcionRef === g.descripcionRef || i.gtId === g.gtId);
+            const enAlist = invItem?.enAlistamiento || 0;
+            return (
           <div key={g.gtId} className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-gray-900">{g.descripcionRef||gLabel(g.gtId)}</p>
               <div className="text-right">
                 <p className="text-xl font-black text-blue-700">{g.total.toLocaleString('es-CO')}</p>
-                <p className="text-xs text-gray-400">piezas disponibles</p>
+                <p className="text-xs text-gray-400">disponibles{enAlist>0 ? ` · ${enAlist.toLocaleString('es-CO')} en alistamiento` : ''}</p>
               </div>
             </div>
             <SizesBadges sizes={g.sizes} />
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
