@@ -101,9 +101,13 @@ function FirmaCanvas({ onSave, label }) {
 // ─── IMPRIMIR FORMATO ─────────────────────────────────────────────────────────
 function printFormato(fc, logoBase64='') {
   const lot = fc.lot || {};
+  // Solo tallas con cantidades > 0
+  const activeSizes = SIZES_REF.filter(s =>
+    (lot.garments||[]).some(g => +g.sizes?.[s] > 0)
+  );
   const garmentRows = (lot.garments||[]).map((g,i)=>{
-    const sizes = SIZES_REF.map(s=>{const val=g.sizes?.[s]||''; return `<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${val||''}</td>`;}).join('');
-    return `<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;font-weight:500;color:#1a3a6b">${g.descripcionRef||gLabel(g.gtId)}</td>${sizes}<td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#dce6f5">${g.total?.toLocaleString('es-CO')||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#fff0e0;color:#e85d26">${fc.cortesRef?.[i]||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic;background:#fdfbff">${fc.comentariosRef?.[i]||''}</td></tr>`;
+    const sizes = activeSizes.map(s=>{const val=g.sizes?.[s]||''; return `<td style="border:1px solid #1a3a6b;padding:3px 4px;text-align:center;font-size:10px;font-weight:600;color:#1a3a6b">${val||''}</td>`;}).join('');
+    return `<tr><td style="border:1px solid #1a3a6b;padding:3px 8px;font-size:10px;font-weight:500;color:#1a3a6b">${g.descripcionRef||gLabel(g.gtId)}</td>${sizes}<td style="border:1px solid #1a3a6b;padding:3px 4px;text-align:center;font-size:10px;font-weight:700;background:#dce6f5">${g.total?.toLocaleString('es-CO')||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;font-weight:700;background:#fff0e0;color:#e85d26">${fc.cortesRef?.[i]||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;color:#4a3a6b;font-style:italic;background:#fdfbff">${fc.comentariosRef?.[i]||''}</td></tr>`;
   }).join('');
   const emptyRef = Array(Math.max(0,5-(lot.garments||[]).length)).fill(0).map(()=>`<tr><td style="border:1px solid #1a3a6b;height:22px"></td>${SIZES_REF.map(s=>'<td style="border:1px solid #1a3a6b"></td>').join('')}<td style="border:1px solid #1a3a6b;background:#dce6f5"></td><td style="border:1px solid #1a3a6b;background:#fff0e0"></td><td style="border:1px solid #1a3a6b;background:#fdfbff"></td></tr>`).join('');
   const espRows = (fc.especificaciones||[]).map(e=>`<tr><td style="border:1px solid #1a3a6b;padding:3px 6px;font-size:10px;height:22px">${e.tipoTela||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px">${e.metrosUsados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 2px;text-align:center;font-size:10px;color:#dc2626">${e.metrosDesechados||''}</td><td style="border:1px solid #1a3a6b;padding:3px 4px;font-size:9px;font-style:italic">${e.comentario||''}</td></tr>`).join('');
@@ -122,7 +126,7 @@ function printFormato(fc, logoBase64='') {
       <div style="padding:6px 14px;display:flex;align-items:center;gap:8px;border-left:1px solid #1a3a6b"><span style="font-size:10px;font-weight:700;color:#1a3a6b">Lote:</span><span style="font-size:11px;font-weight:700;color:#e85d26;font-family:monospace">${fc.lotCode||''}</span></div>
     </div>
     <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">REFERENCIAS — PRENDAS</div>
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px"><thead><tr><th style="width:80px;border:1px solid #1a3a6b;padding:2px 4px;background:#deeaf5;font-size:8px;font-weight:700;color:#14405A;text-align:left">Referencia</th>${SIZES_REF.map(s=>`<th style="width:22px;border:1px solid #1a3a6b;padding:3px 2px;background:#e8eef7;font-size:8px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#c5daf0;font-size:9px;font-weight:700;color:#14405A;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
+    <table style="width:100%;border-collapse:collapse;"><thead><tr><th style="width:80px;border:1px solid #1a3a6b;padding:2px 4px;background:#deeaf5;font-size:8px;font-weight:700;color:#14405A;text-align:left">Referencia</th>${activeSizes.map(s=>`<th style="border:1px solid #1a3a6b;padding:3px 6px;background:#e8eef7;font-size:9px;font-weight:700;color:#1a3a6b;text-align:center">${s}</th>`).join('')}<th style="width:46px;border:1px solid #1a3a6b;padding:3px 2px;background:#c5daf0;font-size:9px;font-weight:700;color:#14405A;text-align:center">TOTAL</th><th style="width:44px;border:1px solid #1a3a6b;padding:3px 2px;background:#fff0e0;font-size:9px;font-weight:700;color:#e85d26;text-align:center">#CORTE</th><th style="width:90px;border:1px solid #1a3a6b;padding:3px 2px;background:#f5f0fa;font-size:8px;font-weight:700;color:#4a3a6b;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${garmentRows}${emptyRef}</tbody></table>
     <div style="background:#2878B4;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:3px 8px">ESPECIFICACIONES DE TELA</div>
     <table style="width:100%;border-collapse:collapse;table-layout:fixed"><thead><tr><th style="border:1px solid #1a3a6b;padding:3px 8px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:left;width:200px">Tipo de tela</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#92400e;text-align:center;width:160px">Metros usados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:9px;font-weight:700;color:#dc2626;text-align:center;width:160px">Metros desechados</th><th style="border:1px solid #1a3a6b;padding:3px 2px;background:#fef3e2;font-size:8px;font-weight:700;color:#92400e;text-align:center;font-style:italic">Comentarios</th></tr></thead><tbody>${espRows}</tbody></table>
     <div style="border-top:1px solid #1a3a6b;padding:7px 12px;display:flex;align-items:center;gap:6px"><span style="font-size:10px;font-weight:700;color:#1a3a6b">NOTA:</span><span style="flex:1;border-bottom:1px solid #1a3a6b;min-height:18px;display:inline-block;font-size:11px;padding:0 4px">${fc.nota||''}</span></div>
@@ -657,7 +661,7 @@ function PendientesFormato({ formatosCorte, profile }) {
               <p className="text-xs text-gray-500">Lote: {fc.lotCode} · {fc.date} · {fc.operarioNombre}</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={()=>printFormato(fc)} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🖨️ Ver</button>
+              <button onClick={()=>printFormato(fc, "https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg")} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🖨️ Ver</button>
               <button onClick={()=>setSel(sel?.id===fc.id?null:fc)}
                 className="text-xs px-3 py-1.5 rounded-lg text-white font-bold" style={{background:'#1a3a6b'}}>
                 ✍ Firmar
@@ -704,7 +708,7 @@ function HistorialFormatos({ formatosCorte }) {
               </div>
               <p className="text-xs text-gray-500">Lote: {fc.lotCode} · {fc.date} · {fc.operarioNombre}</p>
             </div>
-            <button onClick={()=>printFormato(fc)} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🖨️ Imprimir</button>
+            <button onClick={()=>printFormato(fc, "https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg")} className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">🖨️ Imprimir</button>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-2">
             <div className="text-xs">
