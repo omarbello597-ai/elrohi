@@ -103,9 +103,8 @@ export default function BodegaLonasScreen() {
 
   // Migrar lotes existentes al inventario automáticamente
   useEffect(() => {
-    if (lots.length > 0 && !migrado) {
-      setMigrado(true);
-      initInventario().then(() => migrarLotesAInventario(lots));
+    if (lots.length > 0 && inventario.length === 0) {
+      migrarLotesAInventario(lots);
     }
   }, [lots, migrado]);
 
