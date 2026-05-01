@@ -229,9 +229,17 @@ export default function PedidosScreen() {
         return gDesc.includes(keyword);
       }).reduce((a,g)=>a+(g.total||0),0);
       
+      // Buscar el item de inventario para obtener gtId y descripcionRef
+      const invMatch = (inventario||[]).find(inv=>{
+        const invDesc = (inv.descripcionRef||inv.nombre||inv.descripcion||'').toLowerCase();
+        return invDesc.includes(keyword);
+      });
       return {
         descripcion: item.descripcion,
+        descripcionRef: invMatch?.descripcionRef || invMatch?.nombre || item.descripcion,
+        gtId: invMatch?.gtId || 'gt1',
         talla, qty: +item.qty,
+        precioUnitario: item.precioUnitario||0,
         enBodega, enProceso,
         disponible: enBodega >= item.qty,
         parcial: enBodega < item.qty && (enBodega + enProceso) >= item.qty,
