@@ -74,7 +74,7 @@ function FirmaCanvas({ onSave, label }) {
   const drawing   = useRef(false);
   const [hasFirma, setHasFirma] = useState(false);
 
-  const getPos = (e,c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; return {x:s.clientX-r.left,y:s.clientY-r.top}; };
+  const getPos = (e,c) => { const r=c.getBoundingClientRect(); const s=e.touches?e.touches[0]:e; const scaleX=c.width/r.width; const scaleY=c.height/r.height; return {x:(s.clientX-r.left)*scaleX,y:(s.clientY-r.top)*scaleY}; };
   const start  = (e) => { e.preventDefault(); drawing.current=true; const c=canvasRef.current; const ctx=c.getContext('2d'); const p=getPos(e,c); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
   const draw   = (e) => { e.preventDefault(); if(!drawing.current)return; const c=canvasRef.current; const ctx=c.getContext('2d'); ctx.strokeStyle='#1a3a6b'; ctx.lineWidth=2; ctx.lineCap='round'; const p=getPos(e,c); ctx.lineTo(p.x,p.y); ctx.stroke(); setHasFirma(true); };
   const stop   = () => { drawing.current=false; };
@@ -85,8 +85,8 @@ function FirmaCanvas({ onSave, label }) {
     <div style={{marginBottom:10}}>
       <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:5}}>{label}</p>
       <div style={{border:'1px solid #d1d5db',borderRadius:8,background:'#fff',overflow:'hidden'}}>
-        <canvas ref={canvasRef} width={340} height={70}
-          style={{display:'block',touchAction:'none',cursor:'crosshair',width:'100%'}}
+        <canvas ref={canvasRef} width={500} height={80}
+          style={{display:'block',touchAction:'none',cursor:'crosshair',width:'500px',maxWidth:'100%'}}
           onMouseDown={start} onMouseMove={draw} onMouseUp={stop} onMouseLeave={stop}
           onTouchStart={start} onTouchMove={draw} onTouchEnd={stop} />
       </div>
