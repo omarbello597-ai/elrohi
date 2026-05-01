@@ -464,7 +464,7 @@ function OperariosTab({ satId, workers }) {
 
 // ─── MODAL REMISIÓN A TINTORERÍA ──────────────────────────────────────────────
 function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
-  const [conteo,      setConteo]      = useState((lot.garments||[]).map(g=>({gtId:g.gtId,descripcionRef:g.descripcionRef||'',original:g.total,enviado:g.total,novedad:''})));
+  const [conteo,      setConteo]      = useState((lot.garments||[]).map((g,idx)=>({idx,gtId:g.gtId,descripcionRef:g.descripcionRef||gLabel(g.gtId),original:g.total,enviado:g.total,novedad:''})));
   const [nota,        setNota]        = useState('');
   const [nombreSat,   setNombreSat]   = useState(profile?.name||'');
   const [firmaSat,    setFirmaSat]    = useState(null);
@@ -534,7 +534,7 @@ function RemisionTintoreriaModal({ lot, satName, profile, onClose }) {
           {conteo.map((g,i)=>{
             const faltante = g.original - (+g.enviado||0);
             return (
-              <div key={i} className="bg-white border border-gray-200 rounded-xl p-3">
+              <div key={`${g.idx}-${g.descripcionRef}`} className="bg-white border border-gray-200 rounded-xl p-3">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-sm font-bold text-gray-800 flex-1">{g.descripcionRef||gLabel(g.gtId)}</span>
                   <span className="text-xs text-gray-500">Original: <strong>{g.original}</strong></span>
