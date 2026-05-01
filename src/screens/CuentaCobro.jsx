@@ -165,6 +165,7 @@ export default function CuentaCobroScreen() {
   // Lotes completados del satélite (costura completa)
   const lotesSat = lots.filter(l =>
     l.satId === profile?.satId &&
+    !l.pagadoSatelite &&
     ['listo_remision_tintoreria','tintoreria','listo_recepcion_admin','listo_bodega',
      'bodega_lonas','bodega_calidad','en_operaciones_elrohi','en_revision_calidad','despachado'].includes(l.status)
   );
@@ -247,7 +248,33 @@ export default function CuentaCobroScreen() {
         observaciones:     obsAdmin,
         aprobadoAt: new Date().toISOString(),
       });
-      toast.success('✅ Cuenta aprobada');
+      // Registrar en pagosSatelite para que Claudia vea el pago en Mis Pagos
+      const today = new Date().toISOString().split('T')[0];
+      await addDocument('pagosSatelite', {
+        tipo: 'satelite',
+        satId: cc.satId,
+        satName: cc.satName,
+        total: cc.total,
+        status: 'pagado',
+        origen: 'cuenta_cobro',
+        cuentaCobroId: cc.id,
+        cuentaCobroNumero: cc.numero,
+        periodo: cc.periodo,
+        pagadoPor: profile?.name || 'ELROHI',
+        fechaPago: today,
+        firmaElrohi,
+        createdAt: new Date().toISOString(),
+      });
+      // Marcar los lotes de la cuenta como pagados
+      for (const item of (cc.items||[])) {
+        if (item.lotId) {
+          await updateDocument('lots', item.lotId, {
+            pagadoSatelite: true,
+            pagoSateliteFecha: today,
+          });
+        }
+      }
+      toast.success('✅ Cuenta aprobada y pago registrado');
       setShowRevision(null); setFirmaElrohi(null); setObsAdmin('');
     } catch(e){ toast.error('Error'); }
     finally { setSaving(false); }
