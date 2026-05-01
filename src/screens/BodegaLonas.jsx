@@ -159,9 +159,28 @@ export default function BodegaLonasScreen() {
     setSaving(true);
     try {
       const lista = listas.find(l=>l.id===factForm.listaId);
+      // Buscar precio por descripcionRef en la lista de precios
+      const getPrecio = (item) => {
+        if (!lista) return item.precioUnitario||0;
+        // 1. Buscar por gtId directo
+        if (lista.precios?.[item.gtId]) return lista.precios[item.gtId];
+        // 2. Buscar por descripcionRef en productos de la lista
+        const prod = (lista.productos||[]).find(p =>
+          p.descripcion && item.descripcionRef &&
+          p.descripcion.toLowerCase() === item.descripcionRef.toLowerCase()
+        );
+        if (prod?.precio) return prod.precio;
+        // 3. Buscar por coincidencia parcial
+        const prod2 = (lista.productos||[]).find(p =>
+          p.descripcion && item.descripcionRef &&
+          (p.descripcion.toLowerCase().includes(item.descripcionRef.toLowerCase().split(' ').slice(0,3).join(' ')) ||
+           item.descripcionRef.toLowerCase().includes(p.descripcion.toLowerCase().split(' ').slice(0,3).join(' ')))
+        );
+        return prod2?.precio || item.precioUnitario || 0;
+      };
       const itemsConPrecios = (despacho.items||[]).map(item=>({
         ...item,
-        precioUnitario: lista?(lista.precios?.[item.gtId]||0):(item.precioUnitario||0),
+        precioUnitario: getPrecio(item),
       }));
       const numero  = String(facturas.length+1).padStart(4,'0');
       const factura = {
@@ -485,7 +504,12 @@ export default function BodegaLonasScreen() {
             </div>
             {factForm.listaId && (()=>{
               const lista=listas.find(l=>l.id===factForm.listaId);
-              const items=(showFact.items||[]).map(i=>({...i,precioUnitario:lista?.precios?.[i.gtId]||0}));
+              const items=(showFact.items||[]).map(i=>({...i,precioUnitario: (() => {
+                    if (!lista) return i.precioUnitario||0;
+                    if (lista.precios?.[i.gtId]) return lista.precios[i.gtId];
+                    const p = (lista.productos||[]).find(pr => pr.descripcion && i.descripcionRef && pr.descripcion.toLowerCase()===i.descripcionRef.toLowerCase());
+                    return p?.precio || i.precioUnitario || 0;
+                  })()}));
               const sub=items.reduce((a,i)=>a+i.qty*i.precioUnitario,0);
               const iva=factForm.aplicaIva?Math.round(sub*0.19):0;
               return (
