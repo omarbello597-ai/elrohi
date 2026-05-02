@@ -632,111 +632,124 @@ export function NominaScreen() {
       {/* MODAL PAGO */}
       {showModal && (selWorker || selSat) && (
         <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-          <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:480}}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-gray-900">
-                {selWorker ? `Pago — ${selWorker.name}` : `Pago — ${selSat.name}`}
-              </h2>
-              <button onClick={()=>setShowModal(false)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
+          <div style={{background:'#fff',borderRadius:16,width:'100%',maxWidth:860,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+
+            {/* Header */}
+            <div style={{background:'#14405A',borderRadius:'16px 16px 0 0',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <p style={{color:'#fff',fontWeight:900,fontSize:15,margin:0}}>
+                  {selWorker ? `Registrar Pago — ${selWorker.name}` : `Registrar Pago — ${selSat?.name}`}
+                </p>
+                <p style={{color:'#93c5fd',fontSize:11,margin:0}}>{quincena.label}</p>
+              </div>
+              <button onClick={()=>setShowModal(false)} style={{color:'#fff',fontSize:20,fontWeight:900,background:'transparent',border:'none',cursor:'pointer',lineHeight:1}}>✕</button>
             </div>
 
-            {/* Resumen */}
-            {selWorker && (()=>{
-              const liq = calcLiquidacion(selWorker);
-              return (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                  <p className="text-xs text-green-700 mb-1">Período: {quincena.label}</p>
-                  <div className="space-y-1 mb-2">
-                    {(liq.opsDetalle||[]).length>0 && (
-                      <div className="mb-2">
-                        <p className="text-xs font-bold text-green-800 mb-1">Operaciones:</p>
-                        {liq.opsDetalle.map((o,i)=>(
-                          <div key={i} className="flex justify-between text-xs text-green-700 py-0.5 border-b border-green-100 last:border-0">
-                            <span className="flex-1">{o.lotCode} · {o.referencia} · <strong>{o.operacion}</strong> × {(o.qty||0).toLocaleString('es-CO')} und @ {fmtM(o.valUnit)}</span>
-                            <span className="font-bold ml-2 flex-shrink-0">{fmtM(o.subtotal)}</span>
+            {/* Body - 2 columnas */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,padding:20}}>
+
+              {/* COLUMNA IZQUIERDA: Resumen + Descuento */}
+              <div>
+                <p style={{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Resumen del período</p>
+
+                {/* Resumen operario */}
+                {selWorker && (()=>{
+                  const liq = calcLiquidacion(selWorker);
+                  return (
+                    <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:12,marginBottom:12}}>
+                      {(liq.opsDetalle||[]).length>0 && (
+                        <div style={{marginBottom:8}}>
+                          <p style={{fontSize:10,fontWeight:700,color:'#15803d',marginBottom:4}}>Operaciones realizadas:</p>
+                          <div style={{maxHeight:160,overflowY:'auto'}}>
+                            {liq.opsDetalle.map((o,i)=>(
+                              <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#166534',padding:'2px 0',borderBottom:'1px solid #dcfce7'}}>
+                                <span style={{flex:1}}>{o.lotCode} · {o.referencia} · <strong>{o.operacion}</strong> × {(o.qty||0).toLocaleString('es-CO')} und</span>
+                                <span style={{fontWeight:700,marginLeft:8,flexShrink:0}}>{fmtM(o.subtotal)}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
+                      )}
+                      {liq.resumen.map((d,i)=>(
+                        <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#15803d',padding:'2px 0'}}>
+                          <span>{d.concepto}</span><span style={{fontWeight:700}}>{fmtM(d.valor)}</span>
+                        </div>
+                      ))}
+                      <div style={{borderTop:'1px solid #86efac',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}}>
+                        <span style={{fontWeight:700,color:'#14532d',fontSize:12}}>Total a pagar</span>
+                        <span style={{fontWeight:900,color:'#15803d',fontSize:18}}>{fmtM(liq.total)}</span>
                       </div>
-                    )}
-                  {liq.resumen.map((d,i)=>(
-                      <div key={i} className="flex justify-between text-xs text-green-700">
-                        <span>{d.concepto}</span>
-                        <span className="font-bold">{fmtM(d.valor)}</span>
-                      </div>
-                    ))}
+                    </div>
+                  );
+                })()}
+
+                {/* Resumen satélite */}
+                {selSat && (
+                  <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:16,marginBottom:12}}>
+                    <p style={{fontSize:24,fontWeight:900,color:'#15803d',margin:'0 0 4px'}}>{fmtM(selSat.total)}</p>
+                    <p style={{fontSize:11,color:'#16a34a',margin:0}}>{selSat.compOps} operaciones completadas · {quincena.label}</p>
                   </div>
-                  <div className="border-t border-green-200 pt-2 flex justify-between">
-                    <span className="text-sm font-bold text-green-800">Total a pagar</span>
-                    <span className="text-xl font-black text-green-700">{fmtM(liq.total)}</span>
-                  </div>
+                )}
+
+                {/* Descuento */}
+                <div style={{marginBottom:12}}>
+                  <label style={{display:'block',fontSize:11,fontWeight:600,color:'#374151',marginBottom:4}}>Descuento (opcional)</label>
+                  <input type="number" min={0} value={descuento} onChange={e=>setDescuento(e.target.value)}
+                    placeholder="$0"
+                    style={{width:'100%',border:'1px solid #d1d5db',borderRadius:10,padding:'8px 12px',fontSize:13,outline:'none',boxSizing:'border-box'}} />
                 </div>
-              );
-            })()}
 
-            {selSat && (
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                <p className="text-2xl font-black text-green-600">{fmtM(selSat.total)}</p>
-                <p className="text-xs text-green-600 mt-0.5">{selSat.compOps} operaciones completadas</p>
+                {/* Foto comprobante */}
+                <div>
+                  <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:6}}>📸 Comprobante <span style={{color:'#9ca3af',fontWeight:400}}>(opcional)</span></p>
+                  <label style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:'2px dashed #d1d5db',borderRadius:12,padding:12,cursor:'pointer',minHeight:80}}>
+                    {photoPreview
+                      ? <img src={photoPreview} alt="Comprobante" style={{maxHeight:100,borderRadius:8,objectFit:'contain'}} />
+                      : <><span style={{fontSize:24}}>📷</span><span style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Subir foto del comprobante</span></>
+                    }
+                    <input type="file" accept="image/*" capture="environment" style={{display:'none'}}
+                      onChange={e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{setPhotoPreview(ev.target.result); setPhoto(ev.target.result);}; r.readAsDataURL(f); }} />
+                  </label>
+                </div>
               </div>
-            )}
 
-            {/* Descuento */}
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Descuentos (opcional)</label>
-              <input type="number" min={0} value={descuento} onChange={e=>setDescuento(e.target.value)}
-                placeholder="0"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none" />
-            </div>
+              {/* COLUMNA DERECHA: Notas + Firmas + Botón */}
+              <div style={{display:'flex',flexDirection:'column',gap:12}}>
 
-            {/* Firmas */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-bold text-blue-800">Firma ELROHI — Nómina (Paga)</p>
-                {firmaElrohi && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
+                {/* Notas */}
+                <div>
+                  <label style={{display:'block',fontSize:11,fontWeight:600,color:'#374151',marginBottom:4}}>Notas</label>
+                  <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2}
+                    placeholder="Observaciones del pago..."
+                    style={{width:'100%',border:'1px solid #d1d5db',borderRadius:10,padding:'8px 12px',fontSize:12,resize:'none',outline:'none',boxSizing:'border-box'}} />
+                </div>
+
+                {/* Firma ELROHI */}
+                <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:12,padding:12}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#1e40af',margin:0}}>✍️ Firma ELROHI — Responsable de nómina</p>
+                    {firmaElrohi && <span style={{fontSize:10,color:'#16a34a',fontWeight:700}}>✓ Firmado</span>}
+                  </div>
+                  <FirmaCanvas label="" onSave={setFirmaElrohi} />
+                </div>
+
+                {/* Firma quien recibe */}
+                <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:12}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <p style={{fontSize:11,fontWeight:700,color:'#15803d',margin:0}}>✍️ Firma de quien recibe el pago</p>
+                    {firmaRecibe && <span style={{fontSize:10,color:'#16a34a',fontWeight:700}}>✓ Firmado</span>}
+                  </div>
+                  <FirmaCanvas label="" onSave={setFirmaRecibe} />
+                </div>
+
+                {/* Botón confirmar */}
+                <button onClick={confirmarPago} disabled={saving}
+                  style={{width:'100%',padding:'14px',background:saving?'#9ca3af':'#15803d',color:'#fff',fontWeight:900,fontSize:14,borderRadius:12,border:'none',cursor:saving?'not-allowed':'pointer',marginTop:'auto'}}>
+                  {saving ? '⏳ Guardando...' : '✅ Confirmar y generar recibo'}
+                </button>
+
               </div>
-              <FirmaCanvas label="Firma del responsable de nómina:" onSave={setFirmaElrohi} />
-            </div>
-
-            <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-bold text-green-800">Firma de quien recibe el pago</p>
-                {firmaRecibe && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
-              </div>
-              <FirmaCanvas label="Firma del operario/satélite:" onSave={setFirmaRecibe} />
-            </div>
-
-            {/* Foto comprobante */}
-            <div className="mb-3">
-              <p className="text-xs font-semibold text-gray-700 mb-2">📸 Comprobante <span className="text-gray-400 font-normal">(opcional)</span></p>
-              <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl p-3 cursor-pointer hover:border-orange-400">
-                {photoPreview
-                  ? <img src={photoPreview} alt="Comprobante" className="max-h-32 rounded-lg object-contain" />
-                  : <div className="text-center"><p className="text-2xl mb-1">📷</p><p className="text-xs text-gray-500">Clic para subir</p></div>
-                }
-                <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-              </label>
-              {photoPreview && <button onClick={()=>{setPhoto(null);setPhotoPreview(null);}} className="mt-1 text-xs text-red-500">✕ Quitar</button>}
-            </div>
-
-            {/* Notas */}
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Observaciones</label>
-              <textarea value={notes} onChange={e=>setNotes(e.target.value)}
-                placeholder="Ej: Transferencia Bancolombia #1234567..."
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none h-14 focus:outline-none" />
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={()=>setShowModal(false)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
-              <button onClick={confirmarPago} disabled={saving}
-                className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-                style={{background:'#15803d'}}>
-                {saving?'Registrando...':'✅ Confirmar y generar recibo'}
-              </button>
             </div>
           </div>
         </div>
       )}
-    </div>
-  );
-}
