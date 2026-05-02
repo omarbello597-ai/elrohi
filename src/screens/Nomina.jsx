@@ -753,3 +753,6 @@ export function NominaScreen() {
           </div>
         </div>
       )}
+
+  );
+}
