@@ -240,13 +240,21 @@ export function QuincenaScreen() {
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border-2 border-green-200 p-6 text-center mb-5">
-            <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Acumulado</p>
-            <p className="text-4xl font-black text-green-500 mb-1" style={{letterSpacing:'-0.04em'}}>{fmtM(total)}</p>
-            <p className="text-xs text-gray-400">{completedOps.length} operaciones completadas</p>
-          </div>
+          {!yaPagado ? (
+            <div className="bg-white rounded-2xl border-2 border-green-200 p-6 text-center mb-5">
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Acumulado</p>
+              <p className="text-4xl font-black text-green-500 mb-1" style={{letterSpacing:'-0.04em'}}>{fmtM(total)}</p>
+              <p className="text-xs text-gray-400">{completedOps.length} operaciones completadas</p>
+            </div>
+          ) : (
+            <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-6 text-center mb-5">
+              <p className="text-3xl mb-2">✅</p>
+              <p className="text-sm font-black text-green-700">Quincena pagada</p>
+              <p className="text-xs text-green-600 mt-1">Revisa el detalle en Mis Pagos</p>
+            </div>
+          )}
 
-          {completedOps.length > 0 ? (
+          {!yaPagado && completedOps.length > 0 ? (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="px-4 py-2.5" style={{background:'#14405A'}}>
                 <p className="text-[10px] font-bold text-white uppercase tracking-wider">Detalle de operaciones</p>
