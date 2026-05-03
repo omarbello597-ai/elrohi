@@ -631,120 +631,115 @@ export function NominaScreen() {
 
       {/* MODAL PAGO */}
       {showModal && (selWorker || selSat) && (
-        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-          <div style={{background:'#fff',borderRadius:16,width:'100%',maxWidth:860,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+        <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:'16px'}}>
+          <div style={{background:'#fff',borderRadius:'16px',width:'100%',maxWidth:'860px',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
 
-            {/* Header */}
             <div style={{background:'#14405A',borderRadius:'16px 16px 0 0',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
-                <p style={{color:'#fff',fontWeight:900,fontSize:15,margin:0}}>
-                  {selWorker ? 'Registrar Pago - ' + selWorker.name : 'Registrar Pago - ' + (selSat?.name||'')}
+                <p style={{color:'#fff',fontWeight:900,fontSize:'15px',margin:0}}>
+                  {selWorker && ('Registrar Pago - ' + selWorker.name)}
+                  {selSat && ('Registrar Pago - ' + selSat.name)}
                 </p>
-                <p style={{color:'#93c5fd',fontSize:11,margin:0}}>{quincena.label}</p>
+                <p style={{color:'#93c5fd',fontSize:'11px',margin:0}}>{quincena.label}</p>
               </div>
-              <button onClick={()=>setShowModal(false)} style={{color:'#fff',fontSize:20,fontWeight:900,background:'transparent',border:'none',cursor:'pointer',lineHeight:1}}>✕</button>
+              <button onClick={function(){setShowModal(false);}} style={{color:'#fff',fontSize:'20px',fontWeight:900,background:'transparent',border:'none',cursor:'pointer'}}>X</button>
             </div>
 
-            {/* Body - 2 columnas */}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,padding:20}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'20px',padding:'20px'}}>
 
-              {/* COLUMNA IZQUIERDA: Resumen + Descuento */}
               <div>
-                <p style={{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Resumen del período</p>
+                <p style={{fontSize:'11px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'8px'}}>Resumen del periodo</p>
 
-                {/* Resumen operario */}
-                {selWorker && (()=>{
-                  const liq = calcLiquidacion(selWorker);
+                {selWorker && (function(){
+                  var liq = calcLiquidacion(selWorker);
                   return (
-                    <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:12,marginBottom:12}}>
-                      {(liq.opsDetalle||[]).length>0 && (
-                        <div style={{marginBottom:8}}>
-                          <p style={{fontSize:10,fontWeight:700,color:'#15803d',marginBottom:4}}>Operaciones realizadas:</p>
-                          <div style={{maxHeight:160,overflowY:'auto'}}>
-                            {liq.opsDetalle.map((o,i)=>(
-                              <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#166534',padding:'2px 0',borderBottom:'1px solid #dcfce7'}}>
-                                <span style={{flex:1}}>{o.lotCode} · {o.referencia} · <strong>{o.operacion}</strong> × {(o.qty||0).toLocaleString('es-CO')} und</span>
-                                <span style={{fontWeight:700,marginLeft:8,flexShrink:0}}>{fmtM(o.subtotal)}</span>
+                    <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:'12px',padding:'12px',marginBottom:'12px'}}>
+                      {liq.opsDetalle && liq.opsDetalle.length > 0 && (
+                        <div style={{marginBottom:'8px',maxHeight:'160px',overflowY:'auto'}}>
+                          <p style={{fontSize:'10px',fontWeight:700,color:'#15803d',marginBottom:'4px'}}>Operaciones:</p>
+                          {liq.opsDetalle.map(function(o,i){
+                            return (
+                              <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:'10px',color:'#166534',padding:'2px 0',borderBottom:'1px solid #dcfce7'}}>
+                                <span>{o.lotCode} - {o.referencia} - {o.operacion} x {(o.qty||0).toLocaleString('es-CO')}</span>
+                                <span style={{fontWeight:700,marginLeft:'8px'}}>{fmtM(o.subtotal)}</span>
                               </div>
-                            ))}
-                          </div>
+                            );
+                          })}
                         </div>
                       )}
-                      {liq.resumen.map((d,i)=>(
-                        <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#15803d',padding:'2px 0'}}>
-                          <span>{d.concepto}</span><span style={{fontWeight:700}}>{fmtM(d.valor)}</span>
-                        </div>
-                      ))}
-                      <div style={{borderTop:'1px solid #86efac',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}}>
-                        <span style={{fontWeight:700,color:'#14532d',fontSize:12}}>Total a pagar</span>
-                        <span style={{fontWeight:900,color:'#15803d',fontSize:18}}>{fmtM(liq.total)}</span>
+                      {(liq.resumen||[]).map(function(d,i){
+                        return (
+                          <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:'11px',color:'#15803d',padding:'2px 0'}}>
+                            <span>{d.concepto}</span>
+                            <span style={{fontWeight:700}}>{fmtM(d.valor)}</span>
+                          </div>
+                        );
+                      })}
+                      <div style={{borderTop:'1px solid #86efac',marginTop:'8px',paddingTop:'8px',display:'flex',justifyContent:'space-between'}}>
+                        <span style={{fontWeight:700,color:'#14532d',fontSize:'12px'}}>Total a pagar</span>
+                        <span style={{fontWeight:900,color:'#15803d',fontSize:'18px'}}>{fmtM(liq.total)}</span>
                       </div>
                     </div>
                   );
                 })()}
 
-                {/* Resumen satélite */}
                 {selSat && (
-                  <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:16,marginBottom:12}}>
-                    <p style={{fontSize:24,fontWeight:900,color:'#15803d',margin:'0 0 4px'}}>{fmtM(selSat.total)}</p>
-                    <p style={{fontSize:11,color:'#16a34a',margin:0}}>{selSat.compOps} operaciones completadas · {quincena.label}</p>
+                  <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:'12px',padding:'16px',marginBottom:'12px'}}>
+                    <p style={{fontSize:'24px',fontWeight:900,color:'#15803d',margin:'0 0 4px 0'}}>{fmtM(selSat.total)}</p>
+                    <p style={{fontSize:'11px',color:'#16a34a',margin:0}}>{selSat.compOps} operaciones - {quincena.label}</p>
                   </div>
                 )}
 
-                {/* Descuento */}
-                <div style={{marginBottom:12}}>
-                  <label style={{display:'block',fontSize:11,fontWeight:600,color:'#374151',marginBottom:4}}>Descuento (opcional)</label>
-                  <input type="number" min={0} value={descuento} onChange={e=>setDescuento(e.target.value)}
-                    placeholder="$0"
-                    style={{width:'100%',border:'1px solid #d1d5db',borderRadius:10,padding:'8px 12px',fontSize:13,outline:'none',boxSizing:'border-box'}} />
+                <div style={{marginBottom:'12px'}}>
+                  <label style={{display:'block',fontSize:'11px',fontWeight:600,color:'#374151',marginBottom:'4px'}}>Descuento (opcional)</label>
+                  <input type="number" min={0} value={descuento} onChange={function(e){setDescuento(e.target.value);}}
+                    placeholder="0"
+                    style={{width:'100%',border:'1px solid #d1d5db',borderRadius:'10px',padding:'8px 12px',fontSize:'13px',outline:'none',boxSizing:'border-box'}} />
                 </div>
 
-                {/* Foto comprobante */}
                 <div>
-                  <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:6}}>📸 Comprobante <span style={{color:'#9ca3af',fontWeight:400}}>(opcional)</span></p>
-                  <label style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:'2px dashed #d1d5db',borderRadius:12,padding:12,cursor:'pointer',minHeight:80}}>
-                    {photoPreview && <img src={photoPreview} alt="Comprobante" style={{maxHeight:100,borderRadius:8,objectFit:'contain'}} />}
-                    {!photoPreview && <span style={{fontSize:24}}>📷</span>}
-                    {!photoPreview && <span style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Subir comprobante</span>}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style={{display:'none'}}
-                      onChange={e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{setPhotoPreview(ev.target.result); setPhoto(ev.target.result);}; r.readAsDataURL(f); }} />
+                  <p style={{fontSize:'11px',fontWeight:600,color:'#374151',marginBottom:'6px'}}>Comprobante (opcional)</p>
+                  <label style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:'2px dashed #d1d5db',borderRadius:'12px',padding:'12px',cursor:'pointer',minHeight:'80px'}}>
+                    {photoPreview && (
+                      <img src={photoPreview} alt="Comprobante" style={{maxHeight:'100px',borderRadius:'8px',objectFit:'contain'}} />
+                    )}
+                    {!photoPreview && (
+                      <span style={{fontSize:'11px',color:'#9ca3af'}}>Subir foto del comprobante</span>
+                    )}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" style={{display:'none'}}
+                      onChange={function(e){
+                        var f = e.target.files[0];
+                        if (!f) return;
+                        var r = new FileReader();
+                        r.onload = function(ev){ setPhotoPreview(ev.target.result); setPhoto(ev.target.result); };
+                        r.readAsDataURL(f);
+                      }} />
                   </label>
                 </div>
               </div>
 
-              {/* COLUMNA DERECHA: Notas + Firmas + Botón */}
-              <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
 
-                {/* Notas */}
                 <div>
-                  <label style={{display:'block',fontSize:11,fontWeight:600,color:'#374151',marginBottom:4}}>Notas</label>
-                  <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2}
-                    placeholder="Observaciones del pago..."
-                    style={{width:'100%',border:'1px solid #d1d5db',borderRadius:10,padding:'8px 12px',fontSize:12,resize:'none',outline:'none',boxSizing:'border-box'}} />
+                  <label style={{display:'block',fontSize:'11px',fontWeight:600,color:'#374151',marginBottom:'4px'}}>Notas</label>
+                  <textarea value={notes} onChange={function(e){setNotes(e.target.value);}} rows={2}
+                    placeholder="Observaciones..."
+                    style={{width:'100%',border:'1px solid #d1d5db',borderRadius:'10px',padding:'8px 12px',fontSize:'12px',resize:'none',outline:'none',boxSizing:'border-box'}} />
                 </div>
 
-                {/* Firma ELROHI */}
-                <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:12,padding:12}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                    <p style={{fontSize:11,fontWeight:700,color:'#1e40af',margin:0}}>✍️ Firma ELROHI — Responsable de nómina</p>
-                    {firmaElrohi && <span style={{fontSize:10,color:'#16a34a',fontWeight:700}}>✓ Firmado</span>}
-                  </div>
+                <div style={{background:'#eff6ff',border:'1px solid #bfdbfe',borderRadius:'12px',padding:'12px'}}>
+                  <p style={{fontSize:'11px',fontWeight:700,color:'#1e40af',marginBottom:'8px'}}>Firma ELROHI - Responsable nomina</p>
                   <FirmaCanvas label="" onSave={setFirmaElrohi} />
                 </div>
 
-                {/* Firma quien recibe */}
-                <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:12}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                    <p style={{fontSize:11,fontWeight:700,color:'#15803d',margin:0}}>✍️ Firma de quien recibe el pago</p>
-                    {firmaRecibe && <span style={{fontSize:10,color:'#16a34a',fontWeight:700}}>✓ Firmado</span>}
-                  </div>
+                <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:'12px',padding:'12px'}}>
+                  <p style={{fontSize:'11px',fontWeight:700,color:'#15803d',marginBottom:'8px'}}>Firma de quien recibe el pago</p>
                   <FirmaCanvas label="" onSave={setFirmaRecibe} />
                 </div>
 
-                {/* Botón confirmar */}
                 <button onClick={confirmarPago} disabled={saving}
-                  style={{width:'100%',padding:'14px',background:saving?'#9ca3af':'#15803d',color:'#fff',fontWeight:900,fontSize:14,borderRadius:12,border:'none',cursor:saving?'not-allowed':'pointer',marginTop:'auto'}}>
-                  {saving ? '⏳ Guardando...' : '✅ Confirmar y generar recibo'}
+                  style={{width:'100%',padding:'14px',background:saving?'#9ca3af':'#15803d',color:'#fff',fontWeight:900,fontSize:'14px',borderRadius:'12px',border:'none',cursor:'pointer'}}>
+                  {saving ? 'Guardando...' : 'Confirmar y generar recibo'}
                 </button>
 
               </div>
@@ -753,6 +748,5 @@ export function NominaScreen() {
         </div>
       )}
     </div>
-  </div>
   );
 }
