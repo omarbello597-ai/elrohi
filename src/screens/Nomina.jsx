@@ -405,13 +405,13 @@ export function NominaScreen() {
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900">{u.name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">{ROLE_LABELS[u.role]||u.role}</span>
-                    {pagado && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
+                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">{ROLE_LABELS[u.role]||u.role}</span>
+                    {pagado && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className={`text-lg font-black ${pagado?'text-green-600':'text-gray-900'}`}>{fmtM(liq.total)}</p>
-                  {!pagado && <p className="text-[9px] text-orange-500 font-bold">Pendiente →</p>}
+                  {!pagado && <p className="text-xs text-orange-500 font-bold">Pendiente →</p>}
                 </div>
               </div>
             );
@@ -433,16 +433,16 @@ export function NominaScreen() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-gray-900">{u.name}</p>
-                  <p className="text-[10px] text-gray-400">{ROLE_LABELS[u.role]||u.role} · {quincena.label}</p>
+                  <p className="text-xs text-gray-400">{ROLE_LABELS[u.role]||u.role} · {quincena.label}</p>
                 </div>
               </div>
 
               {/* Operaciones realizadas */}
               {(liq.opsDetalle||[]).length > 0 && (
                 <div className="mb-4">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operaciones realizadas</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Operaciones realizadas</p>
                   <div className="bg-gray-50 rounded-xl overflow-hidden">
-                    <div className="grid grid-cols-4 gap-1 px-3 py-1.5 bg-gray-100 text-[9px] font-bold text-gray-500 uppercase">
+                    <div className="grid grid-cols-4 gap-1 px-3 py-1.5 bg-gray-100 text-xs font-bold text-gray-500 uppercase">
                       <span className="col-span-1">Corte / Referencia</span>
                       <span className="col-span-1">Operación</span>
                       <span className="text-center">Und</span>
@@ -451,15 +451,15 @@ export function NominaScreen() {
                     {liq.opsDetalle.map((o,i)=>(
                       <div key={i} className="grid grid-cols-4 gap-1 px-3 py-2 border-b border-gray-100 last:border-0 items-center">
                         <div className="col-span-1">
-                          <p className="text-[10px] font-mono font-bold text-blue-700">{o.lotCode}</p>
-                          <p className="text-[9px] text-gray-500 leading-tight">{o.referencia||''}</p>
+                          <p className="text-xs font-mono font-bold text-blue-700">{o.lotCode}</p>
+                          <p className="text-xs text-gray-500 leading-tight">{o.referencia||''}</p>
                         </div>
                         <div className="col-span-1">
-                          <p className="text-[10px] font-bold text-gray-800">{o.operacion}</p>
-                          <p className="text-[9px] text-gray-400">{fmtM(o.valUnit)}/und</p>
+                          <p className="text-xs font-bold text-gray-800">{o.operacion}</p>
+                          <p className="text-xs text-gray-400">{fmtM(o.valUnit)}/und</p>
                         </div>
-                        <span className="text-[10px] text-center text-gray-600">{(o.qty||0).toLocaleString('es-CO')}</span>
-                        <span className="text-[10px] font-black text-gray-900 text-right">{fmtM(o.subtotal)}</span>
+                        <span className="text-xs text-center text-gray-600">{(o.qty||0).toLocaleString('es-CO')}</span>
+                        <span className="text-xs font-black text-gray-900 text-right">{fmtM(o.subtotal)}</span>
                       </div>
                     ))}
                   </div>
@@ -507,11 +507,11 @@ export function NominaScreen() {
                 <div className="flex-1">
                   <p className="text-sm font-bold text-gray-900">{s.name}</p>
                   <p className="text-xs text-gray-400">{s.compOps} ops · {(s.detalle||[]).length} items</p>
-                  {pagado && <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
+                  {pagado && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">✅ Pagado</span>}
                 </div>
                 <div className="text-right">
                   <p className={`text-lg font-black ${pagado?'text-green-600':'text-gray-900'}`}>{fmtM(s.total)}</p>
-                  {!pagado && <p className="text-[9px] text-orange-500 font-bold">Pendiente →</p>}
+                  {!pagado && <p className="text-xs text-orange-500 font-bold">Pendiente →</p>}
                 </div>
               </div>
             );
@@ -530,7 +530,7 @@ export function NominaScreen() {
                 <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-xl">🏭</div>
                 <div>
                   <p className="text-sm font-bold text-gray-900">{s.name}</p>
-                  <p className="text-[10px] text-gray-400">{quincena.label}</p>
+                  <p className="text-xs text-gray-400">{quincena.label}</p>
                 </div>
               </div>
 
@@ -539,7 +539,7 @@ export function NominaScreen() {
               {/* Desglose por operario con detalle */}
               {(s.workerBreakdown||[]).length>0 && (
                 <div className="mb-4">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Operarios del satélite</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Operarios del satélite</p>
                   {s.workerBreakdown.map((w,i)=>(
                     <div key={i} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100">
                       <div className="flex justify-between items-center mb-2">
@@ -552,9 +552,9 @@ export function NominaScreen() {
                             <div key={j} className="bg-white rounded-lg px-3 py-1.5 border border-gray-100">
                               <div className="flex justify-between items-start gap-2">
                                 <div className="flex-1">
-                                  <p className="text-[10px] font-bold text-blue-700">{o.lotCode}</p>
-                                  <p className="text-[10px] text-gray-700">{o.referencia}</p>
-                                  <p className="text-[10px] text-gray-500"><strong>{o.operacion}</strong> · {(o.qty||0).toLocaleString('es-CO')} und × {fmtM(o.valUnit)}</p>
+                                  <p className="text-xs font-bold text-blue-700">{o.lotCode}</p>
+                                  <p className="text-xs text-gray-700">{o.referencia}</p>
+                                  <p className="text-xs text-gray-500"><strong>{o.operacion}</strong> · {(o.qty||0).toLocaleString('es-CO')} und × {fmtM(o.valUnit)}</p>
                                 </div>
                                 <span className="text-xs font-black text-gray-900 flex-shrink-0">{fmtM(o.subtotal)}</span>
                               </div>
@@ -562,7 +562,7 @@ export function NominaScreen() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10px] text-gray-400 italic">Sin operaciones en este período</p>
+                        <p className="text-xs text-gray-400 italic">Sin operaciones en este período</p>
                       )}
                     </div>
                   ))}
@@ -603,13 +603,13 @@ export function NominaScreen() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-mono text-xs font-bold text-blue-700">{p.recId}</span>
-                    <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Pagado</span>
-                    <span className="text-[9px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Pagado</span>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                       {p.tipo==='elrohi'?'👷 ELROHI':'🏭 Satélite'}
                     </span>
                   </div>
                   <p className="text-sm font-bold text-gray-900">{p.workerName||p.satName}</p>
-                  <p className="text-[10px] text-gray-400">{p.periodo||p.date}</p>
+                  <p className="text-xs text-gray-400">{p.periodo||p.date}</p>
                   <p className="text-sm font-black text-green-600 mt-1">{fmtM(p.total)}</p>
                 </div>
                 <button onClick={() => {
@@ -703,11 +703,10 @@ export function NominaScreen() {
                 <div>
                   <p style={{fontSize:11,fontWeight:600,color:'#374151',marginBottom:6}}>📸 Comprobante <span style={{color:'#9ca3af',fontWeight:400}}>(opcional)</span></p>
                   <label style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:'2px dashed #d1d5db',borderRadius:12,padding:12,cursor:'pointer',minHeight:80}}>
-                    {photoPreview
-                      ? <img src={photoPreview} alt="Comprobante" style={{maxHeight:100,borderRadius:8,objectFit:'contain'}} />
-                      : <><span style={{fontSize:24}}>📷</span><span style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Subir foto del comprobante</span></>
-                    }
-                    <input type="file" accept="image/*" capture="environment" style={{display:'none'}}
+                    {photoPreview && <img src={photoPreview} alt="Comprobante" style={{maxHeight:100,borderRadius:8,objectFit:'contain'}} />}
+                    {!photoPreview && <span style={{fontSize:24}}>📷</span>}
+                    {!photoPreview && <span style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Subir comprobante</span>}
+                    <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" style={{display:'none'}}
                       onChange={e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{setPhotoPreview(ev.target.result); setPhoto(ev.target.result);}; r.readAsDataURL(f); }} />
                   </label>
                 </div>
