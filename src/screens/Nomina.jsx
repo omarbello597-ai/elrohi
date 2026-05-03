@@ -303,8 +303,16 @@ export function NominaScreen() {
           firmaElrohi, firmaRecibe,
         };
         await addDocument('payments', data);
+        // Guardar también para que el operario lo vea en Mis Pagos
+        await addDocument('nominasSatelite', {
+          ...data,
+          operarioId: selWorker.id,
+          workerName: selWorker.name,
+          status: 'pagado',
+          createdAt: new Date().toISOString(),
+        });
         printRecibo({ ...data, nombre: selWorker.name, resumen: detalleFinal, opsDetalle: liq.opsDetalle||[] });
-        toast.success(`✅ Pago registrado — ${rec}`);
+        toast.success('Pago registrado - ' + rec);
       } else if (selSat) {
         const payData = {
           recId: rec, tipo: 'satelite',
