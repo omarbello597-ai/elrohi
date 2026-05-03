@@ -108,30 +108,33 @@ function FirmaCanvas({ onSave, label }) {
 
 // ─── RECIBO PDF ─────────────────────────────────────────────────────────────────
 function printRecibo(data) {
-  const firmaBox = (label,img,nombre) => `
-    <div style="text-align:center;padding:8px 16px">
-      ${img?`<img src="${img}" style="height:65px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">`
-           :`<div style="height:65px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>`}
-      <div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">${label}</div>
-      ${nombre?`<div style="font-size:10px;color:#374151;margin-top:2px">${nombre}</div>`:''}
-    </div>`;
+  const firmaBox = (label,img,nombre) => '<div style="text-align:center;padding:8px 16px">' +
+    (img ? '<img src="' + img + '" style="height:60px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">'
+         : '<div style="height:60px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
+    '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">' + label + '</div>' +
+    (nombre ? '<div style="font-size:10px;color:#374151;margin-top:2px">' + nombre + '</div>' : '') +
+    '</div>';
 
-  // Detalle de operaciones
-  const opsRows = (data.opsDetalle||[]).map(o=>`
-    <tr style="border-bottom:1px solid #f3f4f6">
-      <td style="padding:5px 8px;font-size:10px;color:#14405A;font-weight:600">${o.lotCode||''}</td>
-      <td style="padding:5px 8px;font-size:10px;color:#374151">${o.referencia||''}</td>
-      <td style="padding:5px 8px;font-size:10px;color:#374151">${o.operacion||''}</td>
-      <td style="padding:5px 8px;font-size:10px;text-align:center">${(o.qty||0).toLocaleString('es-CO')}</td>
-      <td style="padding:5px 8px;font-size:10px;text-align:right">${fmtM(o.valUnit||0)}</td>
-      <td style="padding:5px 8px;font-size:10px;text-align:right;font-weight:700;color:#15803d">${fmtM(o.subtotal||0)}</td>
-    </tr>`).join('');
+  // Agrupar opsDetalle por lotCode — solo mostrar corte y total
+  var lotMap = {};
+  (data.opsDetalle||[]).forEach(function(o){
+    var key = o.lotCode || 'Sin corte';
+    if (!lotMap[key]) lotMap[key] = { lotCode: key, total: 0 };
+    lotMap[key].total += (o.subtotal || 0);
+  });
+  var cortesRows = Object.values(lotMap).map(function(c){
+    return '<tr style="border-bottom:1px solid #f3f4f6">' +
+      '<td style="padding:6px 10px;font-size:11px;font-weight:700;color:#14405A">' + c.lotCode + '</td>' +
+      '<td style="padding:6px 10px;font-size:12px;text-align:right;font-weight:700;color:#15803d">' + fmtM(c.total) + '</td>' +
+      '</tr>';
+  }).join('');
 
-  const rows = (data.resumen||data.detalle||[]).map(d => `
-    <tr>
-      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;font-size:12px">${d.concepto}</td>
-      <td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:12px;color:${d.valor<0?'#dc2626':'#15803d'}">${fmtM(d.valor)}</td>
-    </tr>`).join('');
+  var rows = (data.resumen||data.detalle||[]).map(function(d){
+    return '<tr>' +
+      '<td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;font-size:12px">' + d.concepto + '</td>' +
+      '<td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:12px;color:' + (d.valor<0?'#dc2626':'#15803d') + '">' + fmtM(d.valor) + '</td>' +
+      '</tr>';
+  }).join('');
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
   <title>Recibo ${data.recId}</title>
   <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
@@ -150,20 +153,8 @@ function printRecibo(data) {
       <div><span style="font-size:9px;color:#6b7280">ROL</span><div style="font-size:12px">${data.rol}</div></div>
       <div><span style="font-size:9px;color:#6b7280">FECHA</span><div style="font-size:12px">${today()}</div></div>
     </div>
-    ${opsRows?`
-    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">DETALLE DE OPERACIONES</div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#F7F7F7">
-        <th style="padding:5px 8px;font-size:9px;text-align:left;color:#14405A">Corte</th>
-        <th style="padding:5px 8px;font-size:9px;text-align:left;color:#14405A">Referencia</th>
-        <th style="padding:5px 8px;font-size:9px;text-align:left;color:#14405A">Operación</th>
-        <th style="padding:5px 8px;font-size:9px;text-align:center;color:#14405A">Und</th>
-        <th style="padding:5px 8px;font-size:9px;text-align:right;color:#14405A">Vr/und</th>
-        <th style="padding:5px 8px;font-size:9px;text-align:right;color:#14405A">Total</th>
-      </tr></thead>
-      <tbody>${opsRows}</tbody>
-    </table>`:''}
-    <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">RESUMEN</div>
+    ' + (cortesRows ? '<div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">CORTES TRABAJADOS</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F7F7F7"><th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Corte</th><th style="padding:6px 10px;font-size:9px;text-align:right;color:#14405A">Valor</th></tr></thead><tbody>' + cortesRows + '</tbody></table>' : '') + '
+        <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">RESUMEN</div>
     <table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:#F7F7F7">
         <th style="padding:7px 10px;font-size:10px;text-align:left;color:#14405A">Concepto</th>
