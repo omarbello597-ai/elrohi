@@ -638,7 +638,7 @@ export function NominaScreen() {
             <div style={{background:'#14405A',borderRadius:'16px 16px 0 0',padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <p style={{color:'#fff',fontWeight:900,fontSize:15,margin:0}}>
-                  {selWorker ? `Registrar Pago — ${selWorker.name}` : `Registrar Pago — ${selSat?.name}`}
+                  {selWorker ? 'Registrar Pago - ' + selWorker.name : 'Registrar Pago - ' + (selSat?.name||'')}
                 </p>
                 <p style={{color:'#93c5fd',fontSize:11,margin:0}}>{quincena.label}</p>
               </div>
