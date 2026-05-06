@@ -208,6 +208,38 @@ export default function PedidosScreen() {
   const totalPedido = items.reduce((a,i)=>a+(i.qty||0)*i.precioUnitario,0);
 
   // Verificar disponibilidad - usa inventario y cortes en proceso
+  // Helper: buscar prendas en produccion por descripcion keyword
+  const getEnProduccion = (descripcion) => {
+    if (!descripcion) return [];
+    const keyword = descripcion.toLowerCase().split(' ').slice(0,3).join(' ');
+    const result = [];
+    const seen = {};
+    lots.forEach(function(lot) {
+      if (['despachado','nuevo'].includes(lot.status)) return;
+      (lot.garments||[]).forEach(function(g) {
+        const gDesc = (g.descripcionRef||'').toLowerCase();
+        if (!gDesc.includes(keyword) && !keyword.includes(gDesc.split(' ')[0])) return;
+        const key = lot.satId || 'elrohi';
+        if (!seen[key+lot.status]) {
+          seen[key+lot.status] = true;
+          const satName = lot.satName || (satellites||[]).find(function(s){ return s.id===lot.satId; })?.name || '';
+          const statusLabel = {
+            'en_corte': 'En Corte',
+            'costura': 'En Costura',
+            'tintoreria': 'En Tintorería',
+            'listo_recepcion_admin': 'En camino a ELROHI',
+            'listo_bodega': 'En Bodega (pendiente asignar)',
+            'bodega_lonas': 'En Bodega Lonas',
+            'bodega_calidad': 'En Control Calidad',
+            'en_operaciones_elrohi': 'En Operaciones ELROHI',
+          }[lot.status] || lot.status;
+          result.push({ qty: g.total||0, status: statusLabel, satName: satName, lotCode: lot.code });
+        }
+      });
+    });
+    return result;
+  };
+
   const disponibilidad = useMemo(()=>{
     return items.filter(item=>item.descripcion && item.qty>0).map(item=>{
       const desc = (item.descripcion||'').toLowerCase();
@@ -541,6 +573,44 @@ export default function PedidosScreen() {
                           </div>
                         </div>
                       )}
+
+                      {/* Panel disponibilidad en producción */}
+                      {item.descripcion && (function(){
+                        const enProd = getEnProduccion(item.descripcion);
+                        const invItem = (inventario||[]).find(function(inv){
+                          return (inv.descripcionRef||inv.nombre||'').toLowerCase().includes((item.descripcion||'').toLowerCase().split(' ')[0]);
+                        });
+                        const dispBodega = invItem?.disponible || 0;
+                        const enAlist = invItem?.enAlistamiento || 0;
+                        return (
+                          <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl p-2">
+                            <p className="text-xs font-bold text-blue-700 mb-1.5">📦 Disponibilidad</p>
+                            {dispBodega > 0 && (
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-green-700 font-bold">✅ En Bodega disponible</span>
+                                <span className="font-black text-green-700">{dispBodega.toLocaleString('es-CO')} pzas</span>
+                              </div>
+                            )}
+                            {enAlist > 0 && (
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-amber-600 font-bold">📋 En Alistamiento</span>
+                                <span className="font-black text-amber-700">{enAlist.toLocaleString('es-CO')} pzas</span>
+                              </div>
+                            )}
+                            {dispBodega === 0 && enAlist === 0 && enProd.length === 0 && (
+                              <p className="text-xs text-gray-400 italic">Sin stock ni producción activa</p>
+                            )}
+                            {enProd.map(function(p, pi){
+                              return (
+                                <div key={pi} className="flex justify-between text-xs mb-0.5">
+                                  <span className="text-gray-600">🔄 {p.status}{p.satName ? ' — ' + p.satName : ''}</span>
+                                  <span className="font-bold text-gray-700">{(p.qty||0).toLocaleString('es-CO')} pzas</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
 
                       <div className="flex items-center justify-between mt-2">
                         {item.precioUnitario>0 && item.qty>0 && (
