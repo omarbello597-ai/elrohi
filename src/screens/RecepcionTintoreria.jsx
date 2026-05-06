@@ -140,7 +140,7 @@ export default function RecepcionTintoreria() {
       // Guardar info de tintorería en el lote para trazabilidad completa
       const remisionTintoInfo = {
         totalOriginal: showRemision.totalPieces || 0,
-        totalSatelite: showRemision._remision ? showRemision._remision.conteo.reduce(function(a,g){ return a + (+g.enviado||0); }, 0) : showRemision.totalPieces || 0,
+        totalSatelite: (showRemision._remision && showRemision._remision.conteo) ? showRemision._remision.conteo.reduce(function(a,g){ return a + (+g.enviado||0); }, 0) : (showRemision.totalPieces || 0),
         totalTintoreria: totalEntregado,
         piezasEntregadas: piezasEntregadas,
         codigoRemision: remData.codigoRemision,
@@ -149,12 +149,12 @@ export default function RecepcionTintoreria() {
 
       await addDocument('remisionesTinto', remData);
 
-      // SIEMPRE avanzar el lote a listo_recepcion_admin — sale de tintorería
-      await advanceLotStatus(showRemision.id, 'listo_recepcion_admin', profile?.id, profile?.name, {
+      // Guardar info de trazabilidad en el lote sin cambiar status
+      await advanceLotStatus(showRemision.id, 'tintoreria', profile?.id, profile?.name, {
         remisionTinto: remisionTintoInfo,
       });
 
-      toast.success('✅ Remisión ' + remData.codigoRemision + ' generada — lote en camino a ELROHI');
+      toast.success('✅ Remisión ' + remData.codigoRemision + ' generada — esperando recepción de Admin ELROHI');
       setShowRemision(null);
     } catch(e) { console.error(e); toast.error('Error'); }
     finally { setSaving(false); }
