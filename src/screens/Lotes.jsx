@@ -169,7 +169,7 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
   const totalVal = lotTotalValue(lot, ops, satOpVals);
   const doneVal  = lotDoneValue(lot, ops, satOpVals);
 
-  const isAdmin = ['admin_elrohi','gerente'].includes(profile.role);
+  const isAdmin = ['superadmin','admin_elrohi','gerente'].includes(profile.role);
 
   const advance = async (newStatus, extra = {}) => {
     setSaving(true);
@@ -281,6 +281,37 @@ function LoteDetail({ lot, lots, satellites, ops, satOpVals, users, profile, onB
             </tbody>
           </table>
         </div>
+
+        {/* Trazabilidad de piezas - 3 fases */}
+        {lot.remisionTinto && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-3">
+            <p className="text-xs font-bold text-blue-700 mb-2">📊 Trazabilidad de piezas</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white rounded-lg p-2">
+                <p className="text-xs text-gray-400">Original ELROHI</p>
+                <p className="text-lg font-black text-blue-700">{lot.remisionTinto.totalOriginal}</p>
+              </div>
+              <div className="bg-white rounded-lg p-2">
+                <p className="text-xs text-gray-400">Satélite → Tintorería</p>
+                <p className="text-lg font-black text-amber-600">{lot.remisionTinto.totalSatelite}</p>
+                {lot.remisionTinto.totalSatelite < lot.remisionTinto.totalOriginal && (
+                  <p className="text-xs text-red-500">-{lot.remisionTinto.totalOriginal - lot.remisionTinto.totalSatelite}</p>
+                )}
+              </div>
+              <div className="bg-white rounded-lg p-2">
+                <p className="text-xs text-gray-400">Tintorería → ELROHI</p>
+                <p className="text-lg font-black text-green-600">{lot.remisionTinto.totalTintoreria}</p>
+                {lot.remisionTinto.totalTintoreria < lot.remisionTinto.totalSatelite && (
+                  <p className="text-xs text-red-500">-{lot.remisionTinto.totalSatelite - lot.remisionTinto.totalTintoreria}</p>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              Diferencia total: <strong className="text-red-600">-{lot.remisionTinto.totalOriginal - lot.remisionTinto.totalTintoreria} piezas</strong>
+              {' · '}{lot.remisionTinto.codigoRemision}
+            </p>
+          </div>
+        )}
 
         {lot.novelties?.length > 0 && (
           <div className="bg-red-50 rounded-xl border border-red-200 p-4">
