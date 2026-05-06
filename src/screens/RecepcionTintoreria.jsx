@@ -85,6 +85,8 @@ export default function RecepcionTintoreria() {
   const remisionesEnviadas = remisiones.filter(r => r.tintoreriaId === profile?.id || isTinto);
   // Remisiones pendientes de recepción por admin
   const remisionesPendientes = remisiones.filter(r => r.status === 'enviada');
+  // Lotes esperando recepción de Admin (ya salieron de tintorería)
+  const lotesParaRecibir = lots.filter(l => l.status === 'listo_recepcion_admin');
 
   const openRemision = (lot) => {
     // Buscar la remision del satelite para este lote y usar sus cantidades enviadas
@@ -149,8 +151,8 @@ export default function RecepcionTintoreria() {
 
       await addDocument('remisionesTinto', remData);
 
-      // Guardar info de trazabilidad en el lote sin cambiar status
-      await advanceLotStatus(showRemision.id, 'tintoreria', profile?.id, profile?.name, {
+      // Avanzar lote — sale de tintorería, espera recepción de Admin
+      await advanceLotStatus(showRemision.id, 'listo_recepcion_admin', profile?.id, profile?.name, {
         remisionTinto: remisionTintoInfo,
       });
 
