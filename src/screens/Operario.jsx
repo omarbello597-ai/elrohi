@@ -12,7 +12,7 @@ export function MisOpsScreen() {
   const { profile }              = useAuth();
   const { lots, ops, satOpVals } = useData();
 
-  const myLots = lots.filter((l) => l.satId === profile.satId && l.status === 'costura');
+  const myLots = lots.filter((l) => l.satId === profile.satId && ['costura','en_taller','asignado','en_proceso','listo_remision_tintoreria'].includes(l.status));
   const allOps = myLots.flatMap((l) =>
     (l.lotOps || []).map((lo) => ({
       ...lo,
