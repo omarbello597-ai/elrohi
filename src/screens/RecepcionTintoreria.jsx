@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { addDocument, updateDocument, listenCol } from '../services/db';
 import { advanceLotStatus } from '../services/db_timeline';
-import { gLabel, fmtM } from '../utils';
+import { gLabel, fmtM , openPDF } from '../utils';
 import { ACCENT } from '../constants';
 import { orderBy } from 'firebase/firestore';
 import toast from 'react-hot-toast';
@@ -87,13 +87,22 @@ export default function RecepcionTintoreria() {
   const remisionesPendientes = remisiones.filter(r => r.status === 'enviada');
 
   const openRemision = (lot) => {
+    // Buscar la remision del satelite para este lote y usar sus cantidades enviadas
+    const remision = remisiones.find(r => r.lotId === lot.id);
     const conteo = {};
-    lot.garments?.forEach(g => { conteo[g.descripcionRef||g.gtId] = g.total; });
+    lot.garments?.forEach(g => {
+      const key = g.descripcionRef || g.gtId;
+      // Buscar en remision.conteo la cantidad enviada por el satelite
+      const remItem = remision?.conteo?.find(c =>
+        (c.descripcionRef && c.descripcionRef === key) || c.gtId === g.gtId
+      );
+      conteo[key] = remItem ? (+remItem.enviado||0) : g.total;
+    });
     setConteoEntrega(conteo);
     setNovedades([]);
     setFirmaTinto(null);
     setFirmaAdmin(null);
-    setShowRemision(lot);
+    setShowRemision({...lot, _remision: remision});
   };
 
   const addNovedad = () => setNovedades(prev => [...prev, { tipo:'faltante_tintoreria', gtId:'gt1', qty:0, descripcion:'' }]);
@@ -422,7 +431,10 @@ export default function RecepcionTintoreria() {
             </div>
             <div className="space-y-1.5 mb-4">
               {showRemision.garments?.map(g=>{
-                const enviado = showRemision.conteo?.find?.(c=>c.gtId===g.gtId)?.enviado ?? g.total;
+                const remItem = showRemision._remision?.conteo?.find(c =>
+                  (c.descripcionRef && c.descripcionRef === (g.descripcionRef||g.gtId)) || c.gtId === g.gtId
+                );
+                const enviado = remItem ? (+remItem.enviado||0) : g.total;
                 return (
                 <div key={g.gtId} className="grid grid-cols-4 gap-1 items-center bg-gray-50 rounded-xl px-3 py-2 border border-gray-100">
                   <span className="text-xs font-bold text-gray-700 col-span-1 leading-tight">{g.descripcionRef||gLabel(g.gtId)}</span>
