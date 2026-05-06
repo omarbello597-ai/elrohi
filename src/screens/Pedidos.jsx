@@ -125,7 +125,7 @@ const emptyItem = () => ({ descripcion:'', talla:'', qty:1, precioUnitario:0, pr
 
 export default function PedidosScreen() {
   const { profile } = useAuth();
-  const { lots, inventario } = useData();
+  const { lots, inventario, satellites } = useData();
   const [despachos,  setDespachos]  = useState([]);
   const [facturas,   setFacturas]   = useState([]);
   const [clientes,   setClientes]   = useState([]);
