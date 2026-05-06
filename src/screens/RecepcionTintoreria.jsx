@@ -129,13 +129,32 @@ export default function RecepcionTintoreria() {
         generadoPor:   profile?.name,
         tintoreriaId:  profile?.id,
       };
+      // Código de remisión basado en el corte
+      remData.codigoRemision = 'REM-' + showRemision.code;
+
+      // Calcular piezas por prenda para trazabilidad
+      const piezasEntregadas = Object.entries(conteoEntrega).map(function(e){
+        return { descripcionRef: e[0], entregado: +e[1] || 0 };
+      });
+
+      // Guardar info de tintorería en el lote para trazabilidad completa
+      const remisionTintoInfo = {
+        totalOriginal: showRemision.totalPieces || 0,
+        totalSatelite: showRemision._remision ? showRemision._remision.conteo.reduce(function(a,g){ return a + (+g.enviado||0); }, 0) : showRemision.totalPieces || 0,
+        totalTintoreria: totalEntregado,
+        piezasEntregadas: piezasEntregadas,
+        codigoRemision: remData.codigoRemision,
+        fechaEntrega: new Date().toLocaleDateString('es-CO'),
+      };
+
       await addDocument('remisionesTinto', remData);
-      // Avanzar lote a estado especial si hay entrega parcial
-      const hayParcial = novedades.some(n=>n.tipo==='entrega_parcial');
-      if (!hayParcial) {
-        await advanceLotStatus(showRemision.id, 'listo_recepcion_admin', profile?.id, profile?.name);
-      }
-      toast.success('✅ Remisión generada — esperando recepción de Admin');
+
+      // SIEMPRE avanzar el lote a listo_recepcion_admin — sale de tintorería
+      await advanceLotStatus(showRemision.id, 'listo_recepcion_admin', profile?.id, profile?.name, {
+        remisionTinto: remisionTintoInfo,
+      });
+
+      toast.success('✅ Remisión ' + remData.codigoRemision + ' generada — lote en camino a ELROHI');
       setShowRemision(null);
     } catch(e) { console.error(e); toast.error('Error'); }
     finally { setSaving(false); }
@@ -315,7 +334,7 @@ export default function RecepcionTintoreria() {
                 </span>
               </div>
               <p className="text-xs text-gray-500">Satélite: {r.satName}</p>
-              <p className="text-xs text-gray-400">Piezas: {r.conteo?.reduce((a,g)=>a+(+g.enviado||0),0)||0}</p>
+              <p className="text-xs text-gray-400">Piezas: {r.conteo?.length ? r.conteo.reduce((a,g)=>a+(+g.enviado||0),0) : (r.totalPiezas||r.totalPieces||0)}</p>
               {r.hayFaltantes && <p className="text-xs text-amber-600 mt-1">⚠ Envío parcial</p>}
             </div>
           ))}
