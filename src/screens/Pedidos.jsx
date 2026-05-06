@@ -265,7 +265,7 @@ export default function PedidosScreen() {
         listaId:         selListaId,
         listaNombre:     listaSel?.nombre,
         impuesto:        clienteSel?.impuesto,
-        items,
+        items: disponibilidad.map(function(d){ return { descripcion: d.descripcion, descripcionRef: d.descripcionRef, gtId: d.gtId, talla: d.talla, qty: d.qty, precioUnitario: d.precioUnitario||0 }; }),
         guia,
         notas,
         status:          'pendiente',
