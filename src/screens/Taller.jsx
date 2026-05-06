@@ -6,7 +6,7 @@ import { addDocument, updateDocument } from '../services/db';
 import { advanceLotStatus } from '../services/db_timeline';
 import { durationSince, fmtDuration } from '../services/consecutivos';
 import { ACCENT } from '../constants';
-import { gLabel, fmtM } from '../utils';
+import { gLabel, fmtM , openPDF } from '../utils';
 import toast from 'react-hot-toast';
 
 const SIZES_REF = ['XS/6','S/8','M/10','L/12','XL/14','XXL/16','28','30','32','34','36','38','40','42','44'];
@@ -98,6 +98,17 @@ export default function TallerScreen() {
   const [satOps,    setSatOps]    = useState([]);
   const myWorkers = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
   const myLots    = lots.filter(l => l.satId === profile?.satId);
+
+  const operariosSat = users.filter(u => u.satId === profile?.satId && u.role === 'operario');
+
+  const asignarOperario = async (lot, opId, operarioId) => {
+    const operario = users.find(u => u.id === operarioId);
+    const upd = (lot.lotOps||[]).map(op =>
+      op.id === opId ? { ...op, wId: operarioId, workerName: operario?.name || '' } : op
+    );
+    const { updateDocument } = await import('../services/db');
+    await updateDocument('lots', lot.id, { lotOps: upd });
+  };
 
   // Load operations from Firebase
   useEffect(()=>{
@@ -220,7 +231,17 @@ export default function TallerScreen() {
                           style={{background:op.status==='completado'?'#f0fdf4':op.status==='en_proceso'?'#eff6ff':'#f9f9f7'}}>
                           <span className={`w-2 h-2 rounded-full flex-shrink-0 ${op.status==='completado'?'bg-green-500':op.status==='en_proceso'?'bg-blue-500':'bg-gray-300'}`} />
                           <span className="flex-1 font-medium text-gray-700">{op.name||op.opId}</span>
-                          {worker && <span className="text-gray-500">{worker.name}</span>}
+                          <select
+                            value={op.wId||''}
+                            onChange={e => asignarOperario(lot, op.id, e.target.value)}
+                            disabled={op.status==='completado'}
+                            className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-white max-w-[100px]"
+                            style={{fontSize:'10px'}}>
+                            <option value="">Sin asignar</option>
+                            {operariosSat.map(u => (
+                              <option key={u.id} value={u.id}>{u.name}</option>
+                            ))}
+                          </select>
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${op.status==='completado'?'bg-green-100 text-green-700':op.status==='en_proceso'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}`}>
                             {op.status==='completado'?'✓ Listo':op.status==='en_proceso'?'⚡ Activa':'Pend.'}
                           </span>
