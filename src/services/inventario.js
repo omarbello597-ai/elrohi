@@ -111,14 +111,21 @@ export const reservarParaAlistamiento = async (items) => {
   if (!items || !items.length) return;
   const batch = writeBatch(db);
   for (const item of items) {
-    if (!item.gtId || !item.qty) continue;
-    const id = (item.descripcionRef || item.gtId).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 100);
+    if (!item.qty) continue;
+    const id = (item.descripcionRef || item.gtId || 'gt1').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 100);
     const ref = doc(db, 'inventario', id);
     const snap = await getDoc(ref);
     if (!snap.exists()) continue;
+    // Actualizar sizes por talla
+    const prevSizes = snap.data().sizes || {};
+    const newSizes = {...prevSizes};
+    if (item.talla && newSizes[item.talla] !== undefined) {
+      newSizes[item.talla] = Math.max(0, (newSizes[item.talla] || 0) - (item.qty || 0));
+    }
     batch.update(ref, {
       disponible: increment(-(item.qty || 0)),
       enAlistamiento: increment(item.qty || 0),
+      sizes: newSizes,
       updatedAt: new Date().toISOString(),
     });
   }
@@ -144,14 +151,21 @@ export const descontarInventario = async (items) => {
   if (!items || !items.length) return;
   const batch = writeBatch(db);
   for (const item of items) {
-    if (!item.gtId) continue;
-    const id = (item.descripcionRef || item.gtId).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 100);
+    if (!item.qty) continue;
+    const id = (item.descripcionRef || item.gtId || 'gt1').replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 100);
     const ref = doc(db, 'inventario', id);
     const snap = await getDoc(ref);
     if (!snap.exists()) continue;
+    // Actualizar sizes por talla
+    const prevSizes = snap.data().sizes || {};
+    const newSizes = {...prevSizes};
+    if (item.talla && newSizes[item.talla] !== undefined) {
+      newSizes[item.talla] = Math.max(0, (newSizes[item.talla] || 0) - (item.qty || 0));
+    }
     batch.update(ref, {
       enAlistamiento: increment(-(item.qty || 0)),
       total: increment(-(item.qty || 0)),
+      sizes: newSizes,
       updatedAt: new Date().toISOString(),
     });
   }
