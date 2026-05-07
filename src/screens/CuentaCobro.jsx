@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth }   from '../contexts/AuthContext';
 import { useData }   from '../contexts/DataContext';
 import { addDocument, updateDocument, listenCol } from '../services/db';
-import { fmtM }      from '../utils';
+import { fmtM, openPDF }      from '../utils';
 import { ACCENT }    from '../constants';
 import { orderBy }   from 'firebase/firestore';
 import toast         from 'react-hot-toast';
@@ -156,7 +156,7 @@ export default function CuentaCobroScreen() {
     return ()=>{ u1(); u2(); };
   },[]);
 
-  const isAdmin    = ['gerente','admin_elrohi'].includes(profile?.role);
+  const isAdmin    = ['gerente','admin_elrohi','superadmin'].includes(profile?.role);
   const isSat      = profile?.role === 'admin_satelite';
 
   // Satélite del usuario actual
@@ -166,6 +166,7 @@ export default function CuentaCobroScreen() {
   const lotesSat = lots.filter(l =>
     l.satId === profile?.satId &&
     !l.pagadoSatelite &&
+    !l.cuentaCobroEnviada &&
     ['listo_remision_tintoreria','tintoreria','listo_recepcion_admin','listo_bodega',
      'bodega_lonas','bodega_calidad','en_operaciones_elrohi','en_revision_calidad','despachado'].includes(l.status)
   );
@@ -219,7 +220,7 @@ export default function CuentaCobroScreen() {
     setSaving(true);
     try {
       const numero = String(cuentas.length+1).padStart(4,'0');
-      await addDocument('cuentasCobro', {
+      const ccId = await addDocument('cuentasCobro', {
         numero, periodo, satId: profile?.satId, satName: miSatelite?.name||'',
         items, descuentos, adicionales,
         subtotal, totalDescuentos, totalAdicionales, total,
@@ -228,6 +229,15 @@ export default function CuentaCobroScreen() {
         fecha: new Date().toISOString().split('T')[0],
         status: 'pendiente_revision',
       });
+      // Marcar cada lote como ya cobrado para que no aparezca en Nueva Cuenta
+      for (const item of items) {
+        if (item.lotId) {
+          await updateDocument('lots', item.lotId, {
+            cuentaCobroEnviada: true,
+            cuentaCobroId: ccId,
+          });
+        }
+      }
       toast.success(`✅ Cuenta de cobro N° ${numero} enviada a Admin ELROHI`);
       setTab('pendiente');
       setItems([]); setDescuentos([]); setAdicionales([]);
