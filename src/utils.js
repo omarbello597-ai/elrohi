@@ -85,3 +85,18 @@ export const workerQuincena = (userId, lots, ops, satOpVals) =>
       const val = getOpVal(ops, satOpVals, lo.satId, lo.opId);
       return acc + val * lo.qty;
     }, 0);
+
+
+// ── PDF Download Helper ──────────────────────────────────────────────────────
+export function openPDF(html, filename) {
+  var style = '<style>@media print{.no-print{display:none!important;}body{margin:0;}}</style>';
+  var btn = '<div class="no-print" style="position:fixed;top:12px;right:12px;z-index:9999;display:flex;gap:8px;">' +
+    '<button onclick="window.print()" style="background:#14405A;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.2)">⬇️ Descargar / Imprimir</button>' +
+    '<button onclick="window.close()" style="background:#6b7280;color:#fff;border:none;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">✕ Cerrar</button>' +
+    '</div>';
+  var finalHtml = html.replace('</head>', style + '</head>').replace('</body>', btn + '</body>');
+  var win = window.open('', '_blank', 'width=950,height=750');
+  win.document.write(finalHtml);
+  win.document.close();
+  win.focus();
+}
