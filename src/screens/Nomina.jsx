@@ -515,7 +515,7 @@ export function NominaScreen() {
         );
       })()}
 
-            {tab==='satelites' && !selDetalle && (
+            {false && tab==='satelites' && !selDetalle && (
         <div className="space-y-2">
           {satSummary.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
@@ -546,7 +546,7 @@ export function NominaScreen() {
         </div>
       )}
 
-      {tab==='satelites' && selDetalle?.tipo==='satelite' && (()=>{
+      {false && tab==='satelites' && selDetalle?.tipo==='satelite' && (()=>{
         const s = selDetalle.data;
         const satLots = lots.filter(l=>l.satId===s.id);
         return (
