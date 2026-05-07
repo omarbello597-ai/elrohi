@@ -3,7 +3,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useData }     from '../contexts/DataContext';
 import { useAuth }     from '../contexts/AuthContext';
 import { addDocument, updateDocument } from '../services/db';
-import { fmtM, getOpVal, workerQuincena } from '../utils';
+import { fmtM, openPDF, getOpVal, workerQuincena } from '../utils';
 import { Modal } from '../components/ui';
 import { ACCENT } from '../constants';
 import toast from 'react-hot-toast';
@@ -108,75 +108,103 @@ function FirmaCanvas({ onSave, label }) {
 
 // ─── RECIBO PDF ─────────────────────────────────────────────────────────────────
 function printRecibo(data) {
-  const firmaBox = (label,img,nombre) => '<div style="text-align:center;padding:8px 16px">' +
-    (img ? '<img src="' + img + '" style="height:60px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">'
-         : '<div style="height:60px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
-    '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">' + label + '</div>' +
-    (nombre ? '<div style="font-size:10px;color:#374151;margin-top:2px">' + nombre + '</div>' : '') +
-    '</div>';
+  var LOGO = "https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg";
 
-  // Agrupar opsDetalle por lotCode — solo mostrar corte y total
+  function firmaBox(label, img, nombre) {
+    return '<div style="text-align:center;padding:8px 16px">' +
+      (img ? '<img src="' + img + '" style="height:60px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">'
+           : '<div style="height:60px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
+      '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">' + label + '</div>' +
+      (nombre ? '<div style="font-size:10px;color:#374151;margin-top:2px">' + nombre + '</div>' : '') +
+      '</div>';
+  }
+
+  // Agrupar por corte
   var lotMap = {};
-  (data.opsDetalle||[]).forEach(function(o){
+  (data.opsDetalle || []).forEach(function(o) {
     var key = o.lotCode || 'Sin corte';
     if (!lotMap[key]) lotMap[key] = { lotCode: key, total: 0 };
     lotMap[key].total += (o.subtotal || 0);
   });
-  var cortesRows = Object.values(lotMap).map(function(c){
+  var cortesRows = Object.values(lotMap).map(function(c) {
     return '<tr style="border-bottom:1px solid #f3f4f6">' +
       '<td style="padding:6px 10px;font-size:11px;font-weight:700;color:#14405A">' + c.lotCode + '</td>' +
       '<td style="padding:6px 10px;font-size:12px;text-align:right;font-weight:700;color:#15803d">' + fmtM(c.total) + '</td>' +
       '</tr>';
   }).join('');
 
-  var rows = (data.resumen||data.detalle||[]).map(function(d){
+  var resumenRows = (data.resumen || data.detalle || []).map(function(d) {
     return '<tr>' +
       '<td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;font-size:12px">' + d.concepto + '</td>' +
-      '<td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:12px;color:' + (d.valor<0?'#dc2626':'#15803d') + '">' + fmtM(d.valor) + '</td>' +
+      '<td style="padding:6px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;font-size:12px;color:' + (d.valor < 0 ? '#dc2626' : '#15803d') + '">' + fmtM(d.valor) + '</td>' +
       '</tr>';
   }).join('');
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>
-  <title>Recibo ${data.recId}</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
-  </head><body><div style="max-width:650px;margin:20px auto;border:1.5px solid #14405A">
-    <div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:10px"><img src="https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg" style="height:52px;width:auto;object-fit:contain" /><div><div style="font-size:20px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>
-        <div style="font-size:9px;color:#14405A">NIT. 901.080.234-7</div></div>
-      <div style="text-align:right">
-        <div style="font-size:9px;color:#6b7280">RECIBO DE PAGO</div>
-        <div style="font-size:14px;font-weight:900;color:#2878B4">${data.recId}</div>
-      </div>
-    </div>
-    <div style="padding:10px 16px;border-bottom:1px solid #e5e7eb;display:flex;gap:24px;flex-wrap:wrap">
-      <div><span style="font-size:9px;color:#6b7280">EMPLEADO/SATÉLITE</span><div style="font-size:14px;font-weight:700;color:#14405A">${data.nombre}</div></div>
-      <div><span style="font-size:9px;color:#6b7280">PERÍODO</span><div style="font-size:12px;font-weight:600">${data.periodo}</div></div>
-      <div><span style="font-size:9px;color:#6b7280">ROL</span><div style="font-size:12px">${data.rol}</div></div>
-      <div><span style="font-size:9px;color:#6b7280">FECHA</span><div style="font-size:12px">${today()}</div></div>
-    </div>
-    ' + (cortesRows ? '<div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">CORTES TRABAJADOS</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#F7F7F7"><th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Corte</th><th style="padding:6px 10px;font-size:9px;text-align:right;color:#14405A">Valor</th></tr></thead><tbody>' + cortesRows + '</tbody></table>' : '') + '
-        <div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">RESUMEN</div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#F7F7F7">
-        <th style="padding:7px 10px;font-size:10px;text-align:left;color:#14405A">Concepto</th>
-        <th style="padding:7px 10px;font-size:10px;text-align:right;color:#14405A">Valor</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr style="background:#F7F7F7;border-top:2px solid #14405A">
-        <td style="padding:10px;font-weight:900;font-size:14px;color:#14405A">TOTAL A PAGAR</td>
-        <td style="padding:10px;text-align:right;font-weight:900;font-size:18px;color:#e85d26">${fmtM(data.total)}</td>
-      </tr></tfoot>
-    </table>
-    ${data.notas?`<div style="padding:8px 16px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280"><strong>Obs:</strong> ${data.notas}</div>`:''}
-    ${data.foto?`<div style="padding:8px 16px"><img src="${data.foto}" style="max-height:150px;object-fit:contain;border-radius:8px;border:1px solid #e5e7eb"/></div>`:''}
-    <div style="border-top:1px solid #14405A;display:grid;grid-template-columns:1fr 1fr">
-      ${firmaBox('Pagado por — ELROHI Nómina', data.firmaElrohi, 'Departamento de Nómina')}
-      <div style="border-left:1px solid #14405A">${firmaBox('Recibido conforme', data.firmaRecibe, data.nombre)}</div>
-    </div>
-  </div><script>window.onload=()=>window.print();</script></body></html>`;
-  const win=window.open('','_blank'); win.document.write(html); win.document.close();
+
+  var cortesSection = cortesRows
+    ? '<div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">CORTES TRABAJADOS</div>' +
+      '<table style="width:100%;border-collapse:collapse">' +
+      '<thead><tr style="background:#F7F7F7">' +
+      '<th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Corte</th>' +
+      '<th style="padding:6px 10px;font-size:9px;text-align:right;color:#14405A">Valor</th>' +
+      '</tr></thead><tbody>' + cortesRows + '</tbody></table>'
+    : '';
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
+    '<title>Recibo ' + (data.recId || '') + '</title>' +
+    '<style>body{margin:0;font-family:Arial,sans-serif;color:#1f2937}@media print{body{margin:0}}</style>' +
+    '</head><body>' +
+    '<div style="max-width:600px;margin:20px auto;border:1.5px solid #14405A;border-radius:8px;overflow:hidden">' +
+
+    // Header
+    '<div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:12px 16px;display:flex;align-items:center;gap:12px">' +
+    '<img src="' + LOGO + '" style="height:56px;width:auto;object-fit:contain" />' +
+    '<div>' +
+    '<div style="font-size:18px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>' +
+    '<div style="font-size:9px;color:#14405A">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria · Cel.: 313 372 5739</div>' +
+    '</div>' +
+    '</div>' +
+
+    // Título
+    '<div style="background:#14405A;color:#fff;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:5px 16px;text-align:center">RECIBO DE PAGO</div>' +
+
+    // Info
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid #e5e7eb">' +
+    '<div style="padding:8px 12px;border-right:1px solid #e5e7eb"><span style="font-size:9px;color:#6b7280;display:block">RECIBO N°</span><div style="font-size:11px;font-weight:700;color:#14405A">' + (data.recId || '') + '</div></div>' +
+    '<div style="padding:8px 12px;border-right:1px solid #e5e7eb"><span style="font-size:9px;color:#6b7280;display:block">NOMBRE</span><div style="font-size:11px;font-weight:700">' + (data.nombre || data.workerName || '') + '</div></div>' +
+    '<div style="padding:8px 12px"><span style="font-size:9px;color:#6b7280;display:block">PERÍODO</span><div style="font-size:11px;font-weight:700">' + (data.periodo || '') + '</div></div>' +
+    '</div>' +
+
+    // Cortes trabajados
+    cortesSection +
+
+    // Resumen
+    '<div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">RESUMEN</div>' +
+    '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr style="background:#F7F7F7"><th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Concepto</th><th style="padding:6px 10px;font-size:9px;text-align:right;color:#14405A">Valor</th></tr></thead>' +
+    '<tbody>' + resumenRows + '</tbody>' +
+    '</table>' +
+
+    // Total
+    '<div style="display:flex;justify-content:space-between;padding:10px 16px;background:#f0fdf4;border-top:2px solid #14405A">' +
+    '<span style="font-weight:900;font-size:14px;color:#14532d">TOTAL A PAGAR</span>' +
+    '<span style="font-weight:900;font-size:18px;color:#15803d">' + fmtM(data.total || 0) + '</span>' +
+    '</div>' +
+
+    // Firmas
+    '<div style="border-top:1px solid #e5e7eb;display:grid;grid-template-columns:1fr 1fr;padding:8px 0">' +
+    firmaBox('Firma ELROHI - Responsable de pago', data.firmaElrohi, data.pagadoPor) +
+    firmaBox('Firma de quien recibe', data.firmaRecibe, data.nombre || data.workerName) +
+    '</div>' +
+
+    // Foto comprobante
+    (data.foto ? '<div style="padding:10px 16px;text-align:center;border-top:1px solid #e5e7eb"><p style="font-size:9px;color:#6b7280;margin:0 0 6px">COMPROBANTE DE PAGO</p><img src="' + data.foto + '" style="max-width:100%;max-height:200px;border-radius:6px;border:1px solid #e5e7eb" /></div>' : '') +
+
+    '</div></body></html>';
+
+  openPDF(html);
 }
 
-// ─── NOMINA SCREEN ────────────────────────────────────────────────────────────
+
 export function NominaScreen() {
   const { profile } = useAuth();
   const { lots, satellites, ops, satOpVals, users, payments } = useData();
