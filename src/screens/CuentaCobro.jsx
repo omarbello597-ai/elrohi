@@ -129,6 +129,86 @@ function printCuenta(cc, satName, logoBase64) {
 }
 
 // ── SCREEN PRINCIPAL ──────────────────────────────────────────────────────────
+
+function printReciboCobro(cc, totalFinal, descuentoExtra, firmaElrohi, firmaRecibeSat, foto, recId) {
+  var LOGO = "https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg";
+  var itemRows = (cc.items||[]).map(function(item){
+    return '<tr style="border-bottom:1px solid #f3f4f6">' +
+      '<td style="padding:6px 10px;font-size:11px;font-weight:700;color:#14405A">' + (item.lotCode||'') + '</td>' +
+      '<td style="padding:6px 10px;font-size:11px;color:#374151">' + (item.descripcion||'') + '</td>' +
+      '<td style="padding:6px 10px;font-size:11px;text-align:center">' + (item.totalPiezas||item.qty||'') + '</td>' +
+      '<td style="padding:6px 10px;font-size:11px;text-align:right;font-weight:700;color:#15803d">' + fmtM(item.vrTotal||item.subtotal||0) + '</td>' +
+      '</tr>';
+  }).join('');
+  var descRows = (cc.descuentos||[]).map(function(d){
+    return '<tr><td colspan="3" style="padding:4px 10px;font-size:10px;color:#dc2626">' + d.descripcion + '</td>' +
+      '<td style="padding:4px 10px;font-size:10px;color:#dc2626;text-align:right;font-weight:700">-' + fmtM(d.valor||0) + '</td></tr>';
+  }).join('');
+  var novedades = (cc.items||[]).filter(function(i){ return i.novedad; }).map(function(i){
+    return '<div style="font-size:10px;color:#92400e;padding:2px 0">⚠ ' + i.lotCode + ': ' + i.novedad + '</div>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Recibo ' + recId + '</title>' +
+    '<style>body{margin:0;font-family:Arial,sans-serif}@media print{body{margin:0}}</style></head><body>' +
+    '<div style="max-width:640px;margin:20px auto;border:1.5px solid #14405A;border-radius:8px;overflow:hidden">' +
+
+    // Header
+    '<div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:12px 16px;display:flex;align-items:center;gap:12px">' +
+    '<img src="' + LOGO + '" style="height:54px;width:auto;object-fit:contain" />' +
+    '<div><div style="font-size:18px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>' +
+    '<div style="font-size:9px;color:#14405A">NIT. 901.080.234-7 · Calle 39 A Sur No. 5-63 Este La Victoria</div></div>' +
+    '</div>' +
+
+    // Título
+    '<div style="background:#14405A;color:#fff;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:5px 16px;text-align:center">COMPROBANTE DE PAGO A SATÉLITE</div>' +
+
+    // Info
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid #e5e7eb">' +
+    '<div style="padding:8px 12px;border-right:1px solid #e5e7eb"><span style="font-size:9px;color:#6b7280;display:block">RECIBO</span><div style="font-size:11px;font-weight:700;color:#14405A">' + recId + '</div></div>' +
+    '<div style="padding:8px 12px;border-right:1px solid #e5e7eb"><span style="font-size:9px;color:#6b7280;display:block">SATÉLITE</span><div style="font-size:11px;font-weight:700">' + (cc.satName||'') + '</div></div>' +
+    '<div style="padding:8px 12px"><span style="font-size:9px;color:#6b7280;display:block">PERÍODO</span><div style="font-size:11px;font-weight:700">' + (cc.periodo||'') + '</div></div>' +
+    '</div>' +
+
+    // Cortes
+    '<div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">DETALLE DE CORTES</div>' +
+    '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr style="background:#F7F7F7">' +
+    '<th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Corte</th>' +
+    '<th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Referencia</th>' +
+    '<th style="padding:6px 10px;font-size:9px;text-align:center;color:#14405A">Pzas</th>' +
+    '<th style="padding:6px 10px;font-size:9px;text-align:right;color:#14405A">Valor</th>' +
+    '</tr></thead><tbody>' + itemRows + descRows + '</tbody></table>' +
+
+    // Novedades
+    (novedades ? '<div style="background:#fef3c7;padding:8px 16px;border-top:1px solid #fde68a"><p style="font-size:9px;font-weight:700;color:#92400e;margin:0 0 4px">NOVEDADES DEL PROCESO</p>' + novedades + '</div>' : '') +
+
+    // Descuento extra
+    (descuentoExtra > 0 ? '<div style="display:flex;justify-content:space-between;padding:6px 16px;background:#fef2f2;border-top:1px solid #fecaca"><span style="font-size:11px;color:#dc2626">Descuento adicional</span><span style="font-size:11px;font-weight:700;color:#dc2626">-' + fmtM(descuentoExtra) + '</span></div>' : '') +
+
+    // Total
+    '<div style="display:flex;justify-content:space-between;padding:10px 16px;background:#f0fdf4;border-top:2px solid #14405A">' +
+    '<span style="font-weight:900;font-size:14px;color:#14532d">TOTAL PAGADO</span>' +
+    '<span style="font-weight:900;font-size:20px;color:#15803d">' + fmtM(totalFinal) + '</span>' +
+    '</div>' +
+
+    // Firmas
+    '<div style="border-top:1px solid #e5e7eb;display:grid;grid-template-columns:1fr 1fr;padding:8px 0">' +
+    '<div style="text-align:center;padding:8px 16px">' +
+    (firmaElrohi ? '<img src="' + firmaElrohi + '" style="height:55px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">' : '<div style="height:55px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
+    '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">Firma ELROHI</div></div>' +
+    '<div style="text-align:center;padding:8px 16px">' +
+    (firmaRecibeSat ? '<img src="' + firmaRecibeSat + '" style="height:55px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">' : '<div style="height:55px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
+    '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">Firma Satélite - recibí conforme</div></div>' +
+    '</div>' +
+
+    // Foto
+    (foto ? '<div style="padding:10px 16px;text-align:center;border-top:1px solid #e5e7eb"><p style="font-size:9px;color:#6b7280;margin:0 0 6px">COMPROBANTE DE PAGO</p><img src="' + foto + '" style="max-width:100%;max-height:180px;border-radius:6px;border:1px solid #e5e7eb" /></div>' : '') +
+
+    '</div></body></html>';
+
+  openPDF(html);
+}
+
 export default function CuentaCobroScreen() {
   const { profile } = useAuth();
   const { lots, satellites, users } = useData();
@@ -145,7 +225,11 @@ export default function CuentaCobroScreen() {
   const [adicionales,setAdicionales]=useState([]);
   const [firmaSat,  setFirmaSat]  = useState(null);
   const [firmaElrohi,setFirmaElrohi]=useState(null);
+  const [firmaRecibeSat, setFirmaRecibeSat] = useState(null);
   const [obsAdmin,  setObsAdmin]  = useState('');
+  const [descuentoExtra, setDescuentoExtra] = useState('');
+  const [photoCC, setPhotoCC] = useState(null);
+  const [photoPreviewCC, setPhotoPreviewCC] = useState(null);
 
   // Para admin ELROHI — revisar cuenta
   const [showRevision, setShowRevision] = useState(null);
@@ -248,23 +332,36 @@ export default function CuentaCobroScreen() {
   };
 
   const aprobarCuenta = async (cc) => {
-    if (!firmaElrohi) { toast.error('Firma la aprobación'); return; }
+    if (!firmaElrohi)    { toast.error('Falta firma ELROHI'); return; }
+    if (!firmaRecibeSat) { toast.error('Falta firma de quien recibe'); return; }
     setSaving(true);
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const desc  = +descuentoExtra || 0;
+      const totalFinal = cc.total - desc;
+      const recId = 'REC-CC-' + String(Date.now()).slice(-6);
+
       await updateDocument('cuentasCobro', cc.id, {
         status: 'aprobada',
         firmaAdminElrohi:  firmaElrohi,
+        firmaRecibeSat:    firmaRecibeSat,
         nombreAdminElrohi: profile?.name,
         observaciones:     obsAdmin,
+        descuentoExtra:    desc,
+        totalFinal,
         aprobadoAt: new Date().toISOString(),
+        recId,
       });
-      // Registrar en pagosSatelite para que Claudia vea el pago en Mis Pagos
-      const today = new Date().toISOString().split('T')[0];
+
+      // Guardar en pagosSatelite para Mis Pagos de Claudia
       await addDocument('pagosSatelite', {
-        tipo: 'satelite',
-        satId: cc.satId,
-        satName: cc.satName,
-        total: cc.total,
+        tipo: 'satelite', recId,
+        satId: cc.satId, satName: cc.satName,
+        total: totalFinal,
+        descuentoExtra: desc,
+        observaciones: obsAdmin,
+        items: cc.items || [],
+        descuentos: cc.descuentos || [],
         status: 'pagado',
         origen: 'cuenta_cobro',
         cuentaCobroId: cc.id,
@@ -272,21 +369,25 @@ export default function CuentaCobroScreen() {
         periodo: cc.periodo,
         pagadoPor: profile?.name || 'ELROHI',
         fechaPago: today,
-        firmaElrohi,
+        firmaElrohi, firmaRecibeSat,
+        foto: photoCC || null,
         createdAt: new Date().toISOString(),
       });
-      // Marcar los lotes de la cuenta como pagados
+
+      // Marcar lotes como pagados
       for (const item of (cc.items||[])) {
         if (item.lotId) {
-          await updateDocument('lots', item.lotId, {
-            pagadoSatelite: true,
-            pagoSateliteFecha: today,
-          });
+          await updateDocument('lots', item.lotId, { pagadoSatelite: true, pagoSateliteFecha: today });
         }
       }
-      toast.success('✅ Cuenta aprobada y pago registrado');
-      setShowRevision(null); setFirmaElrohi(null); setObsAdmin('');
-    } catch(e){ toast.error('Error'); }
+
+      // Generar recibo
+      printReciboCobro(cc, totalFinal, desc, firmaElrohi, firmaRecibeSat, photoCC, recId);
+
+      toast.success('Pago registrado - ' + recId);
+      setShowRevision(null); setFirmaElrohi(null); setFirmaRecibeSat(null);
+      setObsAdmin(''); setDescuentoExtra(''); setPhotoCC(null); setPhotoPreviewCC(null);
+    } catch(e){ console.error(e); toast.error('Error al registrar pago'); }
     finally { setSaving(false); }
   };
 
@@ -597,11 +698,38 @@ export default function CuentaCobroScreen() {
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none h-16 focus:outline-none" />
             </div>
 
-            <FirmaCanvas label="✍ Firma Admin ELROHI *" onSign={setFirmaElrohi} signed={!!firmaElrohi} />
+            {/* Descuento extra */}
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Descuento adicional (opcional)</label>
+              <input type="number" min={0} value={descuentoExtra} onChange={e=>setDescuentoExtra(e.target.value)}
+                placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
+            </div>
+
+            {/* Foto comprobante */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-600 mb-1">Foto comprobante (opcional)</p>
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl p-3 cursor-pointer" style={{minHeight:60}}>
+                {photoPreviewCC
+                  ? <img src={photoPreviewCC} alt="comprobante" style={{maxHeight:80,borderRadius:6,objectFit:'contain'}} />
+                  : <span className="text-xs text-gray-400">Subir comprobante de pago</span>}
+                <input type="file" accept="image/jpeg,image/png,image/webp" style={{display:'none'}}
+                  onChange={function(e){ var f=e.target.files[0]; if(!f)return; var r=new FileReader(); r.onload=function(ev){setPhotoPreviewCC(ev.target.result);setPhotoCC(ev.target.result);}; r.readAsDataURL(f); }} />
+              </label>
+            </div>
+
+            {/* 2 firmas */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <FirmaCanvas label="Firma ELROHI *" onSign={setFirmaElrohi} signed={!!firmaElrohi} />
+              </div>
+              <div>
+                <FirmaCanvas label="Firma Satélite - recibí conforme *" onSign={setFirmaRecibeSat} signed={!!firmaRecibeSat} />
+              </div>
+            </div>
 
             <div className="flex gap-2 mt-2">
-              <button onClick={()=>setShowRevision(null)} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
-              <button onClick={()=>aprobarCuenta(showRevision)} disabled={saving||!firmaElrohi}
+              <button onClick={()=>{setShowRevision(null);setFirmaElrohi(null);setFirmaRecibeSat(null);setObsAdmin('');setDescuentoExtra('');setPhotoCC(null);setPhotoPreviewCC(null);}} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
+              <button onClick={()=>aprobarCuenta(showRevision)} disabled={saving||!firmaElrohi||!firmaRecibeSat}
                 className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
                 style={{background:'#15803d'}}>
                 {saving?'Aprobando...':'✅ Aprobar cuenta de cobro'}
