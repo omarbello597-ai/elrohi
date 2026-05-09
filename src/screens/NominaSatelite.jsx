@@ -304,7 +304,7 @@ export default function NominaSateliteScreen() {
           {operarios.map(op=>{
             const calc = calcularOperario(op.id);
             const aj   = ajustes[op.id]||{};
-            const pagado = nominas.some(n=>n.operarioId===op.id && n.status==='pagado');
+            const pagado = nominas.some(n=>n.operarioId===op.id && n.status==='pagado' && n.periodo===periodo);
             if (pagado) return (
               <div key={op.id} className="bg-white rounded-xl border border-green-200 p-4 mb-3 opacity-70">
                 <div className="flex items-center justify-between">
