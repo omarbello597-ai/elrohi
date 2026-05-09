@@ -75,7 +75,7 @@ export default function BodegasScreen() {
   const [customOp,   setCustomOp]   = useState({ name:'', val:'' });
   const [saving,     setSaving]     = useState(false);
 
-  const isAdmin = ['gerente','admin_elrohi'].includes(profile?.role);
+  const isAdmin = ['gerente','admin_elrohi','superadmin'].includes(profile?.role);
 
   const listoBodega = lots.filter(l => l.status === 'listo_bodega');
 
@@ -185,6 +185,16 @@ export default function BodegasScreen() {
                         <span className="font-mono text-xs font-bold text-blue-700">{lot.code}</span>
                         <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">⏳ Pendiente asignación</span>
                       </div>
+                      {lot.remisionTinto && (
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 mb-2">
+                          <p className="text-xs font-bold text-blue-700 mb-1">📊 Trazabilidad</p>
+                          <div className="grid grid-cols-3 gap-1 text-center">
+                            <div><p className="text-xs text-gray-400">Original</p><p className="text-sm font-black text-blue-700">{lot.remisionTinto.totalOriginal}</p></div>
+                            <div><p className="text-xs text-gray-400">Sat→Tinto</p><p className="text-sm font-black text-amber-600">{lot.remisionTinto.totalSatelite}{lot.remisionTinto.totalSatelite < lot.remisionTinto.totalOriginal && <span className="text-xs text-red-500"> (-{lot.remisionTinto.totalOriginal - lot.remisionTinto.totalSatelite})</span>}</p></div>
+                            <div><p className="text-xs text-gray-400">Tinto→ELROHI</p><p className="text-sm font-black text-green-600">{lot.remisionTinto.totalTintoreria}{lot.remisionTinto.totalTintoreria < lot.remisionTinto.totalSatelite && <span className="text-xs text-red-500"> (-{lot.remisionTinto.totalSatelite - lot.remisionTinto.totalTintoreria})</span>}</p></div>
+                          </div>
+                        </div>
+                      )}
                       <p className="text-xs text-gray-500">{lot.totalPieces?.toLocaleString('es-CO')} piezas · Vence: {lot.deadline}</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {lot.garments?.map((g,i)=>(
