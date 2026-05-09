@@ -155,12 +155,14 @@ export default function NominaSateliteScreen() {
     misLots.forEach(lot => {
       (lot.lotOps||[]).forEach(op => {
         if (op.wId===operarioId && op.status==='completado') {
+          var valUnit = op.valorUnitario || op.val || 0;
+          var subtotal = op.vrTotal || (op.qty||0) * valUnit;
           ops.push({
             lotCode:  lot.code,
-            opName:   op.name,
+            opName:   op.operacion || op.name || 'Operación',
             qty:      op.qty||0,
-            valUnit:  op.val||0,
-            subtotal: (op.qty||0)*(op.val||0),
+            valUnit:  valUnit,
+            subtotal: subtotal,
           });
         }
       });
