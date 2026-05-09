@@ -366,7 +366,7 @@ function NuevoFormato({ profile, onBack }) {
       const numConsec = await getNextCorteNum();
       const numCorteGuardado = String(numConsec).padStart(4,'0');
       setNumCorte(numCorteGuardado);
-      const code = `ELROHI-${new Date().getFullYear()}-${numCorteGuardado}`;
+      const code = `ELROHI-${String(new Date().getFullYear())}${String(new Date().getMonth()+1).padStart(2,'0')}${String(new Date().getDate()).padStart(2,'0')}-${numCorteGuardado}`;
       const nowISO  = new Date().toISOString();
       const lotData = {
         code, descripcion: descripcion||code, clientId: null,
