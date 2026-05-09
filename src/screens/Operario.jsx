@@ -210,7 +210,7 @@ export function QuincenaScreen() {
   }, 0);
 
   // Mis pagos recibidos de Claudia
-  const misPagos = pagos.filter(p => p.operarioId === profile.id);
+  const misPagos = pagos.filter(p => p.operarioId === profile.id || p.operarioId === profile.uid || (p.operarioName && profile.name && p.operarioName === profile.name));
   const periodoActual = new Date().getDate()<=15 ? `1-15 ${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][new Date().getMonth()]} ${new Date().getFullYear()}` : `16-${new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate()} ${['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][new Date().getMonth()]} ${new Date().getFullYear()}`;
   const yaPagado = misPagos.some(p=>p.periodo===periodoActual);
 
@@ -309,7 +309,7 @@ export function QuincenaScreen() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Pagado</span>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">✅ Pagado</span>
                   </div>
                   <p className="text-sm font-bold text-gray-900">{p.periodo}</p>
                   <p className="text-[10px] text-gray-400">{p.fechaPago}</p>
