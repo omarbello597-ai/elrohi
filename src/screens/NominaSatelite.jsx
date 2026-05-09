@@ -117,6 +117,67 @@ function printRecibo(operario, detalle, satName, periodo, firmaAdmin, firmaSat) 
 }
 
 
+
+// ─── MODAL PAGO ───────────────────────────────────────────────────────────────
+function ModalPago({ operario, detalle, satName, periodo, onClose, onGuardar }) {
+  const [firmaAdmin, setFirmaAdmin] = useState(null);
+  const [firmaOp,    setFirmaOp]    = useState(null);
+  const [saving,     setSaving]     = useState(false);
+
+  const confirmar = async () => {
+    if (!firmaAdmin) { toast.error('Falta firma del administrador'); return; }
+    if (!firmaOp)    { toast.error('Falta firma del operario');      return; }
+    setSaving(true);
+    try {
+      await onGuardar(firmaAdmin, firmaOp);
+      printRecibo(operario, detalle, satName, periodo, firmaAdmin, firmaOp);
+      toast.success('Pago registrado correctamente');
+      onClose();
+    } catch(e) { console.error(e); toast.error('Error al guardar'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16,overflowY:'auto'}}>
+      <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <div>
+            <p style={{fontWeight:700,fontSize:14,color:'#111827',margin:0}}>Pago a {operario.name}</p>
+            <p style={{fontSize:11,color:'#6b7280',margin:0}}>{periodo}</p>
+          </div>
+          <button onClick={onClose} style={{background:'transparent',border:'none',fontSize:20,cursor:'pointer',color:'#6b7280'}}>X</button>
+        </div>
+        <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:12,padding:12,marginBottom:16}}>
+          <p style={{fontSize:10,fontWeight:700,color:'#15803d',marginBottom:8,textTransform:'uppercase'}}>Cortes trabajados</p>
+          {detalle.ops.map(function(o, i) {
+            return (
+              <div key={i} style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#166534',paddingBottom:4}}>
+                <span>{o.lotCode} - {o.opName} x {(o.qty||0).toLocaleString('es-CO')} pzas</span>
+                <span style={{fontWeight:700}}>{fmtM(o.subtotal)}</span>
+              </div>
+            );
+          })}
+          <div style={{borderTop:'1px solid #86efac',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}}>
+            <span style={{fontWeight:900,fontSize:13,color:'#14532d'}}>TOTAL A PAGAR</span>
+            <span style={{fontWeight:900,fontSize:18,color:'#15803d'}}>{fmtM(detalle.total)}</span>
+          </div>
+        </div>
+        <FirmaCanvas label="Firma Administrador Taller *" onSave={setFirmaAdmin} />
+        <FirmaCanvas label="Firma Operario - recibí conforme *" onSave={setFirmaOp} />
+        <div style={{display:'flex',gap:8,marginTop:16}}>
+          <button onClick={onClose}
+            style={{flex:1,padding:'10px',background:'#f3f4f6',color:'#374151',border:'none',borderRadius:10,fontWeight:600,cursor:'pointer'}}>
+            Cancelar
+          </button>
+          <button onClick={confirmar} disabled={saving}
+            style={{flex:2,padding:'10px',background:saving?'#9ca3af':'#15803d',color:'#fff',border:'none',borderRadius:10,fontWeight:700,cursor:'pointer'}}>
+            {saving ? 'Guardando...' : 'Confirmar y generar recibo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 export default function NominaSateliteScreen() {
   const { profile }       = useAuth();
   const { lots, users }   = useData();
