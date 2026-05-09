@@ -205,7 +205,7 @@ export function QuincenaScreen() {
 
   // Usar lo.val directamente (ya incluye el valor real)
   const total = completedOps.reduce((acc, lo) => {
-    const val = lo.val || getOpVal(ops, satOpVals, lo.satId, lo.opId);
+    const val = (+lo.valorUnitario) || (+lo.val) || getOpVal(ops, satOpVals, lo.satId, lo.opId) || 0;
     return acc + val * (lo.qty||0);
   }, 0);
 
