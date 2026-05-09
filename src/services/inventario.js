@@ -14,17 +14,33 @@ const docId = (g) => {
 // Sumar al inventario cuando un lote llega a bodega_lonas
 export const sumarLoteAInventario = async (lot) => {
   const batch = writeBatch(db);
+  // Usar unidades reales recibidas si hay trazabilidad de tintorería
+  const rt = lot.remisionTinto;
+  const factorAjuste = (rt && rt.totalOriginal > 0)
+    ? rt.totalTintoreria / rt.totalOriginal
+    : 1;
+
   for (const g of (lot.garments || [])) {
     const id = docId(g);
     const ref = doc(db, 'inventario', id);
     const snap = await getDoc(ref);
+    // Calcular cantidad real recibida proporcional
+    const totalReal = rt ? Math.round((g.total || 0) * factorAjuste) : (g.total || 0);
+    // Ajustar sizes proporcionalmente
+    const sizesReal = {};
+    Object.entries(g.sizes || {}).forEach(function(entry) {
+      sizesReal[entry[0]] = Math.round((+entry[1] || 0) * factorAjuste);
+    });
+
     if (snap.exists()) {
       const prevSizes = snap.data().sizes || {};
       const mergedSizes = {...prevSizes};
-      Object.entries(g.sizes||{}).forEach(([t,v])=>{ mergedSizes[t] = (mergedSizes[t]||0) + (+v||0); });
+      Object.entries(sizesReal).forEach(function(entry) {
+        mergedSizes[entry[0]] = (mergedSizes[entry[0]] || 0) + entry[1];
+      });
       batch.update(ref, {
-        disponible: increment(g.total || 0),
-        total: increment(g.total || 0),
+        disponible: increment(totalReal),
+        total: increment(totalReal),
         sizes: mergedSizes,
         nombre: g.descripcionRef || snap.data().nombre,
         descripcionRef: g.descripcionRef || snap.data().descripcionRef,
@@ -36,10 +52,10 @@ export const sumarLoteAInventario = async (lot) => {
         gtId: g.gtId,
         nombre: g.descripcionRef || gt?.name || g.gtId,
         descripcionRef: g.descripcionRef || gt?.name || g.gtId,
-        sizes: g.sizes || {},
-        disponible: g.total || 0,
+        sizes: sizesReal,
+        disponible: totalReal,
         enAlistamiento: 0,
-        total: g.total || 0,
+        total: totalReal,
         updatedAt: new Date().toISOString(),
       });
     }
