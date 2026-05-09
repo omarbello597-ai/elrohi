@@ -7,7 +7,7 @@ import {
   initInventario, migrarLotesAInventario,
   reservarParaAlistamiento, liberarAlistamiento, descontarInventario, sumarLoteAInventario
 } from '../services/inventario';
-import { gLabel, fmtM } from '../utils';
+import { gLabel, fmtM , openPDF } from '../utils';
 import { GARMENT_TYPES, ACCENT } from '../constants';
 import { orderBy } from 'firebase/firestore';
 import { listenCol as listenColFire } from '../services/db';
@@ -108,7 +108,7 @@ export default function BodegaLonasScreen() {
     }
   }, [lots, migrado]);
 
-  const isAdmin  = ['gerente','admin_elrohi'].includes(profile?.role);
+  const isAdmin  = ['gerente','admin_elrohi','superadmin'].includes(profile?.role);
   const isBodega = profile?.role === 'bodega_op' || isAdmin;
   const listasActivas = listas.filter(l => l.active!==false && !l.eliminado);
 
@@ -269,16 +269,16 @@ export default function BodegaLonasScreen() {
           {/* Tabla de inventario */}
           {inventario.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100" style={{background:'#1a3a6b'}}>
-                <div className="grid grid-cols-4 gap-4">
-                  {['Referencia','Disponible','En Alistamiento','Total'].map(h=>(
-                    <p key={h} className="text-xs font-bold text-white uppercase tracking-wider">{h}</p>
+              <div className="px-4 py-2 border-b border-gray-100" style={{background:'#1a3a6b'}}>
+                <div style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 1fr',gap:8,alignItems:'center'}}>
+                  {['Referencia','Disponible','En Alistamiento','Total'].map((h,i)=>(
+                    <p key={h} className="text-xs font-bold text-white uppercase tracking-wider" style={{textAlign:i>0?'center':'left'}}>{h}</p>
                   ))}
                 </div>
               </div>
               {inventario.filter(i=>i.total>0||i.disponible>0).map(item => (
-                <div key={item.gtId} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50">
-                  <div className="grid grid-cols-4 gap-4 items-center">
+                <div key={item.gtId} className="px-4 py-2 border-b border-gray-50 hover:bg-gray-50">
+                  <div style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 1fr',gap:8,alignItems:'center'}}>
                     <div>
                       <p className="text-sm font-bold text-gray-900">{item.descripcionRef||item.nombre||gLabel(item.gtId)}</p>
                       {item.sizes && Object.keys(item.sizes).length>0 && (
@@ -291,40 +291,27 @@ export default function BodegaLonasScreen() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-black text-green-700">{(item.disponible||0).toLocaleString('es-CO')}</span>
-                      <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">pzas</span>
+                    <div style={{textAlign:'center'}}>
+                      <span className="text-sm font-black text-green-700">{(item.disponible||0).toLocaleString('es-CO')}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {(item.enAlistamiento||0) > 0 ? (
-                        <>
-                          <span className="text-lg font-black text-blue-700">{(item.enAlistamiento||0).toLocaleString('es-CO')}</span>
-                          <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">reservadas</span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-gray-300 font-medium">—</span>
-                      )}
+                    <div style={{textAlign:'center'}}>
+                      {(item.enAlistamiento||0) > 0
+                        ? <span className="text-sm font-black text-blue-700">{(item.enAlistamiento||0).toLocaleString('es-CO')}</span>
+                        : <span className="text-sm text-gray-300">—</span>
+                      }
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-black text-gray-700">{(item.total||0).toLocaleString('es-CO')}</span>
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden ml-2">
-                        {item.total > 0 && (
-                          <div className="h-full rounded-full" style={{
-                            width:`${Math.round((item.disponible||0)/item.total*100)}%`,
-                            background:'#15803d'
-                          }} />
-                        )}
-                      </div>
+                    <div style={{textAlign:'center'}}>
+                      <span className="text-sm font-black text-gray-700">{(item.total||0).toLocaleString('es-CO')}</span>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="px-4 py-3 bg-gray-50">
-                <div className="grid grid-cols-4 gap-4">
+              <div className="px-4 py-2 bg-gray-50">
+                <div style={{display:'grid',gridTemplateColumns:'3fr 1fr 1fr 1fr',gap:8}}>
                   <p className="text-xs font-black text-gray-700">TOTALES</p>
-                  <p className="text-sm font-black text-green-700">{totalDisponible.toLocaleString('es-CO')}</p>
-                  <p className="text-sm font-black text-blue-700">{totalAlistamiento.toLocaleString('es-CO')}</p>
-                  <p className="text-sm font-black text-gray-700">{(totalDisponible+totalAlistamiento).toLocaleString('es-CO')}</p>
+                  <p className="text-sm font-black text-green-700" style={{textAlign:'center'}}>{totalDisponible.toLocaleString('es-CO')}</p>
+                  <p className="text-sm font-black text-blue-700" style={{textAlign:'center'}}>{totalAlistamiento.toLocaleString('es-CO')}</p>
+                  <p className="text-sm font-black text-gray-700" style={{textAlign:'center'}}>{(totalDisponible+totalAlistamiento).toLocaleString('es-CO')}</p>
                 </div>
               </div>
             </div>
