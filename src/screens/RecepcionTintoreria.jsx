@@ -542,6 +542,38 @@ export default function RecepcionTintoreria() {
               <button onClick={()=>setShowRecepcion(null)} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
             </div>
 
+            {/* Trazabilidad de piezas */}
+            {(()=>{
+              const lot = lots.find(l=>l.id===showRecepcion.lotId);
+              const rt = lot?.remisionTinto;
+              return rt ? (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
+                  <p className="text-xs font-bold text-blue-700 mb-2">📊 Trazabilidad de piezas</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="bg-white rounded-lg p-2">
+                      <p className="text-xs text-gray-400">Original ELROHI</p>
+                      <p className="text-lg font-black text-blue-700">{rt.totalOriginal}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-2">
+                      <p className="text-xs text-gray-400">Sat. → Tinto</p>
+                      <p className="text-lg font-black text-amber-600">{rt.totalSatelite}</p>
+                      {rt.totalSatelite < rt.totalOriginal && <p className="text-xs text-red-500">-{rt.totalOriginal - rt.totalSatelite}</p>}
+                    </div>
+                    <div className="bg-white rounded-lg p-2">
+                      <p className="text-xs text-gray-400">Tinto → ELROHI</p>
+                      <p className="text-lg font-black text-green-600">{rt.totalTintoreria}</p>
+                      {rt.totalTintoreria < rt.totalSatelite && <p className="text-xs text-red-500">-{rt.totalSatelite - rt.totalTintoreria}</p>}
+                    </div>
+                  </div>
+                  {rt.totalOriginal - rt.totalTintoreria > 0 && (
+                    <p className="text-xs text-red-600 font-bold text-center mt-2">
+                      Diferencia total: -{rt.totalOriginal - rt.totalTintoreria} piezas
+                    </p>
+                  )}
+                </div>
+              ) : null;
+            })()}
+
             {/* Resumen remisión */}
             <div className="bg-gray-50 rounded-xl p-3 mb-4">
               <p className="text-xs font-bold text-gray-700 mb-1">Resumen remisión tintorería:</p>
