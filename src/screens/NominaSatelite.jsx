@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth }   from '../contexts/AuthContext';
 import { useData }   from '../contexts/DataContext';
 import { addDocument, listenCol } from '../services/db';
-import { fmtM }      from '../utils';
+import { fmtM, openPDF }      from '../utils';
 import { gLabel }    from '../utils';
 import { ACCENT }    from '../constants';
 import { orderBy }   from 'firebase/firestore';
@@ -39,148 +39,84 @@ function FirmaCanvas({ onSave, label }) {
 
 // ─── PRINT RECIBO ─────────────────────────────────────────────────────────────
 function printRecibo(operario, detalle, satName, periodo, firmaAdmin, firmaSat) {
-  const rows = detalle.ops.map(o=>`
-    <tr style="border-bottom:1px solid #e5e7eb">
-      <td style="padding:5px 8px;font-size:11px;color:#14405A">${o.lotCode}</td>
-      <td style="padding:5px 8px;font-size:11px">${o.opName}</td>
-      <td style="padding:5px 8px;font-size:11px;text-align:center">${o.qty?.toLocaleString('es-CO')}</td>
-      <td style="padding:5px 8px;font-size:11px;text-align:right">${fmtM(o.valUnit)}</td>
-      <td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:700">${fmtM(o.subtotal)}</td>
-    </tr>`).join('');
+  var LOGO = "https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg";
 
-  const firmaBox = (label,img,nombre) => `
-    <div style="text-align:center;padding:8px">
-      ${img?`<img src="${img}" style="height:60px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">`
-           :`<div style="height:60px;border-bottom:1.5px solid #14405A;margin:0 16px"></div>`}
-      <div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">${label}</div>
-      ${nombre?`<div style="font-size:10px;color:#374151;margin-top:2px">${nombre}</div>`:''}
-    </div>`;
+  // Agrupar operaciones por corte
+  var lotMap = {};
+  (detalle.ops || []).forEach(function(o) {
+    var key = o.lotCode || 'Sin corte';
+    if (!lotMap[key]) lotMap[key] = { lotCode: key, ops: [], total: 0 };
+    lotMap[key].ops.push(o);
+    lotMap[key].total += (o.subtotal || o.vrTotal || 0);
+  });
 
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/><title>Recibo de Pago</title>
-  <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif}@media print{body{print-color-adjust:exact}}</style>
-  </head><body><div style="max-width:800px;margin:16px auto;border:1.5px solid #14405A">
-    <div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:10px 16px;display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:10px"><img src="https://i.ibb.co/nMgfFVH0/Logo-ELROHI.jpg" style="height:54px;width:auto;object-fit:contain" /><div><div style="font-size:18px;font-weight:900;color:#14405A">${satName}</div>
-        <div style="font-size:9px;color:#14405A">Taller Satélite · Recibo de pago operario</div></div>
-      <div style="text-align:right">
-        <div style="font-size:9px;font-weight:700;color:#6b7280">RECIBO DE PAGO OPERARIO</div>
-        <div style="font-size:13px;font-weight:900;color:#2878B4">${periodo}</div>
-      </div>
-    </div>
-    <div style="padding:10px 16px;border-bottom:1px solid #e5e7eb;display:flex;gap:24px">
-      <div><span style="font-size:9px;color:#6b7280">OPERARIO</span><div style="font-size:14px;font-weight:700;color:#14405A">${operario.name}</div></div>
-      <div><span style="font-size:9px;color:#6b7280">CÉDULA</span><div style="font-size:12px;font-weight:600">${operario.cedula||'—'}</div></div>
-      <div><span style="font-size:9px;color:#6b7280">FECHA</span><div style="font-size:12px">${nowStr()}</div></div>
-    </div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:#14405A;color:#fff">
-        <th style="padding:6px 8px;font-size:10px;text-align:left">Corte</th>
-        <th style="padding:6px 8px;font-size:10px;text-align:left">Operación</th>
-        <th style="padding:6px 8px;font-size:10px;text-align:center">Piezas</th>
-        <th style="padding:6px 8px;font-size:10px;text-align:right">Valor/pza</th>
-        <th style="padding:6px 8px;font-size:10px;text-align:right">Subtotal</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div style="padding:10px 16px;border-top:1px solid #e5e7eb">
-      ${detalle.salarioFijo>0?`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Salario fijo</span><span>${fmtM(detalle.salarioFijo)}</span></div>`:''}
-      ${detalle.incentivos>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#15803d;margin-bottom:4px"><span>Incentivos</span><span>+${fmtM(detalle.incentivos)}</span></div>`:''}
-      ${detalle.descuentos>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#dc2626;margin-bottom:4px"><span>Descuentos</span><span>-${fmtM(detalle.descuentos)}</span></div>`:''}
-      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid #14405A;padding-top:8px;margin-top:4px">
-        <span style="color:#14405A">TOTAL A PAGAR</span>
-        <span style="color:#e85d26">${fmtM(detalle.total)}</span>
-      </div>
-      ${detalle.obs?`<div style="margin-top:8px;font-size:10px;color:#6b7280">Nota: ${detalle.obs}</div>`:''}
-    </div>
-    <div style="border-top:1px solid #14405A;display:grid;grid-template-columns:1fr 1fr">
-      ${firmaBox('Pagado por — Admin Satélite', firmaAdmin, satName)}
-      <div style="border-left:1px solid #14405A">${firmaBox('Recibido por — Operario', firmaSat, operario.name)}</div>
-    </div>
-  </div><script>window.onload=()=>window.print();</script></body></html>`;
-  const win=window.open('','_blank'); win.document.write(html); win.document.close();
+  var cortesRows = Object.values(lotMap).map(function(c) {
+    return '<tr style="border-bottom:1px solid #f3f4f6">' +
+      '<td style="padding:6px 10px;font-size:11px;font-weight:700;color:#14405A">' + c.lotCode + '</td>' +
+      '<td style="padding:6px 10px;font-size:12px;text-align:right;font-weight:700;color:#15803d">' + fmtM(c.total) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var ajustesRows = (detalle.ajustes || []).map(function(a) {
+    return '<tr><td style="padding:4px 10px;font-size:10px;color:#dc2626">' + (a.concepto || a.descripcion || '') + '</td>' +
+      '<td style="padding:4px 10px;font-size:10px;color:#dc2626;text-align:right;font-weight:700">-' + fmtM(a.valor || 0) + '</td></tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/>' +
+    '<title>Comprobante ' + (operario.name || '') + '</title>' +
+    '<style>body{margin:0;font-family:Arial,sans-serif}@media print{body{margin:0}}</style>' +
+    '</head><body>' +
+    '<div style="max-width:580px;margin:20px auto;border:1.5px solid #14405A;border-radius:8px;overflow:hidden">' +
+
+    // Header
+    '<div style="background:#F7F7F7;border-bottom:2px solid #14405A;padding:12px 16px;display:flex;align-items:center;gap:12px">' +
+    '<img src="' + LOGO + '" style="height:52px;width:auto;object-fit:contain" />' +
+    '<div><div style="font-size:16px;font-weight:900"><span style="color:#2878B4">Dotaciones </span><span style="color:#14405A">EL·ROHI</span></div>' +
+    '<div style="font-size:9px;color:#14405A">NIT. 901.080.234-7 · Satélite: ' + (satName || '') + '</div></div>' +
+    '</div>' +
+
+    // Título
+    '<div style="background:#14405A;color:#fff;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:5px 16px;text-align:center">COMPROBANTE DE PAGO DE NÓMINA</div>' +
+
+    // Info operario
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid #e5e7eb">' +
+    '<div style="padding:8px 12px;border-right:1px solid #e5e7eb"><span style="font-size:9px;color:#6b7280;display:block">OPERARIO</span><div style="font-size:11px;font-weight:700">' + (operario.name || '') + '</div></div>' +
+    '<div style="padding:8px 12px;border-right:1px solid #e5e7eb"><span style="font-size:9px;color:#6b7280;display:block">ROL</span><div style="font-size:11px;font-weight:700">' + (operario.role || '') + '</div></div>' +
+    '<div style="padding:8px 12px"><span style="font-size:9px;color:#6b7280;display:block">PERÍODO</span><div style="font-size:11px;font-weight:700">' + (periodo || '') + '</div></div>' +
+    '</div>' +
+
+    // Cortes trabajados
+    '<div style="background:#14405A;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.1em;padding:4px 10px">CORTES TRABAJADOS</div>' +
+    '<table style="width:100%;border-collapse:collapse">' +
+    '<thead><tr style="background:#F7F7F7">' +
+    '<th style="padding:6px 10px;font-size:9px;text-align:left;color:#14405A">Corte</th>' +
+    '<th style="padding:6px 10px;font-size:9px;text-align:right;color:#14405A">Valor</th>' +
+    '</tr></thead>' +
+    '<tbody>' + cortesRows + ajustesRows + '</tbody>' +
+    '</table>' +
+
+    // Total
+    '<div style="display:flex;justify-content:space-between;padding:10px 16px;background:#f0fdf4;border-top:2px solid #14405A">' +
+    '<span style="font-weight:900;font-size:14px;color:#14532d">TOTAL A PAGAR</span>' +
+    '<span style="font-weight:900;font-size:20px;color:#15803d">' + fmtM(detalle.total || 0) + '</span>' +
+    '</div>' +
+
+    // Firmas
+    '<div style="border-top:1px solid #e5e7eb;display:grid;grid-template-columns:1fr 1fr;padding:8px 0">' +
+    '<div style="text-align:center;padding:8px 16px">' +
+    (firmaAdmin ? '<img src="' + firmaAdmin + '" style="height:55px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">' : '<div style="height:55px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
+    '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">Firma Administrador Satélite</div></div>' +
+    '<div style="text-align:center;padding:8px 16px">' +
+    (firmaSat ? '<img src="' + firmaSat + '" style="height:55px;display:block;margin:0 auto 4px;border-bottom:1.5px solid #14405A;width:80%;object-fit:contain">' : '<div style="height:55px;border-bottom:1.5px solid #14405A;margin:0 20px"></div>') +
+    '<div style="font-size:9px;font-weight:700;color:#14405A;margin-top:4px">Firma Operario - recibí conforme</div></div>' +
+    '</div>' +
+
+    '</div></body></html>';
+
+  openPDF(html);
 }
 
-// ─── MODAL PAGO OPERARIO ──────────────────────────────────────────────────────
-function ModalPago({ operario, detalle, satName, periodo, onClose, onGuardar }) {
-  const [firmaAdmin, setFirmaAdmin] = useState(null);
-  const [firmaOp,    setFirmaOp]    = useState(null);
-  const [saving,     setSaving]     = useState(false);
 
-  const confirmar = async () => {
-    if (!firmaAdmin) { toast.error('El Admin Satélite debe firmar'); return; }
-    if (!firmaOp)    { toast.error('El operario debe firmar'); return; }
-    setSaving(true);
-    try {
-      printRecibo(operario, detalle, satName, periodo, firmaAdmin, firmaOp);
-      await onGuardar(firmaAdmin, firmaOp);
-      toast.success('✅ Pago registrado y recibo generado');
-      onClose();
-    } catch(e) { console.error(e); toast.error('Error'); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.7)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:16,overflowY:'auto'}}>
-      <div style={{background:'#fff',borderRadius:16,padding:24,width:'100%',maxWidth:500,marginTop:16,marginBottom:16}}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-bold text-gray-900">Pago a {operario.name}</h2>
-            <p className="text-xs text-gray-400">{periodo}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 text-xl font-bold bg-transparent border-none cursor-pointer">✕</button>
-        </div>
-
-        {/* Resumen */}
-        <div className="bg-gray-50 rounded-xl p-3 mb-4 space-y-1">
-          {detalle.ops.map((o,i)=>(
-            <div key={i} className="flex justify-between text-xs text-gray-600">
-              <span>{o.lotCode} · {o.opName} × {o.qty?.toLocaleString('es-CO')} pzas</span>
-              <span className="font-bold">{fmtM(o.subtotal)}</span>
-            </div>
-          ))}
-          {detalle.ops.length===0 && <p className="text-xs text-gray-400 italic text-center">Sin operaciones completadas</p>}
-          <div className="border-t border-gray-200 pt-2 mt-2 space-y-1">
-            {detalle.salarioFijo>0 && <div className="flex justify-between text-xs"><span>Salario fijo</span><span>{fmtM(detalle.salarioFijo)}</span></div>}
-            {detalle.incentivos>0  && <div className="flex justify-between text-xs text-green-700"><span>Incentivos</span><span>+{fmtM(detalle.incentivos)}</span></div>}
-            {detalle.descuentos>0  && <div className="flex justify-between text-xs text-red-600"><span>Descuentos</span><span>-{fmtM(detalle.descuentos)}</span></div>}
-          </div>
-          <div className="flex justify-between text-sm font-black border-t border-gray-300 pt-2 mt-1">
-            <span style={{color:'#14405A'}}>TOTAL</span>
-            <span style={{color:'#e85d26'}}>{fmtM(detalle.total)}</span>
-          </div>
-        </div>
-
-        {/* Firmas */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-blue-800">Firma Admin Satélite (Paga)</p>
-            {firmaAdmin && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
-          </div>
-          <FirmaCanvas label="Firma del Admin Satélite:" onSave={setFirmaAdmin} />
-        </div>
-
-        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold text-green-800">Firma Operario — {operario.name} (Recibe)</p>
-            {firmaOp && <span className="text-[10px] text-green-600 font-bold">✓ Firmado</span>}
-          </div>
-          <FirmaCanvas label="Firma del operario:" onSave={setFirmaOp} />
-        </div>
-
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancelar</button>
-          <button onClick={confirmar} disabled={saving}
-            className="flex-1 py-2.5 text-white rounded-xl text-sm font-bold disabled:opacity-50"
-            style={{background:'#15803d'}}>
-            {saving?'Generando...':'💰 Confirmar y generar recibo'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── PANTALLA PRINCIPAL ───────────────────────────────────────────────────────
 export default function NominaSateliteScreen() {
   const { profile }       = useAuth();
   const { lots, users }   = useData();
