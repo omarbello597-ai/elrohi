@@ -210,12 +210,21 @@ export default function NominaSateliteScreen() {
 
   // Cortes del satélite con operaciones completadas
   const misLots = lots.filter(l => l.satId===sat);
-
   const calcularOperario = (operarioId) => {
+    // Calcular rango de fechas del período seleccionado
+    const [diaInicio, resto] = periodo.split('-');
+    const partes = periodo.replace(/\d+-/,'').trim().split(' ');
+    const mesIdx = MESES.indexOf(partes[0]);
+    const anio = +partes[1];
+    const diaFin = +diaInicio <= 15 ? 15 : new Date(anio, mesIdx+1, 0).getDate();
+    const fechaInicio = new Date(anio, mesIdx, +diaInicio, 0, 0, 0).toISOString();
+    const fechaFin    = new Date(anio, mesIdx, diaFin, 23, 59, 59).toISOString();
+
     let ops = [];
     misLots.forEach(lot => {
       (lot.lotOps||[]).forEach(op => {
-        if (op.wId===operarioId && op.status==='completado') {
+        if (op.wId===operarioId && op.status==='completado'
+          && op.doneAt >= fechaInicio && op.doneAt <= fechaFin) {
           var valUnit = op.valorUnitario || op.val || 0;
           var subtotal = op.vrTotal || (op.qty||0) * valUnit;
           ops.push({
